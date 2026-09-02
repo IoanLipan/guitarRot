@@ -1,6 +1,6 @@
-import { midiToPitchClass, type Midi, type PitchClass } from './notes';
+import { enharmonics, midiToPitchClass, type Midi, type PitchClass } from './notes';
 import { fretToMidi } from './fretboard';
-import { STRING_COUNT, type Tuning } from './tuning';
+import { MAX_FRET, STRING_COUNT, type Tuning } from './tuning';
 
 export type ChordQuality =
   | 'maj' | 'min' | 'dom7' | 'maj7' | 'min7'
@@ -49,7 +49,7 @@ export type ChordShape = {
   difficulty: 1 | 2 | 3;
 };
 
-/** Sounding pitches, low to high, skipping muted strings. */
+/** Sounding pitches, in string order from the low E string upward, skipping muted strings. */
 export function chordVoicing(shape: ChordShape, tuning: Tuning): Midi[] {
   const voicing: Midi[] = [];
   for (let stringIndex = 0; stringIndex < STRING_COUNT; stringIndex += 1) {
@@ -73,6 +73,22 @@ export function expectedPitchClasses(root: PitchClass, quality: ChordQuality): P
 }
 
 /**
+ * True when `name` begins with an accepted spelling of `root` (e.g. both
+ * "C#m" and "Dbm" are accepted for pitch class 1). Spellings are checked
+ * longest first, and a match is rejected if the character right after it
+ * is itself an accidental — otherwise "C" would falsely match the start
+ * of "C#m", which actually names a different pitch class.
+ */
+function nameMatchesRoot(name: string, root: PitchClass): boolean {
+  const spellings = [...enharmonics(root)].sort((a, b) => b.length - a.length);
+  return spellings.some((spelling) => {
+    if (!name.startsWith(spelling)) return false;
+    const next = name.charAt(spelling.length);
+    return next !== '#' && next !== 'b';
+  });
+}
+
+/**
  * Returns a list of human-readable problems with a shape. An empty array
  * means the shape is valid. Content tests assert this is empty for every
  * shipped chord, which is what stops an authoring typo teaching a wrong shape.
@@ -88,12 +104,31 @@ export function validateChordShape(shape: ChordShape, tuning: Tuning): string[] 
   }
   if (errors.length > 0) return errors;
 
+  if (!nameMatchesRoot(shape.name, shape.root)) {
+    errors.push(
+      `${shape.id}: name "${shape.name}" does not start with a valid spelling of root ` +
+        `pitch class ${shape.root} (${enharmonics(shape.root).join('/')})`,
+    );
+  }
+
+  // Tracks whether any fret fell outside the playable neck, or wasn't an
+  // integer. Either way it cannot be resolved to a pitch, so we must bail
+  // out before chordVoicing (and the fretToMidi calls inside it) run —
+  // fretToMidi throws for exactly these inputs, which would turn an
+  // authoring mistake into an uncaught exception instead of a reported one.
+  let hasFretRangeError = false;
+
   for (let stringIndex = 0; stringIndex < STRING_COUNT; stringIndex += 1) {
     const fret = shape.frets[stringIndex];
     const finger = shape.fingers[stringIndex];
 
-    if (fret !== null && fret !== undefined && (fret < 0 || fret > 24)) {
+    if (
+      fret !== null &&
+      fret !== undefined &&
+      (!Number.isInteger(fret) || fret < 0 || fret > MAX_FRET)
+    ) {
       errors.push(`${shape.id}: fret ${fret} on string ${stringIndex} is out of range`);
+      hasFretRangeError = true;
     }
     if ((fret === null || fret === undefined) && finger !== null && finger !== undefined) {
       errors.push(`${shape.id}: string ${stringIndex} is muted but has a finger assigned`);
@@ -104,7 +139,20 @@ export function validateChordShape(shape: ChordShape, tuning: Tuning): string[] 
     if (finger !== null && finger !== undefined && (finger < 1 || finger > 4)) {
       errors.push(`${shape.id}: finger ${finger} on string ${stringIndex} is not 1-4`);
     }
+    if (
+      fret !== null &&
+      fret !== undefined &&
+      Number.isInteger(fret) &&
+      fret !== 0 &&
+      (fret < shape.baseFret || fret > shape.baseFret + 4)
+    ) {
+      errors.push(
+        `${shape.id}: fret ${fret} on string ${stringIndex} is outside the baseFret box ` +
+          `[${shape.baseFret}, ${shape.baseFret + 4}]`,
+      );
+    }
   }
+  if (hasFretRangeError) return errors;
 
   const voicing = chordVoicing(shape, tuning);
   if (voicing.length === 0) {
@@ -112,6 +160,13 @@ export function validateChordShape(shape: ChordShape, tuning: Tuning): string[] 
     return errors;
   }
 
+  // Deliberate: this is exact set equality, not a superset/subset check. A
+  // shell voicing that omits a chord tone (e.g. a fifth-omitted Cmaj7 shape
+  // sounding only {0, 4, 11}) is rejected rather than silently accepted.
+  // For a beginner shape library, refusing to certify is the correct
+  // failure direction — loosening this comparison would gut the module's
+  // whole purpose. Shell voicings, if ever wanted, need an explicit
+  // `omits` field on ChordShape, not a relaxed check here.
   const actual = chordPitchClasses(shape, tuning).join(',');
   const expected = expectedPitchClasses(shape.root, shape.quality).join(',');
   if (actual !== expected) {
@@ -122,13 +177,22 @@ export function validateChordShape(shape: ChordShape, tuning: Tuning): string[] 
 
   if (shape.barre !== undefined) {
     const { fret, fromStringIndex, toStringIndex } = shape.barre;
-    if (fromStringIndex >= toStringIndex) {
-      errors.push(`${shape.id}: barre must span from a lower to a higher string index`);
-    }
-    for (let i = fromStringIndex; i <= toStringIndex; i += 1) {
-      const fretAt = shape.frets[i];
-      if (fretAt !== null && fretAt !== undefined && fretAt < fret) {
-        errors.push(`${shape.id}: string ${i} is fretted below its barre at fret ${fret}`);
+    const isValidStringIndex = (i: number): boolean =>
+      Number.isInteger(i) && i >= 0 && i <= STRING_COUNT - 1;
+
+    if (!isValidStringIndex(fromStringIndex) || !isValidStringIndex(toStringIndex)) {
+      errors.push(
+        `${shape.id}: barre string indices must be integers in [0, ${STRING_COUNT - 1}]`,
+      );
+    } else {
+      if (fromStringIndex >= toStringIndex) {
+        errors.push(`${shape.id}: barre must span from a lower to a higher string index`);
+      }
+      for (let i = fromStringIndex; i <= toStringIndex; i += 1) {
+        const fretAt = shape.frets[i];
+        if (fretAt !== null && fretAt !== undefined && fretAt < fret) {
+          errors.push(`${shape.id}: string ${i} is fretted below its barre at fret ${fret}`);
+        }
       }
     }
   }
