@@ -42,8 +42,10 @@ describe('chordShapeToFretboard', () => {
     expect(openStrings).toEqual([1, 5]);
   });
 
-  it('shows a five-fret window starting at the baseFret', () => {
-    expect(chordShapeToFretboard(aMinorOpen).fretRange).toEqual([1, 5]);
+  it('shows the nut for an open shape rather than starting at baseFret 1', () => {
+    // baseFret is 1, but fret 0 is where the nut and open strings live --
+    // the diagram must include it, not start the box at fret 1.
+    expect(chordShapeToFretboard(aMinorOpen).fretRange).toEqual([0, 4]);
   });
 
   it('passes the barre through', () => {

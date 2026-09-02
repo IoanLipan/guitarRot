@@ -40,10 +40,19 @@ export function chordShapeToFretboard(shape: ChordShape): ChordFretboardProps {
   // already enforces: [baseFret, baseFret + 4]. A valid ChordShape always
   // has an integer baseFret >= 1; the fallback to the lowest fretted note
   // only guards a malformed shape slipping through.
+  //
+  // Open shapes (baseFret === 1) are a deliberate exception: fret 0 is
+  // where open strings and the nut live, and every conventional open-chord
+  // diagram shows it. Starting at 0 instead of 1 keeps that nut line and
+  // the open-string circles visible, at the cost of not reaching fret 5
+  // (baseFret + 4) — no open-position chord shipped or planned here uses
+  // a fret that high, so this trade is deliberate, not an oversight.
   const frettedFrets = markers.map((m) => m.fret);
   const hasValidBaseFret = Number.isInteger(shape.baseFret) && shape.baseFret >= 1;
   const start = hasValidBaseFret
-    ? shape.baseFret
+    ? shape.baseFret === 1
+      ? 0
+      : shape.baseFret
     : frettedFrets.length === 0
       ? 1
       : Math.min(...frettedFrets);
