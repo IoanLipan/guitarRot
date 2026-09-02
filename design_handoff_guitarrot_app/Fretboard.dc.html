@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@keyframes fbGlow { 0%,100%{ filter: drop-shadow(0 0 5px #ffb020) drop-shadow(0 0 10px rgba(255,176,32,0.6)); } 50%{ filter: drop-shadow(0 0 9px #ffb020) drop-shadow(0 0 20px rgba(255,176,32,0.85)); } }
+</style>
+</helmet>
+<div style="width:100%; height:100%; position:relative; border-radius:{{radius}}; background:{{woodBg}}; box-shadow: inset 0 2px 14px rgba(0,0,0,0.65), inset 0 -1px 0 rgba(255,255,255,0.03), 0 6px 24px rgba(0,0,0,0.45); overflow:hidden;">
+  <svg viewBox="{{viewBox}}" preserveAspectRatio="xMidYMid meet" style="position:absolute; inset:0; width:100%; height:100%;">
+    <sc-if value="{{rootLabel}}" hint-placeholder-val="{{true}}">
+      <text x="{{labelX}}" y="{{labelY}}" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="900" fontSize="{{labelSize}}" fill="#f4f4f6">{{rootLabel}}</text>
+    </sc-if>
+    <sc-for list="{{fretWires}}" as="w" hint-placeholder-count="8">
+      <line x1="{{w.x1}}" y1="{{w.y1}}" x2="{{w.x2}}" y2="{{w.y2}}" stroke="{{w.color}}" strokeWidth="{{w.width}}" strokeLinecap="round" opacity="{{w.opacity}}" />
+    </sc-for>
+    <sc-for list="{{inlays}}" as="pt" hint-placeholder-count="2">
+      <circle cx="{{pt.x}}" cy="{{pt.y}}" r="{{pt.r}}" fill="rgba(244,244,246,0.14)" />
+    </sc-for>
+    <sc-for list="{{strings}}" as="s" hint-placeholder-count="6">
+      <line x1="{{s.x1}}" y1="{{s.shadowY1}}" x2="{{s.x2}}" y2="{{s.shadowY2}}" stroke="rgba(0,0,0,0.45)" strokeWidth="{{s.width}}" strokeLinecap="round" />
+      <line x1="{{s.x1}}" y1="{{s.y1}}" x2="{{s.x2}}" y2="{{s.y2}}" stroke="{{s.color}}" strokeWidth="{{s.width}}" strokeLinecap="round" />
+    </sc-for>
+    <sc-if value="{{barreRect}}" hint-placeholder-val="{{null}}">
+      <rect x="{{barreRect.x}}" y="{{barreRect.y}}" width="{{barreRect.width}}" height="{{barreRect.height}}" rx="{{barreRect.rx}}" fill="#c9781a" opacity="0.92" />
+    </sc-if>
+    <sc-for list="{{dotPoints}}" as="d" hint-placeholder-count="3">
+      <g style="{{d.glowStyle}}">
+        <circle cx="{{d.x}}" cy="{{d.y}}" r="{{d.r}}" fill="{{d.fill}}" stroke="#0b0b0f" strokeWidth="1.5" />
+        <sc-if value="{{d.label}}" hint-placeholder-val="{{null}}">
+          <text x="{{d.x}}" y="{{d.labelY}}" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="800" fontSize="{{d.labelSize}}" fill="#0b0b0f">{{d.label}}</text>
+        </sc-if>
+      </g>
+    </sc-for>
+    <sc-for list="{{openMuteMarks}}" as="m" hint-placeholder-count="6">
+      <text x="{{m.x}}" y="{{m.y}}" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="900" fontSize="{{m.size}}" fill="{{m.color}}">{{m.symbol}}</text>
+    </sc-for>
+    <sc-for list="{{fretNumberMarks}}" as="n" hint-placeholder-count="8">
+      <text x="{{n.x}}" y="{{n.y}}" textAnchor="middle" fontFamily="ui-monospace, monospace" fontWeight="600" fontSize="{{n.size}}" fill="#7a7a86">{{n.text}}</text>
+    </sc-for>
+  </svg>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 380, &quot;height&quot;: 200}, &quot;orientation&quot;: {&quot;editor&quot;: null, &quot;default&quot;: &quot;horizontal&quot;, &quot;tsType&quot;: &quot;'horizontal'|'vertical'&quot;}, &quot;lowFret&quot;: {&quot;editor&quot;: null, &quot;default&quot;: 0, &quot;tsType&quot;: &quot;number&quot;}, &quot;highFret&quot;: {&quot;editor&quot;: null, &quot;default&quot;: 12, &quot;tsType&quot;: &quot;number&quot;}, &quot;dots&quot;: {&quot;editor&quot;: null, &quot;default&quot;: [], &quot;tsType&quot;: &quot;Array&lt;{string:number,fret:number,glow?:boolean,label?:string}&gt;&quot;}, &quot;openMute&quot;: {&quot;editor&quot;: null, &quot;default&quot;: null, &quot;tsType&quot;: &quot;Array&lt;'open'|'mute'|null&gt;|null&quot;}, &quot;barre&quot;: {&quot;editor&quot;: null, &quot;default&quot;: null, &quot;tsType&quot;: &quot;{fret:number,from:number,to:number}|null&quot;}, &quot;rootLabel&quot;: {&quot;editor&quot;: null, &quot;default&quot;: &quot;&quot;, &quot;tsType&quot;: &quot;string&quot;}}">
+const STRING_COUNT = 6;
+const INLAY_FRETS = [3, 5, 7, 9, 15, 17, 19, 21];
+const DOUBLE_INLAY_FRETS = [12, 24];
+const STRING_COLORS = ['#77778a', '#8a8a9a', '#9fa0ae', '#b7b8c4', '#cfd0d8', '#e8e9ee'];
+const STRING_WIDTHS = [5.2, 4.4, 3.6, 2.8, 2.0, 1.3];
+
+class Component extends DCLogic {
+  renderVals() {
+    const orientation = this.props.orientation ?? 'horizontal';
+    const lowFret = this.props.lowFret ?? 0;
+    const highFret = this.props.highFret ?? 12;
+    const dots = this.props.dots ?? [];
+    const openMute = this.props.openMute ?? null;
+    const barre = this.props.barre ?? null;
+    const rootLabel = this.props.rootLabel ?? '';
+    const horizontal = orientation === 'horizontal';
+
+    const stringSpacing = horizontal ? 42 : 50;
+    const fretSpacing = horizontal ? 78 : 64;
+    const padding = horizontal
+      ? { top: 30, right: 30, bottom: 40, left: 78 }
+      : { top: rootLabel ? 70 : 50, right: 34, bottom: 34, left: 34 };
+    const openOffset = horizontal ? 38 : 30;
+    const hasNut = lowFret === 0;
+
+    const cellFrets = [];
+    for (let f = Math.max(1, lowFret); f <= highFret; f += 1) cellFrets.push(f);
+    const stringSpan = (STRING_COUNT - 1) * stringSpacing;
+    const fretSpan = cellFrets.length * fretSpacing;
+
+    const width = horizontal ? padding.left + fretSpan + padding.right : padding.left + stringSpan + padding.right;
+    const height = horizontal ? padding.top + stringSpan + padding.bottom : padding.top + fretSpan + padding.bottom;
+
+    const stringCoord = (i) => horizontal
+      ? padding.top + (STRING_COUNT - 1 - i) * stringSpacing
+      : padding.left + i * stringSpacing;
+    const fretOrigin = horizontal ? padding.left : padding.top;
+    const fretCoord = (fret) => {
+      if (fret === 0) return fretOrigin - openOffset;
+      const idx = cellFrets.indexOf(fret);
+      return fretOrigin + (idx + 0.5) * fretSpacing;
+    };
+    const wireCoord = (idx) => fretOrigin + idx * fretSpacing;
+    const markerPoint = (stringIdx, fret) => horizontal
+      ? { x: fretCoord(fret), y: stringCoord(stringIdx) }
+      : { x: stringCoord(stringIdx), y: fretCoord(fret) };
+
+    const fretWires = [];
+    for (let idx = 0; idx <= cellFrets.length; idx += 1) {
+      const at = wireCoord(idx);
+      const isNut = idx === 0 && hasNut;
+      fretWires.push(horizontal
+        ? { x1: at, y1: padding.top, x2: at, y2: padding.top + stringSpan, color: isNut ? '#f0f0f4' : '#c7c7ce', width: isNut ? 7 : 3, opacity: isNut ? 1 : 0.9 }
+        : { x1: padding.left, y1: at, x2: padding.left + stringSpan, y2: at, color: isNut ? '#f0f0f4' : '#c7c7ce', width: isNut ? 7 : 3, opacity: isNut ? 1 : 0.9 });
+    }
+
+    const strings = [];
+    for (let i = 0; i < STRING_COUNT; i += 1) {
+      const coord = stringCoord(i);
+      const w = STRING_WIDTHS[i];
+      if (horizontal) {
+        strings.push({ x1: padding.left, y1: coord, x2: padding.left + fretSpan, y2: coord, shadowY1: coord + 1.2, shadowY2: coord + 1.2, color: STRING_COLORS[i], width: w });
+      } else {
+        strings.push({ x1: coord, y1: padding.top, x2: coord, y2: padding.top + fretSpan, shadowY1: padding.top, shadowY2: padding.top + fretSpan, color: STRING_COLORS[i], width: w });
+      }
+    }
+    if (!horizontal) {
+      for (const s of strings) { s.x1 += 1.2; s.x2 += 1.2; }
+    }
+
+    const inlays = [];
+    const centre = (stringCoord(0) + stringCoord(STRING_COUNT - 1)) / 2;
+    const pointAcross = (across, along) => horizontal ? { x: along, y: across } : { x: across, y: along };
+    for (const fret of cellFrets) {
+      const along = fretCoord(fret);
+      if (DOUBLE_INLAY_FRETS.includes(fret)) {
+        inlays.push({ ...pointAcross(centre - stringSpacing, along), r: horizontal ? 7 : 8 });
+        inlays.push({ ...pointAcross(centre + stringSpacing, along), r: horizontal ? 7 : 8 });
+      } else if (INLAY_FRETS.includes(fret)) {
+        inlays.push({ ...pointAcross(centre, along), r: horizontal ? 7 : 8 });
+      }
+    }
+
+    const dotR = horizontal ? 15 : 16;
+    const dotPoints = dots.map((d) => {
+      const p = markerPoint(d.string, d.fret);
+      return {
+        x: p.x, y: p.y, r: dotR,
+        fill: '#ffb020',
+        glowStyle: d.glow ? 'animation: fbGlow 1.5s ease-in-out infinite;' : 'filter: drop-shadow(0 0 3px rgba(255,176,32,0.55));',
+        label: d.label ?? null,
+        labelY: p.y + dotR * 0.36,
+        labelSize: dotR * 0.95,
+      };
+    });
+
+    const openMuteMarks = [];
+    if (openMute) {
+      for (let i = 0; i < STRING_COUNT; i += 1) {
+        const v = openMute[i];
+        if (!v) continue;
+        const coord = stringCoord(i);
+        const along = fretOrigin - openOffset - (horizontal ? 0 : 16);
+        const pt = horizontal ? { x: fretOrigin - openOffset, y: coord } : { x: coord, y: padding.top - 20 };
+        openMuteMarks.push({ x: pt.x, y: pt.y + 6, symbol: v === 'open' ? 'O' : '×', color: v === 'open' ? '#f4f4f6' : '#5f5f6b', size: horizontal ? 16 : 20 });
+      }
+    }
+
+    const fretNumberMarks = [];
+    if (horizontal) {
+      for (const fret of cellFrets) {
+        if (INLAY_FRETS.includes(fret) || DOUBLE_INLAY_FRETS.includes(fret) || fret === cellFrets[0] || fret === cellFrets[cellFrets.length - 1]) {
+          fretNumberMarks.push({ x: fretCoord(fret), y: padding.top + stringSpan + 26, text: String(fret), size: 15 });
+        }
+      }
+    } else if (lowFret > 0) {
+      fretNumberMarks.push({ x: padding.left - 20, y: fretCoord(cellFrets[0]) + 5, text: `${lowFret}fr`, size: 15 });
+    }
+
+    let barreRect = null;
+    if (barre) {
+      const r = dotR;
+      const a1 = stringCoord(barre.from);
+      const a2 = stringCoord(barre.to);
+      const along = fretCoord(barre.fret);
+      barreRect = horizontal
+        ? { x: along - r, y: Math.min(a1, a2) - r, width: 2 * r, height: Math.abs(a2 - a1) + 2 * r, rx: r }
+        : { x: Math.min(a1, a2) - r, y: along - r, width: Math.abs(a2 - a1) + 2 * r, height: 2 * r, rx: r };
+    }
+
+    return {
+      viewBox: `0 0 ${width} ${height}`,
+      radius: horizontal ? '22px' : '18px',
+      woodBg: 'linear-gradient(160deg,#3b2a1d,#2a1d14 45%,#1c130d), repeating-linear-gradient(96deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 2px, transparent 2px, transparent 7px)',
+      fretWires, strings, inlays, dotPoints, openMuteMarks, fretNumberMarks, barreRect,
+      rootLabel, labelX: width / 2, labelY: 34, labelSize: 26,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

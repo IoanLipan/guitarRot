@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas" />
+<style>
+@keyframes playheadMove { from{ left:0%; } to{ left:100%; } }
+@keyframes correctPulse { 0%,100%{ box-shadow:0 0 0 0 rgba(53,208,127,0.55); } 50%{ box-shadow:0 0 0 16px rgba(53,208,127,0); } }
+@keyframes softFlicker { 0%,100%{ opacity:0.9; } 50%{ opacity:1; } }
+body { margin:0; background:#0b0b0f; }
+</style>
+</helmet>
+
+<div style="background:#0b0b0f; color:#f4f4f6; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; padding:64px; display:flex; flex-direction:column; gap:72px; width:max-content;">
+
+  <div>
+    <div style="font-size:44px; font-weight:900; letter-spacing:-0.01em;">guitarRot</div>
+    <div style="font-size:15px; color:#9a9aa8; margin-top:4px; text-transform:uppercase; letter-spacing:0.12em;">Feed · Learn · Quiz — dark mode only</div>
+  </div>
+
+  <!-- ===================== FEED ===================== -->
+  <div>
+    <div style="font-size:22px; font-weight:800; margin-bottom:16px; color:#ffb020;">Feed — scroll to doomscroll</div>
+    <div style="width:390px; height:844px; background:#000; border-radius:54px; padding:12px; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+      <div style="position:relative; width:100%; height:100%; border-radius:44px; overflow:hidden; background:#0b0b0f;">
+        <div style="position:absolute; top:10px; left:50%; transform:translateX(-50%); width:100px; height:26px; background:#000; border-radius:14px; z-index:20;"></div>
+        <div style="position:absolute; inset:0; bottom:78px; overflow-y:auto; scroll-snap-type:y mandatory;">
+
+          <sc-for list="{{feedItems}}" as="item" hint-placeholder-count="9">
+
+            <!-- RIFF CARD -->
+            <sc-if value="{{item.isRiff}}" hint-placeholder-val="{{true}}">
+              <div style="scroll-snap-align:start; width:100%; height:766px; display:flex; flex-direction:column; padding:28px 22px; box-sizing:border-box; background:linear-gradient(180deg,#15151c,#0b0b0f);">
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <div style="background:#1e1e28; color:#9a9aa8; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:6px 12px; border-radius:100px;">{{item.riff.style}}</div>
+                  <div style="background:#1e1e28; color:#9a9aa8; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:6px 12px; border-radius:100px;">Lvl {{item.riff.level}}</div>
+                  <div style="background:#1e1e28; color:#9a9aa8; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:6px 12px; border-radius:100px;">{{item.riff.bpm}} BPM</div>
+                </div>
+                <div style="font-size:30px; font-weight:900; margin-top:16px; line-height:1.1;">{{item.riff.title}}</div>
+
+                <div style="position:relative; margin-top:auto; margin-bottom:auto; height:280px; background:#0f0f14; border-radius:16px; padding:20px 18px; box-sizing:border-box;">
+                  <sc-for list="{{tabRowIndexes}}" as="row" hint-placeholder-count="6">
+                    <div style="position:absolute; left:18px; right:18px; top:{{row.top}}; height:1px; background:#33333e;" data-row="{{row.row}}"></div>
+                  </sc-for>
+                  <sc-for list="{{item.riff.noteMarks}}" as="n" hint-placeholder-count="8">
+                    <div style="position:absolute; top:{{n.top}}; left:{{n.left}}; transform:translate(-50%,-50%); width:26px; height:26px; border-radius:8px; background:#ffb020; color:#0b0b0f; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px rgba(255,176,32,0.55);">{{n.fret}}</div>
+                  </sc-for>
+                  <div style="{{item.riff.playheadStyle}}"></div>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:14px; margin-top:8px;">
+                  <div style="width:52px; height:52px; border-radius:50%; background:#ffb020; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 6px 18px rgba(255,176,32,0.35);">
+                    <div style="width:0; height:0; border-top:10px solid transparent; border-bottom:10px solid transparent; border-left:16px solid #0b0b0f; margin-left:2px;"></div>
+                  </div>
+                  <div style="flex:1;">
+                    <div style="font-size:11px; color:#9a9aa8; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px;">Speed</div>
+                    <input type="range" min="0.5" max="1.5" step="0.1" defaultValue="1" style="width:100%; accentColor:#ffb020;" />
+                  </div>
+                  <div style="color:#9a9aa8; font-size:12px; font-weight:700; border:1px solid #33333e; border-radius:100px; padding:8px 12px;">Loop ↻</div>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- CHORD CARD -->
+            <sc-if value="{{item.isChord}}" hint-placeholder-val="{{false}}">
+              <div style="scroll-snap-align:start; width:100%; height:766px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; padding:28px 22px; box-sizing:border-box; background:linear-gradient(180deg,#1e1e28,#0b0b0f);">
+                <div style="text-align:center;">
+                  <div style="font-size:54px; font-weight:900; line-height:1;">{{item.chord.name}}</div>
+                  <div style="color:#9a9aa8; font-size:14px; text-transform:uppercase; letter-spacing:0.1em; margin-top:6px;">{{item.chord.quality}}</div>
+                </div>
+                <div style="width:220px; height:300px;">
+                  <dc-import name="Fretboard" orientation="vertical" low-fret="{{item.chord.lowFret}}" high-fret="{{item.chord.highFret}}" dots="{{item.chord.dots}}" open-mute="{{item.chord.openMute}}" barre="{{item.chord.barre}}" style="width:100%; height:100%;" hint-size="220px,300px"></dc-import>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; color:#9a9aa8; font-size:14px; font-weight:600;">
+                  <div style="width:34px; height:34px; border-radius:50%; background:#1e1e28; display:flex; align-items:center; justify-content:center;">♪</div>
+                  tap to hear it strummed
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- QUIZ CARD -->
+            <sc-if value="{{item.isQuiz}}" hint-placeholder-val="{{false}}">
+              <div style="scroll-snap-align:start; width:100%; height:766px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:28px 26px; box-sizing:border-box; background:radial-gradient(circle at 50% 30%, rgba(255,176,32,0.14), #0b0b0f 65%);">
+                <div style="background:#ffb020; color:#0b0b0f; font-size:12px; font-weight:900; letter-spacing:0.1em; text-transform:uppercase; padding:7px 14px; border-radius:100px;">Quick quiz</div>
+
+                <sc-if value="{{item.quiz.isNote}}" hint-placeholder-val="{{true}}">
+                  <div style="width:100%; height:140px;">
+                    <dc-import name="Fretboard" orientation="horizontal" low-fret="{{item.quiz.fretboard.lowFret}}" high-fret="{{item.quiz.fretboard.highFret}}" dots="{{item.quiz.fretboard.dots}}" style="width:100%; height:100%;" hint-size="320px,140px"></dc-import>
+                  </div>
+                </sc-if>
+                <sc-if value="{{item.quiz.isChordKind}}" hint-placeholder-val="{{false}}">
+                  <div style="width:150px; height:200px;">
+                    <dc-import name="Fretboard" orientation="vertical" low-fret="{{item.quiz.chord.lowFret}}" high-fret="{{item.quiz.chord.highFret}}" dots="{{item.quiz.chord.dots}}" open-mute="{{item.quiz.chord.openMute}}" barre="{{item.quiz.chord.barre}}" style="width:100%; height:100%;" hint-size="150px,200px"></dc-import>
+                  </div>
+                </sc-if>
+
+                <div style="font-size:26px; font-weight:900; text-align:center;">{{item.quiz.prompt}}</div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%;">
+                  <sc-for list="{{item.quiz.options}}" as="opt" hint-placeholder-count="4">
+                    <div style="{{opt.style}}">{{opt.label}}</div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+          </sc-for>
+        </div>
+
+        <div style="position:absolute; left:0; right:0; bottom:0; height:78px; background:#15151c; border-top:1px solid #26262f; display:flex;">
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#ffb020; font-size:11px; font-weight:800;">
+            <div style="width:24px; height:24px; border-radius:6px; background:#ffb020;"></div>Feed
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#5f5f6b; font-size:11px; font-weight:700;">
+            <div style="width:24px; height:24px; border-radius:6px; border:2px solid #5f5f6b;"></div>Learn
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#5f5f6b; font-size:11px; font-weight:700;">
+            <div style="width:24px; height:24px; border-radius:50%; border:2px solid #5f5f6b;"></div>Quiz
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== LEARN ===================== -->
+  <div>
+    <div style="font-size:22px; font-weight:800; margin-bottom:16px; color:#ffb020;">Learn — reference &amp; browse</div>
+    <div style="width:390px; height:844px; background:#000; border-radius:54px; padding:12px; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+      <div style="position:relative; width:100%; height:100%; border-radius:44px; overflow:hidden; background:#0b0b0f;">
+        <div style="position:absolute; top:10px; left:50%; transform:translateX(-50%); width:100px; height:26px; background:#000; border-radius:14px; z-index:20;"></div>
+        <div style="position:absolute; inset:0; bottom:78px; overflow-y:auto; padding:64px 22px 32px; box-sizing:border-box; display:flex; flex-direction:column; gap:36px;">
+
+          <div style="font-size:32px; font-weight:900;">Learn</div>
+
+          <div>
+            <div style="font-size:13px; color:#9a9aa8; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:12px;">Fretboard explorer</div>
+            <div style="width:100%; height:170px;">
+              <dc-import name="Fretboard" orientation="horizontal" low-fret="0" high-fret="12" dots="{{explorerDots}}" style="width:100%; height:100%;" hint-size="340px,170px"></dc-import>
+            </div>
+            <div style="margin-top:12px; text-align:center; color:#9a9aa8; font-size:14px;">You tapped fret 5, string 6 → <span style="color:#ffb020; font-weight:800;">A</span></div>
+          </div>
+
+          <div>
+            <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px;">
+              <div style="font-size:13px; color:#9a9aa8; text-transform:uppercase; letter-spacing:0.1em;">Chord library</div>
+              <div style="color:#5f5f6b; font-size:12px;">9 shapes</div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+              <sc-for list="{{chords}}" as="c" hint-placeholder-count="9">
+                <div style="background:#15151c; border-radius:14px; padding:10px 8px; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                  <div style="width:100%; height:96px;">
+                    <dc-import name="Fretboard" orientation="vertical" low-fret="{{c.lowFret}}" high-fret="{{c.highFret}}" dots="{{c.dots}}" open-mute="{{c.openMute}}" barre="{{c.barre}}" style="width:100%; height:100%;" hint-size="100px,96px"></dc-import>
+                  </div>
+                  <div style="font-size:14px; font-weight:800;">{{c.name}}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:13px; color:#9a9aa8; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:12px;">Scale positions — E minor pentatonic, box 1</div>
+            <div style="width:100%; height:150px;">
+              <dc-import name="Fretboard" orientation="horizontal" low-fret="0" high-fret="3" dots="{{scaleDots}}" style="width:100%; height:100%;" hint-size="340px,150px"></dc-import>
+            </div>
+          </div>
+
+        </div>
+        <div style="position:absolute; left:0; right:0; bottom:0; height:78px; background:#15151c; border-top:1px solid #26262f; display:flex;">
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#5f5f6b; font-size:11px; font-weight:700;">
+            <div style="width:24px; height:24px; border-radius:6px; border:2px solid #5f5f6b;"></div>Feed
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#ffb020; font-size:11px; font-weight:800;">
+            <div style="width:24px; height:24px; border-radius:6px; background:#ffb020;"></div>Learn
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#5f5f6b; font-size:11px; font-weight:700;">
+            <div style="width:24px; height:24px; border-radius:50%; border:2px solid #5f5f6b;"></div>Quiz
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== QUIZ ===================== -->
+  <div>
+    <div style="font-size:22px; font-weight:800; margin-bottom:16px; color:#ffb020;">Quiz — focused practice</div>
+    <div style="display:flex; gap:32px;">
+
+      <div style="width:390px; height:844px; background:#000; border-radius:54px; padding:12px; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+        <div style="position:relative; width:100%; height:100%; border-radius:44px; overflow:hidden; background:#0b0b0f;">
+          <div style="position:absolute; top:10px; left:50%; transform:translateX(-50%); width:100px; height:26px; background:#000; border-radius:14px; z-index:20;"></div>
+          <div style="position:absolute; inset:0; bottom:78px; display:flex; flex-direction:column; align-items:center; padding:64px 26px 0; box-sizing:border-box; gap:28px;">
+            <div style="display:flex; align-items:center; gap:8px; color:#9a9aa8; font-size:13px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase;">
+              <div style="width:8px; height:8px; border-radius:50%; background:#ffb020;"></div>Streak 6
+            </div>
+            <div style="width:100%; height:5px; background:#1e1e28; border-radius:100px; overflow:hidden;">
+              <div style="width:60%; height:100%; background:#ffb020;"></div>
+            </div>
+            <div style="width:100%; height:140px; margin-top:8px;">
+              <dc-import name="Fretboard" orientation="horizontal" low-fret="0" high-fret="5" dots="{{quizFretDots}}" style="width:100%; height:100%;" hint-size="320px,140px"></dc-import>
+            </div>
+            <div style="font-size:30px; font-weight:900; text-align:center;">Name this note</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; width:100%;">
+              <sc-for list="{{quizPlainOptions}}" as="opt" hint-placeholder-count="4">
+                <div style="background:#1e1e28; border:2px solid #2b2b36; border-radius:18px; padding:22px 0; text-align:center; font-size:24px; font-weight:800; color:#f4f4f6;">{{opt}}</div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="position:absolute; left:0; right:0; bottom:0; height:78px; background:#15151c; border-top:1px solid #26262f; display:flex;">
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#5f5f6b; font-size:11px; font-weight:700;"><div style="width:24px; height:24px; border-radius:6px; border:2px solid #5f5f6b;"></div>Feed</div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#5f5f6b; font-size:11px; font-weight:700;"><div style="width:24px; height:24px; border-radius:6px; border:2px solid #5f5f6b;"></div>Learn</div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#ffb020; font-size:11px; font-weight:800;"><div style="width:24px; height:24px; border-radius:50%; background:#ffb020;"></div>Quiz</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:390px; height:844px; background:#000; border-radius:54px; padding:12px; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+        <div style="position:relative; width:100%; height:100%; border-radius:44px; overflow:hidden; background:#0b0b0f;">
+          <div style="position:absolute; inset:0; background:radial-gradient(circle at 50% 40%, rgba(53,208,127,0.28), transparent 60%); animation: softFlicker 1.8s ease-in-out infinite; z-index:5;"></div>
+          <div style="position:absolute; top:10px; left:50%; transform:translateX(-50%); width:100px; height:26px; background:#000; border-radius:14px; z-index:20;"></div>
+          <div style="position:absolute; inset:0; bottom:78px; display:flex; flex-direction:column; align-items:center; padding:64px 26px 0; box-sizing:border-box; gap:24px; z-index:6;">
+            <div style="display:flex; align-items:center; gap:8px; color:#35d07f; font-size:13px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase;">
+              <div style="width:8px; height:8px; border-radius:50%; background:#35d07f;"></div>Streak 7
+            </div>
+            <div style="width:100%; height:5px; background:#1e1e28; border-radius:100px; overflow:hidden;">
+              <div style="width:68%; height:100%; background:#35d07f;"></div>
+            </div>
+            <div style="font-size:64px; font-weight:900; color:#35d07f; text-shadow:0 0 30px rgba(53,208,127,0.7); letter-spacing:-0.02em; margin-top:20px;">PERFECT</div>
+            <div style="font-size:20px; font-weight:700; color:#9a9aa8;">G — nice ear.</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; width:100%; margin-top:12px;">
+              <div style="background:#35d07f; border:2px solid #35d07f; border-radius:18px; padding:22px 0; text-align:center; font-size:24px; font-weight:800; color:#0b0b0f; animation: correctPulse 1.4s ease-out infinite;">G</div>
+              <div style="background:#15151c; border:2px solid #22222b; border-radius:18px; padding:22px 0; text-align:center; font-size:24px; font-weight:800; color:#4a4a54;">F#</div>
+              <div style="background:#15151c; border:2px solid #22222b; border-radius:18px; padding:22px 0; text-align:center; font-size:24px; font-weight:800; color:#4a4a54;">G#</div>
+              <div style="background:#15151c; border:2px solid #22222b; border-radius:18px; padding:22px 0; text-align:center; font-size:24px; font-weight:800; color:#4a4a54;">A</div>
+            </div>
+          </div>
+          <div style="position:absolute; left:0; right:0; bottom:0; height:78px; background:#15151c; border-top:1px solid #26262f; display:flex; z-index:6;">
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#5f5f6b; font-size:11px; font-weight:700;"><div style="width:24px; height:24px; border-radius:6px; border:2px solid #5f5f6b;"></div>Feed</div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#5f5f6b; font-size:11px; font-weight:700;"><div style="width:24px; height:24px; border-radius:6px; border:2px solid #5f5f6b;"></div>Learn</div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#ffb020; font-size:11px; font-weight:800;"><div style="width:24px; height:24px; border-radius:50%; background:#ffb020;"></div>Quiz</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== FRETBOARD COMPONENT STUDY ===================== -->
+  <div>
+    <div style="font-size:22px; font-weight:800; margin-bottom:16px; color:#ffb020;">The fretboard — shared component, two orientations</div>
+    <div style="display:flex; gap:40px; align-items:flex-start; flex-wrap:wrap;">
+      <div>
+        <div style="color:#9a9aa8; font-size:13px; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:14px;">Horizontal — explorer</div>
+        <div style="width:760px; height:230px;">
+          <dc-import name="Fretboard" orientation="horizontal" low-fret="0" high-fret="15" dots="{{studyHorizontalDots}}" style="width:100%; height:100%;" hint-size="760px,230px"></dc-import>
+        </div>
+      </div>
+      <div>
+        <div style="color:#9a9aa8; font-size:13px; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:14px;">Vertical — chord box</div>
+        <div style="width:260px; height:340px;">
+          <dc-import name="Fretboard" orientation="vertical" low-fret="0" high-fret="4" dots="{{studyChord.dots}}" open-mute="{{studyChord.openMute}}" root-label="Am" style="width:100%; height:100%;" hint-size="260px,340px"></dc-import>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+function chordFromFrets(name, quality, frets, barre) {
+  const dots = [];
+  const openMute = [];
+  frets.forEach((f, i) => {
+    if (f === null) { openMute.push('mute'); }
+    else if (f === 0) { openMute.push('open'); }
+    else { openMute.push(null); dots.push({ string: i, fret: f }); }
+  });
+  return { name, quality, dots, openMute, barre: barre || null, lowFret: 0, highFret: 4 };
+}
+
+const CHORDS = [
+  chordFromFrets('E', 'major', [0, 2, 2, 1, 0, 0]),
+  chordFromFrets('Am', 'minor', [null, 0, 2, 2, 1, 0]),
+  chordFromFrets('D', 'major', [null, null, 0, 2, 3, 2]),
+  chordFromFrets('G', 'major', [3, 2, 0, 0, 0, 3]),
+  chordFromFrets('C', 'major', [null, 3, 2, 0, 1, 0]),
+  chordFromFrets('Em', 'minor', [0, 2, 2, 0, 0, 0]),
+  chordFromFrets('A', 'major', [null, 0, 2, 2, 2, 0]),
+  chordFromFrets('Dm', 'minor', [null, null, 0, 2, 3, 1]),
+  chordFromFrets('F', 'major', [1, 3, 3, 2, 1, 1], { fret: 1, from: 0, to: 5 }),
+];
+
+const RIFFS = [
+  { title: 'Chromatic warm-up', style: 'Warm-up', level: 1, bpm: 80, totalBeats: 8,
+    notes: [[0,1,0],[0,2,0.5],[0,3,1],[0,4,1.5],[1,1,2],[1,2,2.5],[1,3,3],[1,4,3.5],[2,1,4],[2,2,4.5],[2,3,5],[2,4,5.5],[3,1,6],[3,2,6.5],[3,3,7],[3,4,7.5]] },
+  { title: 'E minor pentatonic, box one', style: 'Scale', level: 2, bpm: 90, totalBeats: 8,
+    notes: [[0,0,0],[0,3,0.5],[1,0,1],[1,2,1.5],[2,0,2],[2,2,2.5],[3,0,3],[3,2,3.5],[4,0,4],[4,3,4.5],[5,0,5],[5,3,5.5]] },
+  { title: 'Power chord drive', style: 'Rock', level: 2, bpm: 120, totalBeats: 16,
+    notes: [[0,0,0],[1,2,0],[0,0,1],[1,2,1],[0,0,2],[1,2,2],[0,0,3],[1,2,3],
+      [0,3,4],[1,5,4],[0,3,5],[1,5,5],[0,3,6],[1,5,6],[0,3,7],[1,5,7],
+      [0,5,8],[1,7,8],[0,5,9],[1,7,9],[0,5,10],[1,7,10],[0,5,11],[1,7,11],
+      [0,0,12],[1,2,12],[0,0,13],[1,2,13],[0,0,14],[1,2,14],[0,0,15],[1,2,15]] },
+].map((r) => ({
+  ...r,
+  playheadStyle: `position:absolute; top:8px; bottom:8px; left:0; width:3px; background:#ffb020; box-shadow:0 0 10px #ffb020, 0 0 20px rgba(255,176,32,0.6); border-radius:2px; animation: playheadMove ${(r.totalBeats * 60 / r.bpm).toFixed(2)}s linear infinite;`,
+  noteMarks: r.notes.map(([stringIndex, fret, beat]) => ({
+    fret,
+    left: `${(beat / r.totalBeats) * 100}%`,
+    top: `${((5 - stringIndex) / 5) * 100}%`,
+  })),
+}));
+
+function quizOptionStyle(isCorrect) {
+  return isCorrect
+    ? 'background:#35d07f; border:2px solid #35d07f; border-radius:16px; padding:20px 0; text-align:center; font-size:20px; font-weight:800; color:#0b0b0f;'
+    : 'background:#1e1e28; border:2px solid #2b2b36; border-radius:16px; padding:20px 0; text-align:center; font-size:20px; font-weight:800; color:#f4f4f6; opacity:0.6;';
+}
+
+const QUIZZES = [
+  { isNote: true, isChordKind: false, prompt: 'Name this note', fretboard: { lowFret: 0, highFret: 5, dots: [{ string: 0, fret: 3, glow: true }] },
+    options: ['F#', 'G', 'G#', 'A'].map((label, i) => ({ label, style: quizOptionStyle(i === 1) })) },
+  { isNote: false, isChordKind: true, prompt: 'Which chord is this?', chord: CHORDS[1],
+    options: ['Am', 'C', 'Dm', 'E'].map((label, i) => ({ label, style: quizOptionStyle(i === 0) })) },
+  { isNote: true, isChordKind: false, prompt: 'Name this note', fretboard: { lowFret: 0, highFret: 5, dots: [{ string: 4, fret: 2, glow: true }] },
+    options: ['C', 'C#', 'D', 'D#'].map((label, i) => ({ label, style: quizOptionStyle(i === 1) })) },
+];
+
+const FEED_ITEMS = [
+  { isRiff: true, isChord: false, isQuiz: false, riff: RIFFS[0] },
+  { isRiff: false, isChord: true, isQuiz: false, chord: CHORDS[0] },
+  { isRiff: false, isChord: false, isQuiz: true, quiz: QUIZZES[0] },
+  { isRiff: false, isChord: true, isQuiz: false, chord: CHORDS[1] },
+  { isRiff: true, isChord: false, isQuiz: false, riff: RIFFS[1] },
+  { isRiff: false, isChord: false, isQuiz: true, quiz: QUIZZES[1] },
+  { isRiff: true, isChord: false, isQuiz: false, riff: RIFFS[2] },
+  { isRiff: false, isChord: true, isQuiz: false, chord: CHORDS[3] },
+  { isRiff: false, isChord: false, isQuiz: true, quiz: QUIZZES[2] },
+];
+
+const SCALE_DOTS = [[0,0],[0,3],[1,0],[1,2],[2,0],[2,2],[3,0],[3,2],[4,0],[4,3],[5,0],[5,3]]
+  .map(([string, fret]) => ({ string, fret, glow: true }));
+
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      feedItems: FEED_ITEMS,
+      tabRowIndexes: [0, 1, 2, 3, 4, 5].map((row) => ({ row, top: `${(row / 5) * 100}%` })),
+      chords: CHORDS,
+      explorerDots: [{ string: 0, fret: 5, glow: true }],
+      scaleDots: SCALE_DOTS,
+      quizFretDots: [{ string: 0, fret: 3, glow: true }],
+      quizPlainOptions: ['F#', 'G', 'G#', 'A'],
+      studyHorizontalDots: [
+        { string: 1, fret: 3, glow: true }, { string: 3, fret: 5, glow: true },
+        { string: 4, fret: 7, glow: true }, { string: 0, fret: 9, glow: true },
+        { string: 2, fret: 12, glow: true },
+      ],
+      studyChord: CHORDS[1],
+    };
+  }
+}
+
+</script>
+</body>
+</html>
