@@ -104,6 +104,23 @@ describe('findPositions', () => {
   it('returns nothing for a pitch below the instrument', () => {
     expect(findPositions(STANDARD_TUNING, 30, [0, 12])).toEqual([]);
   });
+
+  it('returns nothing for a pitch above the instrument', () => {
+    expect(findPositions(STANDARD_TUNING, 100, [0, 30])).toEqual([]);
+  });
+
+  it('rejects a non-integer midi note', () => {
+    expect(() => findPositions(STANDARD_TUNING, 60.5, [0, 12])).toThrow();
+    expect(() => findPositions(STANDARD_TUNING, 40.0000001, [0, 12])).toThrow();
+  });
+
+  it('accepts a readonly fret range', () => {
+    const FIRST_BOX = [0, 5] as const;
+    expect(findPositions(STANDARD_TUNING, 45, FIRST_BOX)).toEqual([
+      { stringIndex: 0, fret: 5 },
+      { stringIndex: 1, fret: 0 },
+    ]);
+  });
 });
 
 describe('findPitchClassPositions', () => {
@@ -121,6 +138,48 @@ describe('findPitchClassPositions', () => {
       { stringIndex: 4, fret: 5 },
       { stringIndex: 5, fret: 0 },
     ]);
+  });
+
+  it('normalizes an out-of-range pitch class the same as its 0-11 equivalent', () => {
+    // 16 is "a fifth above A" (9 + 7), the kind of unwrapped arithmetic the chord
+    // and scale modules do. It must resolve identically to its mod-12 form, 4 (E).
+    expect(findPitchClassPositions(STANDARD_TUNING, 16, [0, 5])).toEqual(
+      findPitchClassPositions(STANDARD_TUNING, 4, [0, 5]),
+    );
+    // A negative pitch class must normalize the same way too.
+    expect(findPitchClassPositions(STANDARD_TUNING, -8, [0, 5])).toEqual(
+      findPitchClassPositions(STANDARD_TUNING, 4, [0, 5]),
+    );
+  });
+});
+
+describe('fret range clamping', () => {
+  it('drops the impossible below-the-nut position instead of emitting a negative fret', () => {
+    // Reproduces the exact reported bug: fret -1 must not appear.
+    expect(() => findPositions(STANDARD_TUNING, 39, [-2, 12])).not.toThrow();
+    expect(() => findPitchClassPositions(STANDARD_TUNING, 4, [-2, 12])).not.toThrow();
+    expect(findPositions(STANDARD_TUNING, 39, [-2, 12])).toEqual([]);
+  });
+
+  it('agrees on a range that starts below zero: neither throws, neither returns a negative fret', () => {
+    // Non-vacuous case: 40 is exactly the open low E, so a real position exists.
+    const positions = findPositions(STANDARD_TUNING, 40, [-5, 3]);
+    expect(positions.length).toBeGreaterThan(0);
+    for (const p of positions) {
+      expect(p.fret).toBeGreaterThanOrEqual(0);
+    }
+
+    const pcPositions = findPitchClassPositions(STANDARD_TUNING, 4, [-3, 5]);
+    expect(pcPositions.length).toBeGreaterThan(0);
+    for (const p of pcPositions) {
+      expect(p.fret).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('every position findPositions returns still round-trips through fretToMidi after clamping', () => {
+    for (const p of findPositions(STANDARD_TUNING, 40, [-5, 3])) {
+      expect(fretToMidi(STANDARD_TUNING, p.stringIndex, p.fret)).toBe(40);
+    }
   });
 });
 
