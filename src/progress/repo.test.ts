@@ -29,6 +29,17 @@ describe('WebProgressRepo', () => {
     await expect(new WebProgressRepo().load()).resolves.toEqual(emptyProgressState());
   });
 
+  it('recovers when localStorage.getItem itself throws, instead of crashing on launch', async () => {
+    // Bare localStorage access can throw (Safari's SecurityError with site
+    // data blocked, some private-browsing configurations) -- this must be
+    // caught exactly like a corrupt blob, not escape uncaught.
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    await expect(new WebProgressRepo().load()).resolves.toEqual(emptyProgressState());
+    vi.restoreAllMocks();
+  });
+
   it('exports the current state as JSON', async () => {
     const repo = new WebProgressRepo();
     const state = emptyProgressState();
@@ -99,5 +110,29 @@ describe('createDebouncedSaver', () => {
     const repo = { save: vi.fn(async () => {}) };
     await createDebouncedSaver(repo as never, 500).flush();
     expect(repo.save).not.toHaveBeenCalled();
+  });
+
+  it('reports a rejected save through onError instead of leaving it an unhandled rejection', async () => {
+    const failure = new Error('QuotaExceededError');
+    const repo = { save: vi.fn(async () => { throw failure; }) };
+    const onError = vi.fn();
+    const saver = createDebouncedSaver(repo as never, 500, onError);
+
+    saver.save(emptyProgressState());
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(onError).toHaveBeenCalledWith(failure);
+  });
+
+  it('reports a rejected flush through onError as well', async () => {
+    const failure = new Error('QuotaExceededError');
+    const repo = { save: vi.fn(async () => { throw failure; }) };
+    const onError = vi.fn();
+    const saver = createDebouncedSaver(repo as never, 500, onError);
+
+    saver.save(emptyProgressState());
+    await expect(saver.flush()).resolves.toBeUndefined();
+
+    expect(onError).toHaveBeenCalledWith(failure);
   });
 });

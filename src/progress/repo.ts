@@ -12,11 +12,15 @@ export interface ProgressRepo {
 /** Browser implementation, used in `npm run dev` and in tests. */
 export class WebProgressRepo implements ProgressRepo {
   async load(): Promise<ProgressState> {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === null) return emptyProgressState();
     try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw === null) return emptyProgressState();
       return migrate(JSON.parse(raw));
     } catch {
+      // Covers a corrupt/unparseable blob AND localStorage access itself
+      // throwing (e.g. Safari's SecurityError with site data blocked, or
+      // some private-browsing configurations) -- either way, launch must
+      // never crash.
       return emptyProgressState();
     }
   }
@@ -50,9 +54,11 @@ export function createProgressRepo(): ProgressRepo {
 export function createDebouncedSaver(
   repo: ProgressRepo,
   ms = 500,
+  onError?: (error: unknown) => void,
 ): { save(state: ProgressState): void; flush(): Promise<void> } {
   let pending: ProgressState | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  const handleError = onError ?? ((): void => {});
 
   async function write(): Promise<void> {
     if (timer !== null) {
@@ -69,9 +75,9 @@ export function createDebouncedSaver(
       pending = state;
       if (timer !== null) clearTimeout(timer);
       timer = setTimeout(() => {
-        void write();
+        write().catch(handleError);
       }, ms);
     },
-    flush: write,
+    flush: () => write().catch(handleError),
   };
 }
