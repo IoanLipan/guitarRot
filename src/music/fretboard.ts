@@ -17,7 +17,7 @@ function assertStringIndex(stringIndex: number): void {
  * bound is expressed exactly once and the two functions cannot disagree on
  * what a negative or overlong range means.
  */
-function clampFretRange(range: readonly [number, number]): [number, number] {
+export function clampFretRange(range: readonly [number, number]): [number, number] {
   const [lowFret, highFret] = range;
   return [Math.max(0, lowFret), Math.min(highFret, MAX_FRET)];
 }
