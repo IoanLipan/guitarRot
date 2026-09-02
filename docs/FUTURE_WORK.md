@@ -35,6 +35,17 @@ the native wrap lands — no change needed before then.
 None of these block anything today. Listed roughly in the order worth
 picking up.
 
+**Note on the chord diagram window:** `chordAdapter.ts`'s fret-window
+calculation now special-cases `baseFret === 1` (open shapes) to start at
+fret 0 so the nut and open-string circles stay visible, at the cost of the
+window not reaching `baseFret + 4` (fret 5) for those shapes even though
+`validateChordShape` technically permits a note that high. No open-position
+shape here uses fret 5 — real open chords don't — so this is an accepted,
+documented trade-off (see the comment in `chordShapeToFretboard`), not an
+oversight. If an open-position shape ever legitimately needs fret 5, this
+will need a real decision (e.g. widening the open-shape window to 6 frets)
+rather than the current fixed 5.
+
 ### Correctness / robustness
 - **`src/progress/types.ts`** — `migrate()`'s `srs`/`daily`/accumulator
   objects are plain `{}` literals, so a stored key literally named
