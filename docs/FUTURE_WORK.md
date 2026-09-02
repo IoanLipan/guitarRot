@@ -1,34 +1,186 @@
 # Future work
 
-Everything below is deliberately deferred, not forgotten. Each item was
-identified during the Foundation plan (see
-`docs/superpowers/plans/2026-09-02-foundation.md` and its execution ledger
-at `.superpowers/sdd/2026-09-02-foundation/progress.md`) and judged safe to
-carry forward rather than fix immediately.
+This is the living record of what's done, what's deliberately deferred, and
+what's still open against the approved spec
+(`docs/superpowers/specs/2026-09-02-guitar-rot-design.md`). Read it before
+starting new work — it exists specifically so nothing gets silently
+rebuilt or forgotten between sessions.
+
+## Status at a glance
+
+- **Plan 1 — Foundation** (music theory core, audio engine, `Fretboard`/
+  `TabStaff` renderers, progress storage): **done**. See
+  `docs/superpowers/plans/2026-09-02-foundation.md` and its ledger at
+  `.superpowers/sdd/2026-09-02-foundation/progress.md`.
+- **Plan 2 — App shell** (Feed / Learn / Quiz screens): **UI built and
+  working, not at spec parity.** It was built directly from
+  `design_handoff_guitarrot_app/` — a simplified visual mockup, not the full
+  spec — so real distance remains from what spec §8/§9 describe. Gaps below.
+- **Plan 3 — Content, design pass, Capacitor wrap**: not started.
 
 ## Plan 2 — App (feed, quizzes, Learn tab, shell)
+
+Built reusing Foundation's `Fretboard`, `TabStaff`, `chordAdapter`,
+`content/riffs`, `src/audio/*`, and `src/progress/*` rather than
+reimplementing any of them. 303 tests pass, typecheck is clean, `vite
+build` succeeds.
+
+**Built:**
+- `src/content/chords.ts` — 9-shape beginner chord library (E, Am, D, G, C,
+  Em, A, Dm, F), each validated against `validateChordShape`.
+- `src/quiz/generateQuiz.ts` — note-ID and chord-ID question generation with
+  chromatic-neighbor / other-library-chord distractors.
+- `src/feed/feedItems.ts` — the Feed's card list.
+- `src/progress/applyAnswer.ts` — pure streak/daily-stats fold for one quiz
+  answer.
+- `src/app/{useAudioEngine,useProgress,AppShell,TabBar}.tsx` — the shared
+  audio-engine/progress hooks, the gesture-unlock gate, and the bottom tab
+  bar shell.
+- `src/feed/{Feed,RiffCard,ChordCard,QuizCard}.tsx` — the scroll-snap feed
+  and its three card types.
+- `src/learn/Learn.tsx` — fretboard explorer (tap → hear + caption), 9-tile
+  chord library grid (tap → strum), E minor pentatonic box-1 display.
+- `src/quiz/{Quiz,AnswerGrid,QuizVisual}.tsx` — the standalone Quiz tab
+  (streak, progress bar, question/feedback states) and the answer-grid /
+  fretboard-or-chord-diagram pieces it shares with the Feed's `QuizCard`.
+- `src/App.tsx` now renders `AppShell`. `src/dev/DevHarness.tsx` (Foundation's
+  throwaway manual-test harness) has been deleted now that the real shell
+  supersedes it.
+
+**Checklist against the original spec's Plan 2 scope** (spec §8/§9):
+
+- [x] Vertical scroll-snap feed: riff-loop, chord, and quiz cards — built,
+      but as one **fixed 9-card cycle** (`feedItems.ts`), not the weighted
+      generator spec §8 describes.
+- [ ] Feed generator (`feed/generator.ts`) with SRS due-weighting — **not
+      built**.
+- [ ] SRS scheduler (`quiz/srs.ts`) — **not built**.
+- [~] Two quiz modes — **partially built**. Spec §9 defines `hear-note`
+      (audio plays, no visual; user names the pitch class **and** taps its
+      location on the fretboard) and `see-fret` (a marker appears; user
+      names it). Only the multiple-choice half of `see-fret` exists (a dot
+      shown, four name options). `hear-note` (audio-only) doesn't exist at
+      all, and no quiz interaction ever asks the user to tap the fretboard
+      to answer — every answer is a 2×2 button grid. A chord-ID quiz
+      (show a chord diagram, name it) also exists; it isn't in the original
+      spec's mode list — it came from the design handoff.
+- [x] Learn tab: fretboard explorer, chord library — done.
+- [ ] Learn tab: lesson viewer — **not built**. No `Lesson` content type
+      exists either. The design handoff never covered lessons at all (its
+      Learn section only specs explorer + chord library + scale positions),
+      even though spec §3 and §8 both call for them.
+- [x] Bottom tab bar shell — done, but **routing is a plain `useState<TabId>`
+      in `AppShell`**, not the React Router (memory/hash) spec §2 calls for.
+      No practical downside yet since nothing needs deep-linking or the
+      browser back button; revisit if either comes up.
+- [ ] Spring animation / haptic tap on every interaction (spec §12) — **not
+      built**, deliberately: spec §11 puts the whole motion/visual pass
+      under a later `frontend-design` step, and haptics needs the Capacitor
+      `haptics` plugin from Plan 3 anyway.
+
+**The one correctness gap that matters — read this before touching Feed
+again:** spec §8 states a hard rule: *"An IntersectionObserver ...
+designates exactly one active card. ... At most one card produces sound at
+any time. Overlapping playback is the single most likely defect in the feed
+and must be tested."* That rule is **not implemented**. Every `RiffCard` in
+the Feed creates its own independent `RiffPlayer`, and `Tone.Transport` is
+global — `riffPlayer.ts`'s own doc comment already says so ("only one
+player may run at a time: `start()` cancels whatever was previously
+scheduled"). Concretely: start riff A, scroll to riff B, tap play on B — A's
+schedule is silently cancelled by B's `start()`, but A's own component state
+still shows "Stop." Fix this before shipping the Feed for real: add an
+`IntersectionObserver` (or equivalent) that designates one active card,
+starts its audio on activation, and calls `stopAll()`/disposes its player on
+deactivation.
+
+**Smaller judgment calls made while building the mockup as literally
+specified** (not spec violations, just worth knowing):
+- Riff card's "Loop ↻" chip is visual-only — `riffPlayer.ts`'s `start()`
+  always sets `transport.loop = true`. A real one-shot mode means changing
+  that function's contract.
+- No sound plays on a quiz-answer tap; the design handoff's interaction
+  list didn't call for it.
+- Quiz tab's progress bar tracks a 10-question rolling round — invented;
+  neither the design handoff nor the spec define what the bar's denominator
+  should be. Once a real SRS due-queue exists, this should probably become
+  "due items remaining today" instead.
+- Correct/incorrect feedback holds 1.1s before auto-advancing to the next
+  question — duration wasn't specified anywhere.
+
+## Suggested order for closing the Plan 2 gaps
+
+1. **Fix the single-active-audio bug** above — small, correctness-critical,
+   independent of everything else. Do this first regardless of what else
+   changes.
+2. **Build `quiz/srs.ts`** and wire `ProgressState.srs` (the `SrsItem` type
+   has existed since Foundation; nothing writes to it yet). This unlocks
+   real due-queue-driven feed generation.
+3. **Build `feed/generator.ts`** (55/30/15 composition, due-weighting,
+   rolling ~20-card window, 15-card no-repeat rule, level gating) — depends
+   on #2 for due-weighting.
+4. **Content authoring pass** to ~24 chords / ~40 riffs / ~30 lessons, plus
+   a `Lesson` content type and Learn-tab lesson viewer (Plan 3 scope, but
+   the chord count also feeds the SRS item universe in #2 — do these
+   together rather than content-then-SRS-then-content-again).
+5. **`frontend-design` visual/motion pass** (Plan 3): spring animations,
+   haptics, the `ui/` primitives the original spec names.
+6. **Capacitor wrap** (Plan 3): iOS/Android platform folders, `preferences`
+   / `haptics` / `status-bar` / `splash-screen` plugins, fix `MANIFEST_URL`
+   for `capacitor://`/`file:` origins (see the Plan 3 section below).
+7. **Optional:** install real guitar samples, verify the engine upgrades to
+   `sampled`.
+
+## Plan 3 — Content, design pass, Capacitor wrap
 
 Not started. Scope per the design spec
 (`docs/superpowers/specs/2026-09-02-guitar-rot-design.md`):
 
-- Vertical scroll-snap feed: riff-loop cards, chord cards, quiz cards, an
-  "algorithm" that weights by SRS due-ness.
-- SRS scheduler (`quiz/srs.ts`) over the ~200-item note/chord universe.
-- Two quiz modes: hear-note-name-and-locate-it, see-fret-name-it.
-- Learn tab: fretboard explorer, chord library, lesson viewer.
-- Bottom tab bar shell and routing.
-
-## Plan 3 — Content, design pass, Capacitor wrap
-
-Not started. Scope: ~24 chords, ~40 riffs (original + public-domain),
-~30 micro-lessons; the `frontend-design` visual pass; adding iOS/Android
-platform folders and native plugins (Preferences, Haptics, StatusBar,
-SplashScreen); installing real guitar samples.
+- ~24 chords, ~40 riffs (original + public-domain), ~30 micro-lessons —
+  current counts are 9 / 3 / 0.
+- A `Lesson` content type and the Learn-tab lesson viewer UI (see Plan 2
+  gaps above — this didn't ship with the rest of Learn because the design
+  handoff never specified it).
+- The `frontend-design` visual pass (motion, haptics, `ui/` primitives).
+- Adding iOS/Android platform folders and native plugins (Preferences,
+  Haptics, StatusBar, SplashScreen).
+- Installing real guitar samples.
 
 **Known interface note for Plan 3:** `MANIFEST_URL` in `src/audio/manifest.ts`
 is the root-absolute path `/audio/guitar/manifest.json`, which won't resolve
 under Capacitor's `capacitor://` / `file:` origins. Make it configurable when
 the native wrap lands — no change needed before then.
+
+## Findings from the App-shell build (Plan 2)
+
+### Test coverage gaps
+- **No component tests for `RiffCard`, `ChordCard`, `QuizCard` (the Feed's
+  variant), `Feed`, `AppShell`, `TabBar`, `useAudioEngine`, or
+  `useProgress`.** Pure logic (`chords.ts`, `generateQuiz.ts`,
+  `feedItems.ts`, `applyAnswer.ts`) and the two most-scrutinized
+  screen-level components (`Learn`, the standalone `Quiz` tab) are tested;
+  the Feed's own card components and the shell plumbing are not. No known
+  bug hides here, but it's the largest coverage hole in Plan 2 — Foundation
+  gave `Fretboard`/`TabStaff` a full test file each, and these components
+  don't have the equivalent yet.
+- **Nothing in this build was clicked through in a real browser.** No
+  headless browser tool was available in the session that built it;
+  confirmed only via `tsc`, the full `vitest` suite, `vite build`, and
+  fetching every new module through Vite's dev server to rule out
+  compile/runtime-import errors. Do a real walkthrough (in particular the
+  Feed's scroll-snap behavior and the audio-unlock gate on an actual mobile
+  browser) before calling Plan 2 UI-complete.
+
+### Design decisions to revisit deliberately (not bugs)
+- Every Feed/Learn/Quiz component takes the narrow `AudioEngine` interface
+  (not the concrete `GuitarAudioEngine` class) specifically so it's
+  testable against a plain fake — mirrors `riffPlayer.ts`'s own
+  `engine: AudioEngine` parameter. `useAudioEngine.ts` is the one place that
+  still needs the concrete class, to call `new GuitarAudioEngine()`.
+- `progress/applyAnswer.ts` is a pure fold (`(state, correct, today) =>
+  state`) kept separate from `useProgress.ts`'s React/side-effecting glue,
+  matching how `progress/types.ts`'s `pruneDaily` is already factored.
+  Building the real SRS scheduler (gap above) should extend this function
+  rather than duplicating the streak/daily logic elsewhere.
 
 ## Carried-forward findings from the Foundation build
 
@@ -121,17 +273,9 @@ rather than the current fixed 5.
   boundaries (`chordAdapter`, `TabStaff`, `timing`, `riffPlayer`). No bug
   today; worth tightening to `readonly` once more consumers exist and the
   cost of getting it wrong goes up.
-- **`src/main.tsx`** — one leftover Vite-scaffold non-null assertion
-  (`document.getElementById('root')!`). Swap for an explicit throw.
 - **`public/favicon.svg`** — still Vite's own brand mark. Replace before any
   Capacitor store submission, given the project's no-third-party-material
   rule.
-- **`src/dev/DevHarness.tsx`** — its `requestAnimationFrame` loop runs
-  unconditionally even while stopped, which pins the tab-staff scroll
-  position to zero and blocks manual scrolling when nothing is playing.
-  This file is explicitly throwaway (replaced by the real app shell in
-  Plan 2), so likely not worth fixing in place — noting in case the harness
-  outlives its intended lifespan.
 
 ### Documented, intentional deviations from the design spec (not drift)
 These were deliberate implementation choices, not oversights — recorded
@@ -149,10 +293,17 @@ here only so nobody "fixes" them later without checking this list first.
 ## Process note
 
 Two implementer subagents were interrupted mid-task by session rate limits
-during this build (Task 9, Task 15). Both recovered cleanly — Task 9 left
-no partial files and was fully re-dispatched; Task 15's work was complete
-and independently re-verified (tests, typecheck, build, and several of its
-own numeric claims) before the controller performed its one missing
+during the Foundation build (Task 9, Task 15). Both recovered cleanly — Task 9
+left no partial files and was fully re-dispatched; Task 15's work was
+complete and independently re-verified (tests, typecheck, build, and several
+of its own numeric claims) before the controller performed its one missing
 `git commit` directly. Nothing was lost either time; the SDD ledger at
 `.superpowers/sdd/2026-09-02-foundation/progress.md` is the full record if
 it's ever useful to reconstruct exactly what happened and when.
+
+The Plan 2 app-shell build (Feed/Learn/Quiz) was done inline in a single
+conversation rather than through the `subagent-driven-development` process,
+directly from `design_handoff_guitarrot_app/`'s handoff package — there is
+no SDD ledger for it. This is also why its gaps against the original spec
+(above) are wider than Foundation's: it targeted the simpler mockup, not
+the full spec, by direct instruction.
