@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TOUCH_MIN, createFretboardGeometry } from './fretboardGeometry';
+import { TOUCH_MIN, createFretboardGeometry, type Rect } from './fretboardGeometry';
 
 describe('cellFrets', () => {
   it('excludes fret 0, which lives in the open-string margin', () => {
@@ -131,4 +131,60 @@ describe('inlayPoints', () => {
     const g = createFretboardGeometry({ orientation: 'horizontal', fretRange: [0, 12] });
     expect(g.inlayPoints(4)).toHaveLength(0);
   });
+});
+
+describe('fret range validation', () => {
+  it('rejects a non-integer fret bound', () => {
+    expect(() =>
+      createFretboardGeometry({ orientation: 'horizontal', fretRange: [2.5, 4] }),
+    ).toThrow();
+  });
+
+  it('rejects a negative fret bound', () => {
+    expect(() =>
+      createFretboardGeometry({ orientation: 'horizontal', fretRange: [-1, 4] }),
+    ).toThrow();
+  });
+});
+
+// The single-corner check `cellRect({ stringIndex: 0, fret: 0 })` at x,y >= 0
+// cannot see either the open/fret-1 overlap or the far-edge overflow — it
+// never inspects the far edges and never compares two rects to each other.
+// These sweeps check every cell against the canvas bounds and every pair of
+// cells against each other, across every orientation/interactive combo.
+describe('geometry sweep', () => {
+  const rectsOverlap = (a: Rect, b: Rect): boolean =>
+    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+  for (const orientation of ['horizontal', 'vertical'] as const) {
+    for (const interactive of [false, true]) {
+      describe(`${orientation}, interactive=${interactive}`, () => {
+        const g = createFretboardGeometry({ orientation, fretRange: [0, 5], interactive });
+        const rects: Rect[] = [];
+        for (let stringIndex = 0; stringIndex < 6; stringIndex += 1) {
+          for (const fret of [0, ...g.cellFrets]) {
+            rects.push(g.cellRect({ stringIndex, fret }));
+          }
+        }
+
+        it('keeps every cell fully on canvas', () => {
+          for (const rect of rects) {
+            expect(rect.x).toBeGreaterThanOrEqual(0);
+            expect(rect.y).toBeGreaterThanOrEqual(0);
+            expect(rect.x + rect.width).toBeLessThanOrEqual(g.width);
+            expect(rect.y + rect.height).toBeLessThanOrEqual(g.height);
+          }
+        });
+
+        it('never overlaps any two cells (touching edges allowed)', () => {
+          for (const [i, a] of rects.entries()) {
+            for (const [j, b] of rects.entries()) {
+              if (j <= i) continue;
+              expect(rectsOverlap(a, b)).toBe(false);
+            }
+          }
+        });
+      });
+    }
+  }
 });

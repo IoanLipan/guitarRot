@@ -15,10 +15,22 @@ export const DOUBLE_INLAY_FRETS = [12, 24] as const;
 
 type Padding = { top: number; right: number; bottom: number; left: number };
 
+// The numbers below are only an aesthetic floor. createFretboardGeometry
+// derives the real openOffset/padding from stringSpacing and fretSpacing
+// (after interactive widening) and clamps upward to guarantee three
+// invariants — never hand-tune these to "fix" an overlap or off-canvas
+// cell; fix the derivation instead:
+//   1. no overlap between the open-string cell and the fret-1 cell:
+//        openOffset >= fretSpacing / 2
+//   2. the open cell stays on canvas along the fret axis:
+//        padding.left (horizontal) / padding.top (vertical)
+//          >= openOffset + fretSpacing / 2
+//      (1) and (2) together mean padding must be >= fretSpacing along the
+//      fret axis.
+//   3. every cell stays on canvas along the string axis: the padding on
+//      both sides of that axis (top & bottom horizontal, left & right
+//      vertical) must be >= stringSpacing / 2.
 const BASE = {
-  // Left/top padding must exceed openOffset + fretSpacing / 2, or the
-  // open-string tap rect hangs off the edge of the canvas and is only
-  // partly clickable. The interactive fret spacing is the binding case.
   horizontal: {
     stringSpacing: 30,
     fretSpacing: 56,
@@ -35,9 +47,9 @@ const BASE = {
 
 export type FretboardGeometry = {
   orientation: Orientation;
-  fretRange: [number, number];
+  readonly fretRange: readonly [number, number];
   /** Frets that get a drawn cell. Never contains 0; open strings sit in the margin. */
-  cellFrets: number[];
+  readonly cellFrets: readonly number[];
   hasNut: boolean;
   width: number;
   height: number;
@@ -59,6 +71,12 @@ export function createFretboardGeometry(opts: {
 }): FretboardGeometry {
   const { orientation, fretRange, interactive = false } = opts;
   const [lowFret, highFret] = fretRange;
+  if (!Number.isInteger(lowFret) || !Number.isInteger(highFret)) {
+    throw new Error(`Fret range must use integer frets: ${lowFret}-${highFret}`);
+  }
+  if (lowFret < 0 || highFret < 0) {
+    throw new Error(`Fret range cannot be negative: ${lowFret}-${highFret}`);
+  }
   if (highFret < Math.max(1, lowFret)) {
     throw new Error(`Empty fret range: ${lowFret}-${highFret}`);
   }
@@ -68,7 +86,28 @@ export function createFretboardGeometry(opts: {
     ? Math.max(base.stringSpacing, TOUCH_MIN)
     : base.stringSpacing;
   const fretSpacing = interactive ? Math.max(base.fretSpacing, TOUCH_MIN) : base.fretSpacing;
-  const { padding, openOffset } = base;
+
+  // Derive openOffset and padding from the (possibly interactive-widened)
+  // spacing — see the invariants documented above BASE. The clamps only
+  // ever raise the aesthetic-floor values, never lower them.
+  const openOffset = Math.max(base.openOffset, fretSpacing / 2);
+  const fretAxisPad = openOffset + fretSpacing / 2;
+  const stringAxisPad = stringSpacing / 2 + 2; // 2px breathing room past the minimum
+
+  const padding: Padding =
+    orientation === 'horizontal'
+      ? {
+          left: Math.max(base.padding.left, fretAxisPad),
+          right: base.padding.right,
+          top: Math.max(base.padding.top, stringAxisPad),
+          bottom: Math.max(base.padding.bottom, stringAxisPad),
+        }
+      : {
+          top: Math.max(base.padding.top, fretAxisPad),
+          bottom: base.padding.bottom,
+          left: Math.max(base.padding.left, stringAxisPad),
+          right: Math.max(base.padding.right, stringAxisPad),
+        };
 
   const hasNut = lowFret === 0;
   const cellFrets: number[] = [];
@@ -115,7 +154,7 @@ export function createFretboardGeometry(opts: {
 
   return {
     orientation,
-    fretRange,
+    fretRange: [lowFret, highFret],
     cellFrets,
     hasNut,
     width,
