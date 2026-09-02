@@ -27,3 +27,21 @@ body {
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
 }
+
+@keyframes answer-correct-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(53, 208, 127, 0.55); }
+  50% { box-shadow: 0 0 0 16px rgba(53, 208, 127, 0); }
+}
+
+@keyframes answer-wrong-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 95, 0.55); }
+  50% { box-shadow: 0 0 0 16px rgba(255, 90, 95, 0); }
+}
+
+.answer-pulse-correct {
+  animation: answer-correct-pulse 1.4s ease-out infinite;
+}
+
+.answer-pulse-wrong {
+  animation: answer-wrong-pulse 1.4s ease-out infinite;
+}
