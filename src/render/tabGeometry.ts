@@ -1,4 +1,4 @@
-import { beatsPerBar, type TimeSignature } from '@/content';
+import { VALID_TIME_SIGNATURE_DENOMINATORS, beatsPerBar, type TimeSignature } from '@/content';
 import type { Line } from './fretboardGeometry';
 
 const STRING_COUNT = 6;
@@ -32,7 +32,23 @@ export function createTabGeometry(opts: {
   stringSpacing?: number;
 }): TabGeometry {
   const { bars, timeSignature } = opts;
-  if (bars < 1) throw new Error(`A tab staff needs at least one bar, got ${bars}`);
+  if (!Number.isInteger(bars) || bars < 1) {
+    throw new Error(`A tab staff needs a whole number of bars, at least one, got ${bars}`);
+  }
+
+  // Mirrors validateRiff's guard (src/content/types.ts): a malformed time
+  // signature (zero/negative numerator, a denominator that isn't a real
+  // note value) makes beatsPerBar produce Infinity or NaN, which would
+  // silently defeat every measurement below and render a blank SVG with an
+  // infinite/NaN viewBox.
+  const [numerator, denominator] = timeSignature;
+  if (
+    !Number.isInteger(numerator) ||
+    numerator <= 0 ||
+    !VALID_TIME_SIGNATURE_DENOMINATORS.has(denominator)
+  ) {
+    throw new Error(`Invalid time signature ${numerator}/${denominator}`);
+  }
 
   const beatWidth = opts.beatWidth ?? DEFAULTS.beatWidth;
   const stringSpacing = opts.stringSpacing ?? DEFAULTS.stringSpacing;

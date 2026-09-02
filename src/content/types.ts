@@ -46,7 +46,7 @@ export function riffTotalBeats(riff: Riff): number {
  * producing a note that plays outside its own loop.
  */
 /** Denominators that correspond to a real note value (whole through 16th). */
-const VALID_TIME_SIGNATURE_DENOMINATORS = new Set([1, 2, 4, 8, 16]);
+export const VALID_TIME_SIGNATURE_DENOMINATORS = new Set([1, 2, 4, 8, 16]);
 
 export function validateRiff(riff: Riff): string[] {
   const errors: string[] = [];
@@ -57,7 +57,9 @@ export function validateRiff(riff: Riff): string[] {
   if (!Number.isInteger(riff.bars) || riff.bars < 1) {
     errors.push(`${riff.id}: bars must be a positive integer`);
   }
-  if (riff.bpm < 30 || riff.bpm > 300) errors.push(`${riff.id}: bpm ${riff.bpm} is implausible`);
+  if (!Number.isFinite(riff.bpm) || riff.bpm < 30 || riff.bpm > 300) {
+    errors.push(`${riff.id}: bpm ${riff.bpm} is implausible`);
+  }
   if (riff.source === 'public-domain' && (riff.attribution ?? '').trim() === '') {
     errors.push(`${riff.id}: public-domain material needs an attribution`);
   }

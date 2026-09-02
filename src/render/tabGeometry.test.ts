@@ -41,4 +41,16 @@ describe('createTabGeometry', () => {
   it('rejects a riff with no bars', () => {
     expect(() => createTabGeometry({ bars: 0, timeSignature: [4, 4] })).toThrow();
   });
+
+  it('rejects a NaN bar count instead of producing NaN geometry', () => {
+    expect(() => createTabGeometry({ bars: NaN, timeSignature: [4, 4] })).toThrow();
+  });
+
+  it('rejects a fractional bar count', () => {
+    expect(() => createTabGeometry({ bars: 2.5, timeSignature: [4, 4] })).toThrow();
+  });
+
+  it('rejects a time signature with an invalid denominator instead of producing infinite geometry', () => {
+    expect(() => createTabGeometry({ bars: 4, timeSignature: [4, 0] })).toThrow();
+  });
 });

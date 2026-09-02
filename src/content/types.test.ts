@@ -81,6 +81,10 @@ describe('validateRiff', () => {
     expect(validateRiff({ ...valid, bpm: 5 }).join(' ')).toContain('bpm');
   });
 
+  it('rejects a NaN tempo', () => {
+    expect(validateRiff({ ...valid, bpm: NaN }).length).toBeGreaterThan(0);
+  });
+
   it('requires attribution on public-domain material', () => {
     const bad: Riff = { ...valid, source: 'public-domain' };
     expect(validateRiff(bad).join(' ')).toContain('attribution');
