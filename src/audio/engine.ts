@@ -40,10 +40,21 @@ export class GuitarAudioEngine implements AudioEngine {
 
     this.chain = [gain, filter, reverb];
 
-    this.voice =
-      this.currentBackend === 'sampled' && manifest !== null
-        ? await SampledGuitar.load(manifest)
-        : new SynthGuitar();
+    if (this.currentBackend === 'sampled' && manifest !== null) {
+      try {
+        this.voice = await SampledGuitar.load(manifest);
+      } catch (error) {
+        // A listed sample can 404 or be unreachable even when the manifest
+        // itself parsed fine (Tone.loaded() rejects in that case). Fail
+        // exactly as gracefully as the "no manifest at all" path already
+        // does, rather than leaving voice null and the app silently mute.
+        console.warn('Failed to load sampled guitar backend; falling back to synth.', error);
+        this.currentBackend = 'synth';
+        this.voice = new SynthGuitar();
+      }
+    } else {
+      this.voice = new SynthGuitar();
+    }
     this.voice.connect(gain);
   }
 
