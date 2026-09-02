@@ -101,4 +101,44 @@ describe('validateRiff', () => {
     };
     expect(validateRiff(bad).join(' ')).toContain('same string');
   });
+
+  it('rejects a non-finite beat', () => {
+    const bad = { ...valid, events: [{ stringIndex: 0, fret: 0, beat: NaN, duration: 1 }] };
+    expect(validateRiff(bad)).not.toEqual([]);
+  });
+
+  it('rejects a non-finite duration', () => {
+    const bad = { ...valid, events: [{ stringIndex: 0, fret: 0, beat: 0, duration: NaN }] };
+    expect(validateRiff(bad)).not.toEqual([]);
+  });
+
+  it('rejects an infinite duration', () => {
+    const bad = { ...valid, events: [{ stringIndex: 0, fret: 0, beat: 0, duration: Infinity }] };
+    expect(validateRiff(bad)).not.toEqual([]);
+  });
+
+  it('rejects a zero denominator in the time signature', () => {
+    const bad: Riff = { ...valid, timeSignature: [4, 0] };
+    expect(validateRiff(bad).length).toBeGreaterThan(0);
+  });
+
+  it('rejects a negative numerator in the time signature', () => {
+    const bad: Riff = { ...valid, timeSignature: [-4, 4] };
+    expect(validateRiff(bad).length).toBeGreaterThan(0);
+  });
+
+  it('rejects a fractional bar count', () => {
+    const bad: Riff = { ...valid, bars: 2.5 };
+    expect(validateRiff(bad).length).toBeGreaterThan(0);
+  });
+
+  it('rejects a blank title', () => {
+    const bad: Riff = { ...valid, title: '   ' };
+    expect(validateRiff(bad).join(' ')).toContain('title');
+  });
+
+  it('rejects a blank style', () => {
+    const bad: Riff = { ...valid, style: '' };
+    expect(validateRiff(bad).join(' ')).toContain('style');
+  });
 });
