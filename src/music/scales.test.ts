@@ -22,6 +22,14 @@ describe('scalePitchClasses', () => {
   it('adds one note to the pentatonic for the blues scale', () => {
     expect(scalePitchClasses(4, SCALES.blues)).toHaveLength(6);
   });
+
+  it('spells the major pentatonic as root, 2nd, 3rd, 5th, 6th', () => {
+    expect(scalePitchClasses(0, SCALES.majorPentatonic)).toEqual([0, 2, 4, 7, 9]);
+  });
+
+  it('spells the blues scale as the minor pentatonic plus the flat fifth', () => {
+    expect(scalePitchClasses(0, SCALES.blues)).toEqual([0, 3, 5, 6, 7, 10]);
+  });
 });
 
 describe('scalePositions', () => {
