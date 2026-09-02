@@ -262,7 +262,9 @@ the note names it contains, and two or three progressions it appears in.
 **QuizCard** — a single SRS item pulled from the due queue, rendered inline. Answering feeds
 the same scheduler as the Quiz tab.
 
-**LessonCard** — one theory idea, illustrated on a `Fretboard`. Roughly 15 seconds of reading.
+Lessons are deliberately *not* a feed card type. They live in the Learn tab, where reading is
+the intent. The feed stays three cards wide so its rhythm — play, play, answer — never breaks
+for prose.
 
 ### Audio lifecycle — hard rule
 
@@ -275,7 +277,7 @@ likely defect in the feed and must be tested.
 
 Pure and deterministic given `(state, seed, count)`, therefore fully testable.
 
-Composition targets: riff 50%, chord 25%, quiz 15%, lesson 10%.
+Composition targets: riff 55%, chord 30%, quiz 15%.
 
 Rules:
 - A quiz card appears every 4–6 cards whenever the SRS due queue is non-empty; if it is empty,
@@ -397,7 +399,7 @@ Vitest. Exhaustive unit coverage on the pure layers, light component coverage ab
   This catches authoring typos, which are otherwise silent and teach the user wrong things.
 - `quiz/srs.ts` — scheduling maths, ease floor, lapse handling.
 - `feed/generator.ts` — composition ratios, no-repeat window, level gating, quiz cadence,
-  determinism under a fixed seed.
+  determinism under a fixed seed, and that no lesson content ever enters the feed.
 - `audio/` — event-to-Transport-time conversion tested pure; Tone.js itself is not mocked or
   tested.
 - Components — `Fretboard` marker placement and tap mapping; feed single-active-audio rule.
