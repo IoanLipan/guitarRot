@@ -9,7 +9,7 @@ export type ChordFretboardProps = {
   fretRange: [number, number];
 };
 
-const DIAGRAM_FRETS = 4;
+const DIAGRAM_FRETS = 5;
 
 /** Splits a ChordShape into the props the Fretboard component understands. */
 export function chordShapeToFretboard(shape: ChordShape): ChordFretboardProps {
@@ -35,10 +35,19 @@ export function chordShapeToFretboard(shape: ChordShape): ChordFretboardProps {
     });
   });
 
+  // The window is anchored on the shape's own baseFret (the "leftmost fret
+  // of the diagram box"), matching the 5-fret span validateChordShape
+  // already enforces: [baseFret, baseFret + 4]. A valid ChordShape always
+  // has an integer baseFret >= 1; the fallback to the lowest fretted note
+  // only guards a malformed shape slipping through.
   const frettedFrets = markers.map((m) => m.fret);
-  const lowest = frettedFrets.length === 0 ? 1 : Math.min(...frettedFrets);
-  const start = lowest <= 1 ? 0 : lowest;
-  const end = (start === 0 ? 1 : start) + DIAGRAM_FRETS - 1;
+  const hasValidBaseFret = Number.isInteger(shape.baseFret) && shape.baseFret >= 1;
+  const start = hasValidBaseFret
+    ? shape.baseFret
+    : frettedFrets.length === 0
+      ? 1
+      : Math.min(...frettedFrets);
+  const end = start + DIAGRAM_FRETS - 1;
 
   return {
     markers,
