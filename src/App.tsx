@@ -1,5 +1,5 @@
-import DevHarness from '@/dev/DevHarness';
+import AppShell from '@/app/AppShell';
 
 export default function App() {
-  return <DevHarness />;
+  return <AppShell />;
 }
