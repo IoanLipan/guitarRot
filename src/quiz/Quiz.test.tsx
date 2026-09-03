@@ -9,6 +9,7 @@ function fakeProgress(overrides: Partial<ProgressHandle> = {}): ProgressHandle {
     state: emptyProgressState(),
     loaded: true,
     recordAnswer: vi.fn(),
+    updateSettings: vi.fn(),
     ...overrides,
   };
 }

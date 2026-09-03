@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import type { AudioEngine } from '@/audio';
+import { getToneProfile, type AudioEngine } from '@/audio';
 import { Learn } from './Learn';
 
 function fakeEngine(): AudioEngine {
   return {
     backend: 'synth',
     unlocked: true,
+    tone: getToneProfile('clean'),
+    setTone: vi.fn(),
     init: vi.fn(),
     unlock: vi.fn(),
     playNote: vi.fn(),

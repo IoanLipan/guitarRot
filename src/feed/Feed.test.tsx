@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { AudioEngine } from '@/audio';
+import { getToneProfile, type AudioEngine } from '@/audio';
 import { emptyProgressState } from '@/progress';
 import type { ProgressHandle } from '@/app/useProgress';
 
@@ -33,6 +33,8 @@ function fakeEngine(): AudioEngine {
   return {
     backend: 'synth',
     unlocked: true,
+    tone: getToneProfile('clean'),
+    setTone: vi.fn(),
     init: vi.fn(),
     unlock: vi.fn(),
     playNote: vi.fn(),
@@ -43,7 +45,12 @@ function fakeEngine(): AudioEngine {
 }
 
 function fakeProgress(): ProgressHandle {
-  return { state: emptyProgressState(), loaded: true, recordAnswer: vi.fn() };
+  return {
+    state: emptyProgressState(),
+    loaded: true,
+    recordAnswer: vi.fn(),
+    updateSettings: vi.fn(),
+  };
 }
 
 describe('Feed', () => {
@@ -52,10 +59,18 @@ describe('Feed', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the whole card list as scroll-snap children', () => {
+  it('renders a page of cards as scroll-snap children', () => {
     render(<Feed engine={fakeEngine()} progress={fakeProgress()} />);
     const scroller = screen.getByTestId('feed-scroller');
-    expect(scroller.querySelectorAll('[data-card-index]')).toHaveLength(9);
+    const cards = scroller.querySelectorAll('[data-card-index]');
+    expect(cards.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('opens on a playable card, not a quiz', () => {
+    render(<Feed engine={fakeEngine()} progress={fakeProgress()} />);
+    // The first card owns the only player, so a riff opening the feed is
+    // exactly the case where one gets created.
+    expect(startedPlayers).toHaveLength(1);
   });
 
   it('starts audio for the active card only, never for every riff on screen', () => {

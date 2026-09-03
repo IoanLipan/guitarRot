@@ -5,6 +5,7 @@ import {
   createProgressRepo,
   emptyProgressState,
   type ProgressState,
+  type Settings,
 } from '@/progress';
 
 function todayIso(): string {
@@ -15,6 +16,7 @@ export type ProgressHandle = {
   state: ProgressState;
   loaded: boolean;
   recordAnswer: (correct: boolean) => void;
+  updateSettings: (patch: Partial<Settings>) => void;
 };
 
 /** Loads progress once on mount and persists every answer, debounced. */
@@ -49,5 +51,13 @@ export function useProgress(): ProgressHandle {
     });
   }, []);
 
-  return { state, loaded, recordAnswer };
+  const updateSettings = useCallback((patch: Partial<Settings>) => {
+    setState((prev) => {
+      const next = { ...prev, settings: { ...prev.settings, ...patch } };
+      saverRef.current.save(next);
+      return next;
+    });
+  }, []);
+
+  return { state, loaded, recordAnswer, updateSettings };
 }

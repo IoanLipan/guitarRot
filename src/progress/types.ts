@@ -16,6 +16,8 @@ export type Settings = {
   preferFlats: boolean;
   /** Feed riff playback speed, 0.25 to 1.5. */
   defaultSpeed: number;
+  /** Guitar voicing id from `audio/tones.ts`. */
+  toneId: string;
 };
 
 export type DailyStat = {
@@ -39,6 +41,7 @@ export const DEFAULT_SETTINGS: Settings = {
   leftHanded: false,
   preferFlats: false,
   defaultSpeed: 1,
+  toneId: 'clean',
 };
 
 export const SEEN_LIMIT = 200;
@@ -131,6 +134,10 @@ export function migrate(raw: unknown): ProgressState {
           typeof raw.settings.defaultSpeed === 'number'
             ? raw.settings.defaultSpeed
             : DEFAULT_SETTINGS.defaultSpeed,
+        toneId:
+          typeof raw.settings.toneId === 'string'
+            ? raw.settings.toneId
+            : DEFAULT_SETTINGS.toneId,
       }
     : { ...DEFAULT_SETTINGS };
 
