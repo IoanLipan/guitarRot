@@ -33,11 +33,39 @@ describe('tone profiles', () => {
     expect(rock.string.dampening).toBeGreaterThan(blues.string.dampening);
   });
 
-  it('gives country the brightest, longest-ringing string', () => {
+  it('gives country the brightest string', () => {
     const country = getToneProfile('country');
     for (const other of TONE_PROFILES.filter((p) => p.id !== 'country')) {
       expect(country.string.dampening).toBeGreaterThan(other.string.dampening);
-      expect(country.string.resonance).toBeGreaterThanOrEqual(other.string.resonance);
+    }
+  });
+
+  // Regression: country used to ring at resonance 0.985 — on the edge of
+  // runaway feedback — which built into a harsh sustain that read as more
+  // aggressive than the actually-distorted rock preset. Twang is a bright
+  // attack that decays, so country must stay clean and must let go.
+  it('keeps country clean, and never edgier than rock', () => {
+    const country = getToneProfile('country');
+    const rock = getToneProfile('rock');
+    expect(country.amp.drive).toBe(0);
+    expect(country.amp.drive).toBeLessThan(rock.amp.drive);
+    expect(country.string.resonance).toBeLessThan(rock.string.resonance + 0.03);
+  });
+
+  // Distortion needs top end to read as crunch rather than mud: rock's
+  // post-drive filter used to sit below its own harmonics.
+  it('leaves rock enough top end for its drive to be audible', () => {
+    const rock = getToneProfile('rock');
+    expect(rock.amp.filterHz).toBeGreaterThan(5000);
+    expect(rock.amp.drive).toBeGreaterThan(0.3);
+  });
+
+  // Both ends matter: below ~0.93 a note dies in a quarter second and reads
+  // as a plink rather than a string, and at 1.0 it never decays at all.
+  it('keeps every string in the range that sustains without ringing forever', () => {
+    for (const profile of TONE_PROFILES) {
+      expect(profile.string.resonance).toBeGreaterThanOrEqual(0.93);
+      expect(profile.string.resonance).toBeLessThan(0.99);
     }
   });
 

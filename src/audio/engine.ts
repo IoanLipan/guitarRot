@@ -18,8 +18,12 @@ const DEFAULT_SPREAD_MS = 28;
  * Reverb decay is fixed because changing it forces Tone to re-render the
  * impulse response asynchronously; tone profiles vary the wet mix instead,
  * which is instant and does the audible work.
+ *
+ * Kept short deliberately: a long tail smears consecutive plucks into each
+ * other and the result stops sounding like a guitar in a room and starts
+ * sounding like a sustained pad.
  */
-const REVERB_DECAY = 1.6;
+const REVERB_DECAY = 1.1;
 
 export class GuitarAudioEngine implements AudioEngine {
   private voice: GuitarVoice | null = null;
