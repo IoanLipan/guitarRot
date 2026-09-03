@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRiffPlayer, type AudioEngine, type RiffPlayer } from '@/audio';
+import { tapHaptic } from '@/app/haptics';
 import type { Riff } from '@/content';
 import { createTabGeometry, TabStaff } from '@/render';
 
@@ -75,6 +76,7 @@ export function RiffCard({
   }, [geometry]);
 
   function handleToggle() {
+    tapHaptic();
     const player = playerRef.current;
     if (player === null) return;
     if (playing) {

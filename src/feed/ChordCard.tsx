@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AudioEngine } from '@/audio';
+import { tapHaptic } from '@/app/haptics';
 import {
   chordToneNames,
   chordVoicing,
@@ -25,6 +26,7 @@ export function ChordCard({ chord, engine }: { chord: ChordShape; engine: AudioE
   );
 
   function handleStrum() {
+    tapHaptic();
     engine.strum(chordVoicing(chord, STANDARD_TUNING));
     setStrumming(true);
     if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);

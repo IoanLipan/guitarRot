@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { errorHaptic, successHaptic } from '@/app/haptics';
 import type { ProgressHandle } from '@/app/useProgress';
 import { AnswerGrid } from './AnswerGrid';
 import { explainAnswer } from './explainAnswer';
@@ -46,6 +47,8 @@ export function Quiz({ progress }: { progress: ProgressHandle }) {
     const isCorrect = option === question.correctAnswer;
     progress.recordAnswer(isCorrect);
     setAnsweredInRound((count) => count + 1);
+    if (isCorrect) successHaptic();
+    else errorHaptic();
 
     // Right answers keep moving on their own; wrong ones wait for the user
     // to read why they were wrong.

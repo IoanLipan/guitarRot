@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AudioEngine } from '@/audio';
+import { tapHaptic } from '@/app/haptics';
 import { CHORDS } from '@/content';
 import {
   chordToneNames,
@@ -49,12 +50,14 @@ export function Learn({ engine }: { engine: AudioEngine }) {
   }
 
   function handleExplorerTap(position: FretPosition) {
+    tapHaptic();
     const midi = fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret);
     engine.playNote(midi, { stringIndex: position.stringIndex });
     setTapped(position);
   }
 
   function handleChordTap(chord: ChordShape) {
+    tapHaptic();
     engine.strum(chordVoicing(chord, STANDARD_TUNING));
     flashChord(chord);
   }

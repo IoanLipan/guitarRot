@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { SplashScreen } from '@capacitor/splash-screen';
+import { Style, StatusBar } from '@capacitor/status-bar';
 import { getToneProfile } from '@/audio';
 import { Feed } from '@/feed/Feed';
 import { Learn } from '@/learn/Learn';
@@ -22,6 +25,18 @@ export function AppShell() {
     if (engine === null || !progress.loaded) return;
     engine.setTone(getToneProfile(toneId));
   }, [engine, progress.loaded, toneId]);
+
+  // Native chrome, once, once there's something real on screen to reveal.
+  // launchAutoHide is off in capacitor.config.ts specifically so the splash
+  // never drops the user before this component has painted its first frame.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    void StatusBar.setStyle({ style: Style.Dark });
+    void StatusBar.setBackgroundColor({ color: '#0b0b0f' }).catch(() => {
+      // iOS has no concept of a status bar background colour; expected to reject there.
+    });
+    void SplashScreen.hide();
+  }, []);
 
   if (!ready || engine === null) {
     return (

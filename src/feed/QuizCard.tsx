@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { errorHaptic, successHaptic } from '@/app/haptics';
 import { AnswerGrid, explainAnswer, QuizVisual, type QuizQuestion } from '@/quiz';
 
 /** A right answer holds just long enough to register, then the feed moves on. */
@@ -32,6 +33,8 @@ export function QuizCard({
     setPicked(option);
     const isCorrect = option === question.correctAnswer;
     onAnswered(isCorrect);
+    if (isCorrect) successHaptic();
+    else errorHaptic();
 
     // Right answers keep the scroll rhythm going by themselves. Wrong ones
     // stop and explain — advancing past a mistake you haven't read is how

@@ -1,3 +1,5 @@
+import { tapHaptic } from './haptics';
+
 export type TabId = 'feed' | 'learn' | 'quiz';
 
 const TABS: readonly { id: TabId; label: string }[] = [
@@ -17,7 +19,10 @@ export function TabBar({ active, onChange }: { active: TabId; onChange: (id: Tab
           <button
             key={tab.id}
             type="button"
-            onClick={() => onChange(tab.id)}
+            onClick={() => {
+              tapHaptic();
+              onChange(tab.id);
+            }}
             aria-current={isActive ? 'page' : undefined}
             className="flex h-[78px] flex-1 flex-col items-center justify-center gap-1 text-[11px] font-bold active:scale-95"
             style={{ color: isActive ? 'var(--color-accent)' : INACTIVE_COLOR }}
