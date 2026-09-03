@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">guitarRot</string>
+    <string name="title_activity_main">guitarRot</string>
+    <string name="package_name">com.guitarrot.app</string>
+    <string name="custom_url_scheme">com.guitarrot.app</string>
+</resources>
