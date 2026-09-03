@@ -19,7 +19,7 @@ function fakeEngine(): AudioEngine {
 describe('Learn', () => {
   it('shows a placeholder caption before any fret is tapped', () => {
     render(<Learn engine={fakeEngine()} />);
-    expect(screen.getByText('Tap a fret to hear it.')).toBeInTheDocument();
+    expect(screen.getByText('Tap any fret to hear it.')).toBeInTheDocument();
   });
 
   it('plays the tapped note and updates the caption', () => {
@@ -46,5 +46,17 @@ describe('Learn', () => {
     fireEvent.click(screen.getByTestId('chord-tile-Am-open'));
 
     expect(engine.strum).toHaveBeenCalledTimes(1);
+  });
+
+  it('names the chord and its tones after a tap, and marks the tile pressed', () => {
+    render(<Learn engine={fakeEngine()} />);
+    expect(screen.getByTestId('chord-caption')).toHaveTextContent(
+      'Tap a shape to hear it strummed.',
+    );
+
+    fireEvent.click(screen.getByTestId('chord-tile-Am-open'));
+
+    expect(screen.getByTestId('chord-caption')).toHaveTextContent('Am minor — A · C · E');
+    expect(screen.getByTestId('chord-tile-Am-open')).toHaveAttribute('aria-pressed', 'true');
   });
 });
