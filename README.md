@@ -42,3 +42,22 @@ npm run build      # tsc -b && vite build
 Audio playback requires a real tap or click — browsers suspend Web Audio
 until a user gesture — so the app shows a "Tap to start" screen on first
 load for exactly that reason.
+
+Deploys to production automatically on every push to `master` (Vercel).
+
+## Android
+
+Wrapped with Capacitor (`android/` is a real, committed platform project).
+Building it locally needs a JDK 21 on `JAVA_HOME` and the Android SDK's
+`build-tools`/`platforms` (Android Studio isn't required if those are
+already on disk):
+
+```bash
+npm run build && npx cap sync android
+cd android && JAVA_HOME=/path/to/jdk-21 ./gradlew assembleDebug
+```
+
+Produces `android/app/build/outputs/apk/debug/app-debug.apk`, installable
+by sideloading (no Play Store account needed). See
+[`docs/FUTURE_WORK.md`](docs/FUTURE_WORK.md)'s Plan 3 section for what's
+wired (Preferences, Haptics, StatusBar, SplashScreen) and what isn't (iOS).

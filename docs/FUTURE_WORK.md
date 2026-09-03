@@ -16,7 +16,9 @@ rebuilt or forgotten between sessions.
   working, not at spec parity.** It was built directly from
   `design_handoff_guitarrot_app/` — a simplified visual mockup, not the full
   spec — so real distance remains from what spec §8/§9 describe. Gaps below.
-- **Plan 3 — Content, design pass, Capacitor wrap**: not started.
+- **Plan 3 — Content, design pass, Capacitor wrap**: content and the
+  design/motion pass not started; the **Capacitor wrap itself is now done**
+  — see below.
 
 ## Plan 2 — App (feed, quizzes, Learn tab, shell)
 
@@ -126,17 +128,43 @@ specified** (not spec violations, just worth knowing):
    together rather than content-then-SRS-then-content-again).
 5. **`frontend-design` visual/motion pass** (Plan 3): spring animations,
    haptics, the `ui/` primitives the original spec names.
-6. **Capacitor wrap** (Plan 3): iOS/Android platform folders, `preferences`
-   / `haptics` / `status-bar` / `splash-screen` plugins, fix `MANIFEST_URL`
-   for `capacitor://`/`file:` origins (see the Plan 3 section below).
+6. ~~Capacitor wrap~~ — **done for Android** (see the Plan 3 section below).
+   iOS still needs `npx cap add ios` and an Xcode signing pass.
 7. **Optional:** install real guitar samples, verify the engine upgrades to
    `sampled`.
 
 ## Plan 3 — Content, design pass, Capacitor wrap
 
-Not started. Scope per the design spec
-(`docs/superpowers/specs/2026-09-02-guitar-rot-design.md`):
+**Capacitor wrap — DONE (Android; iOS not attempted).** `android/` is a real
+platform project, committed (its own generated `.gitignore` already excludes
+`build/`, `.gradle/`, and the machine-specific `local.properties`). Building
+it needs a JDK 21 on `JAVA_HOME` — Capacitor 8's Android core requires 21;
+17 fails with `invalid source release: 21`, which cost a round-trip the
+first time this was built. `npx cap sync android` after any `npm run build`
+keeps the native project's web assets current; `cd android && ./gradlew
+assembleDebug` produces `android/app/build/outputs/apk/debug/app-debug.apk`
+(verify with `apksigner verify --verbose`, not `jarsigner -verify` — modern
+AGP debug builds use the v2 signature scheme, which `jarsigner` doesn't
+understand and will misreport as "unsigned").
 
+All four plugins the original spec named are wired, not just installed:
+- **Preferences** — `NativeProgressRepo` in `src/progress/repo.ts` mirrors
+  `WebProgressRepo` exactly; `createProgressRepo()` switches on
+  `Capacitor.isNativePlatform()`.
+- **Haptics** — `src/app/haptics.ts` (`tapHaptic`/`successHaptic`/
+  `errorHaptic`), a no-op outside a native platform, wired to tab switches,
+  fret taps, chord strums, riff play/pause, and quiz answers.
+- **StatusBar** / **SplashScreen** — set in `AppShell`'s mount effect;
+  `launchAutoHide` is off in `capacitor.config.ts` so the splash holds until
+  `AppShell` has actually painted something, then hides itself.
+
+The app icon and splash were generated from scratch (`assets/icon*.png`,
+`assets/splash.png`, plus `public/favicon.svg` for the web build) rather
+than left as the placeholder — see below — using the same zero-dependency
+headless-Chrome-over-CDP approach as the UI screenshot passes, run through
+`@capacitor/assets`.
+
+Still open for Plan 3:
 - ~24 chords, ~40 riffs (original + public-domain), ~30 micro-lessons —
   current counts are 9 / 9 / 0. The riff library now spans blues, country,
   rock, fingerstyle and two lead solos; chords are still the nine open/barre
@@ -144,15 +172,27 @@ Not started. Scope per the design spec
 - A `Lesson` content type and the Learn-tab lesson viewer UI (see Plan 2
   gaps above — this didn't ship with the rest of Learn because the design
   handoff never specified it).
-- The `frontend-design` visual pass (motion, haptics, `ui/` primitives).
-- Adding iOS/Android platform folders and native plugins (Preferences,
-  Haptics, StatusBar, SplashScreen).
+- The `frontend-design` visual/motion pass (spring animations, `ui/`
+  primitives) — haptics landed already, ahead of this item, since they were
+  cheap once the Capacitor wrap existed.
+- iOS platform folder — not attempted. `npx cap add ios` plus an Xcode
+  signing pass; no reason it wouldn't work, just not exercised this session.
 - Installing real guitar samples.
 
-**Known interface note for Plan 3:** `MANIFEST_URL` in `src/audio/manifest.ts`
-is the root-absolute path `/audio/guitar/manifest.json`, which won't resolve
-under Capacitor's `capacitor://` / `file:` origins. Make it configurable when
-the native wrap lands — no change needed before then.
+**`MANIFEST_URL` is very likely already fine, but this is reasoning, not a
+verified test.** The APK was built and its signature/manifest checked with
+`aapt`/`apksigner`, but nothing in this session actually ran it on an
+emulator or device. The old note here worried that the root-absolute path
+`/audio/guitar/manifest.json` wouldn't resolve under `capacitor://`/`file:`
+origins. Modern Capacitor (8.x) serves the app over a real local HTTP(S)
+origin (`https://localhost` on Android) rather than a raw `file://` URL, so
+a same-origin absolute-path fetch should resolve exactly like it does in a
+browser — but confirm this by actually installing the APK and checking
+`engine.backend` (the Settings sheet's "Engine:" line) reports `synth`
+with no console error, before treating this as closed. Since no
+`public/audio/guitar/manifest.json` exists yet either way, the expected
+on-device result is the same 404-and-fall-back-to-synth behavior the
+browser already shows.
 
 ## Guitar tones
 
@@ -339,6 +379,19 @@ here only so nobody "fixes" them later without checking this list first.
   pass finger numbers through `marker.label` instead.
 - The spec's `showOpenStrings?: boolean` became two explicit arrays,
   `openStrings`/`mutedStrings`, on `FretboardProps`.
+
+## Deployment
+
+The `guitar-rot` Vercel project (org `lipanovskis-projects`) auto-deploys
+`master` to production on every push. It didn't always: its **Production
+Branch** setting was stuck at `foundation` — a stale branch name from before
+that work merged — so every push to `master` only produced a Preview,
+requiring a manual "Promote to Production" click each time. Fixed via the
+dashboard at Settings → Git → Production Branch (the Vercel REST API's
+`PATCH /v9/projects/:id` schema rejects both a top-level `productionBranch`
+field and a nested `link.productionBranch` one, so this is a dashboard-only
+change, not something to script). If deploys ever start requiring manual
+promotion again, check that setting first.
 
 ## Process note
 
