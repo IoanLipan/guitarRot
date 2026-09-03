@@ -49,11 +49,13 @@ build` succeeds.
 
 **Checklist against the original spec's Plan 2 scope** (spec §8/§9):
 
-- [x] Vertical scroll-snap feed: riff-loop, chord, and quiz cards — built,
-      but as one **fixed 9-card cycle** (`feedItems.ts`), not the weighted
-      generator spec §8 describes.
-- [ ] Feed generator (`feed/generator.ts`) with SRS due-weighting — **not
-      built**.
+- [x] Vertical scroll-snap feed: riff-loop, chord, and quiz cards.
+- [~] Feed generator (`feed/generator.ts`) — **built**, endless and
+      seeded-reproducible, hitting the spec's 55/30/15 mix, a quiz every
+      3-5 cards, no more than two cards of a kind in a row, and a per-pool
+      no-repeat window. **Not** yet weighted by SRS due-ness (needs the
+      scheduler below) and there is no level gating, since nothing tracks a
+      user level yet.
 - [ ] SRS scheduler (`quiz/srs.ts`) — **not built**.
 - [~] Two quiz modes — **partially built**. Spec §9 defines `hear-note`
       (audio plays, no visual; user names the pitch class **and** taps its
@@ -115,9 +117,9 @@ specified** (not spec violations, just worth knowing):
 2. **Build `quiz/srs.ts`** and wire `ProgressState.srs` (the `SrsItem` type
    has existed since Foundation; nothing writes to it yet). This unlocks
    real due-queue-driven feed generation.
-3. **Build `feed/generator.ts`** (55/30/15 composition, due-weighting,
-   rolling ~20-card window, 15-card no-repeat rule, level gating) — depends
-   on #2 for due-weighting.
+3. ~~Build `feed/generator.ts`~~ — **done**, except for the due-weighting
+   hook, which is a small change to `pickContent` once #2 exists, and level
+   gating, which needs a tracked user level.
 4. **Content authoring pass** to ~24 chords / ~40 riffs / ~30 lessons, plus
    a `Lesson` content type and Learn-tab lesson viewer (Plan 3 scope, but
    the chord count also feeds the SRS item universe in #2 — do these
@@ -136,7 +138,9 @@ Not started. Scope per the design spec
 (`docs/superpowers/specs/2026-09-02-guitar-rot-design.md`):
 
 - ~24 chords, ~40 riffs (original + public-domain), ~30 micro-lessons —
-  current counts are 9 / 3 / 0.
+  current counts are 9 / 9 / 0. The riff library now spans blues, country,
+  rock, fingerstyle and two lead solos; chords are still the nine open/barre
+  shapes.
 - A `Lesson` content type and the Learn-tab lesson viewer UI (see Plan 2
   gaps above — this didn't ship with the rest of Learn because the design
   handoff never specified it).
@@ -149,6 +153,24 @@ Not started. Scope per the design spec
 is the root-absolute path `/audio/guitar/manifest.json`, which won't resolve
 under Capacitor's `capacitor://` / `file:` origins. Make it configurable when
 the native wrap lands — no change needed before then.
+
+## Guitar tones
+
+`audio/tones.ts` holds four voicings (clean, rock, blues, country). Each
+shapes the Karplus-Strong string model *and* the chain after it
+(distortion, filter, reverb wet, gain); `GuitarAudioEngine.setTone` swaps
+both live. Two constraints worth knowing before adding a voicing:
+
+- **Reverb decay is fixed.** Changing `decay` makes Tone re-render its
+  impulse response asynchronously, which would stall a tone switch. Vary
+  `reverbWet` instead — it is instant and does the audible work.
+- **`settings.toneId` is a plain string, not the `ToneId` union.** That
+  keeps `progress/` free of a dependency on `audio/`, per the spec's
+  layering rules. `getToneProfile` is total and falls back to the default
+  for an unknown stored id, which is what makes that safe.
+
+The sampled backend ignores the string half of a profile and still gets the
+amp half, so tones remain audible once real samples land.
 
 ## Findings from the App-shell build (Plan 2)
 
@@ -174,8 +196,8 @@ full page reload, and a reload landing mid-script produces a blank
 screenshot that looks exactly like a crash.
 
 ### Test coverage gaps
-- **No component tests for `RiffCard`, `ChordCard`, `AppShell`, `TabBar`,
-  `useAudioEngine`, or `useProgress`.** `Feed`, `QuizCard`, `Learn` and the
+- **No component tests for `RiffCard`, `ChordCard`, `SettingsSheet`,
+  `AppShell`, `TabBar`, `useAudioEngine`, or `useProgress`.** `Feed`, `QuizCard`, `Learn` and the
   `Quiz` tab now have them, as does every pure module. The shell plumbing
   and the two remaining card components are still uncovered.
 - **Layout is not asserted anywhere.** The screenshot pass above is manual.
