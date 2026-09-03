@@ -40,15 +40,19 @@ function shuffle<T>(items: readonly T[], random: () => number): T[] {
   return copy;
 }
 
-export function generateNoteQuestion(
+/**
+ * Builds the question for one specific fret.
+ *
+ * Split out from the random generator so a question can be rebuilt from its
+ * own id — that is what makes a quiz card shareable by link.
+ */
+export function noteQuestionAt(
+  stringIndex: number,
+  fret: number,
   opts: { tuning?: Tuning; random?: () => number } = {},
 ): NoteQuizQuestion {
   const tuning = opts.tuning ?? STANDARD_TUNING;
   const random = opts.random ?? Math.random;
-  const [lowFret, highFret] = NOTE_QUIZ_FRET_RANGE;
-
-  const stringIndex = Math.floor(random() * STRING_COUNT);
-  const fret = lowFret + Math.floor(random() * (highFret - lowFret + 1));
   const midi = fretToMidi(tuning, stringIndex, fret);
   const correctAnswer = noteName(midi);
 
@@ -72,18 +76,31 @@ export function generateNoteQuestion(
   };
 }
 
-export function generateChordQuestion(
+export function generateNoteQuestion(
+  opts: { tuning?: Tuning; random?: () => number } = {},
+): NoteQuizQuestion {
+  const random = opts.random ?? Math.random;
+  const [lowFret, highFret] = NOTE_QUIZ_FRET_RANGE;
+  const stringIndex = Math.floor(random() * STRING_COUNT);
+  const fret = lowFret + Math.floor(random() * (highFret - lowFret + 1));
+  return noteQuestionAt(stringIndex, fret, { ...opts, random });
+}
+
+/** Builds the question for one specific chord, so it can be rebuilt from its id. */
+export function chordQuestionFor(
+  correct: ChordShape,
   opts: { chords?: readonly ChordShape[]; random?: () => number } = {},
 ): ChordQuizQuestion {
   const pool = opts.chords ?? CHORDS;
   const random = opts.random ?? Math.random;
   if (pool.length < 4) {
-    throw new Error('generateChordQuestion needs a pool of at least 4 chords');
+    throw new Error('chordQuestionFor needs a pool of at least 4 chords');
   }
 
-  const [correct, ...rest] = shuffle(pool, random);
-  if (correct === undefined) throw new Error('Empty chord pool');
-  const distractors = rest.slice(0, 3);
+  const distractors = shuffle(
+    pool.filter((chord) => chord.id !== correct.id),
+    random,
+  ).slice(0, 3);
 
   return {
     kind: 'chord',
@@ -93,4 +110,18 @@ export function generateChordQuestion(
     correctAnswer: correct.name,
     options: shuffle([correct.name, ...distractors.map((c) => c.name)], random),
   };
+}
+
+export function generateChordQuestion(
+  opts: { chords?: readonly ChordShape[]; random?: () => number } = {},
+): ChordQuizQuestion {
+  const pool = opts.chords ?? CHORDS;
+  const random = opts.random ?? Math.random;
+  if (pool.length < 4) {
+    throw new Error('generateChordQuestion needs a pool of at least 4 chords');
+  }
+
+  const [correct] = shuffle(pool, random);
+  if (correct === undefined) throw new Error('Empty chord pool');
+  return chordQuestionFor(correct, { ...opts, random });
 }

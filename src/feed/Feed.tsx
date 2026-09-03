@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { AudioEngine } from '@/audio';
 import type { ProgressHandle } from '@/app/useProgress';
+import { ShareButton, shareTargetOf, shareTitleOf } from '@/share';
 import { ChordCard } from './ChordCard';
 import { emptyCursor, generateFeedPage, type FeedCursor, type FeedItem } from './generator';
 import { QuizCard } from './QuizCard';
@@ -20,12 +21,21 @@ const PRUNE_CHUNK = 10;
 /** Never prune closer than this to the active card. */
 const PRUNE_SAFETY = 3;
 
-export function Feed({ engine, progress }: { engine: AudioEngine; progress: ProgressHandle }) {
+export function Feed({
+  engine,
+  progress,
+  /** Card a shared link asked for; opens the feed on it. */
+  initialItem,
+}: {
+  engine: AudioEngine;
+  progress: ProgressHandle;
+  initialItem?: FeedItem | undefined;
+}) {
   const cursorRef = useRef<FeedCursor>(emptyCursor());
   const [items, setItems] = useState<FeedItem[]>(() => {
     const page = generateFeedPage(PAGE_SIZE, cursorRef.current);
     cursorRef.current = page.cursor;
-    return page.items;
+    return initialItem === undefined ? page.items : [initialItem, ...page.items];
   });
 
   const { activeIndex, containerRef, cardProps, scrollToCard, shiftActiveIndex } = useActiveCard(
@@ -76,7 +86,14 @@ export function Feed({ engine, progress }: { engine: AudioEngine; progress: Prog
       data-testid="feed-scroller"
     >
       {items.map((item, index) => (
-        <div key={item.id} {...cardProps(index)} className="h-full snap-start">
+        <div key={item.id} {...cardProps(index)} className="relative h-full snap-start">
+          {/* One share control for every kind of card, rather than three.
+              Sits below the settings gear so the two never overlap. */}
+          <ShareButton
+            target={shareTargetOf(item)}
+            title={shareTitleOf(item)}
+            className="absolute top-[calc(env(safe-area-inset-top)+3.5rem)] right-4 z-20 bg-ground/55 backdrop-blur-md"
+          />
           {item.kind === 'riff' && (
             <RiffCard riff={item.riff} engine={engine} isActive={index === activeIndex} />
           )}

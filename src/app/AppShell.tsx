@@ -6,6 +6,7 @@ import { getToneProfile } from '@/audio';
 import { Feed } from '@/feed/Feed';
 import { Learn } from '@/learn/Learn';
 import { Quiz } from '@/quiz/Quiz';
+import { readShareTarget, resolveShareTarget, type SharedContent } from '@/share';
 import { Songs } from '@/songs';
 import { SettingsSheet } from './SettingsSheet';
 import { TabBar, type TabId } from './TabBar';
@@ -17,6 +18,21 @@ export function AppShell() {
   const progress = useProgress();
   const [tab, setTab] = useState<TabId>('feed');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shared, setShared] = useState<SharedContent | null>(null);
+
+  // A shared link (`/?p=riff:blues-shuffle-e`) opens on the card it names.
+  // The parameter is stripped once read, so a later reload is an ordinary
+  // launch rather than one pinned forever to somebody else's link.
+  useEffect(() => {
+    const target = readShareTarget(window.location.search);
+    if (target === null) return;
+    const resolved = resolveShareTarget(target);
+    if (resolved !== null) {
+      setShared(resolved);
+      setTab(resolved.tab);
+    }
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
 
   const toneId = progress.state.settings.toneId;
 
@@ -62,8 +78,16 @@ export function AppShell() {
       {/* min-h-0 lets this pane actually shrink, so its own scrollers work
           instead of the whole page growing past the viewport. */}
       <main className="relative min-h-0 flex-1 overflow-hidden pt-[env(safe-area-inset-top)]">
-        {tab === 'feed' && <Feed engine={engine} progress={progress} />}
-        {tab === 'songs' && <Songs engine={engine} />}
+        {tab === 'feed' && (
+          <Feed
+            engine={engine}
+            progress={progress}
+            initialItem={shared?.tab === 'feed' ? shared.item : undefined}
+          />
+        )}
+        {tab === 'songs' && (
+          <Songs engine={engine} openSongId={shared?.tab === 'songs' ? shared.song.id : null} />
+        )}
         {tab === 'learn' && <Learn engine={engine} />}
         {tab === 'quiz' && <Quiz engine={engine} progress={progress} />}
 

@@ -400,6 +400,43 @@ here only so nobody "fixes" them later without checking this list first.
 - The spec's `showOpenStrings?: boolean` became two explicit arrays,
   `openStrings`/`mutedStrings`, on `FretboardProps`.
 
+## Songs tab and sharing (built 2026-09-03)
+
+**Songs** (`src/songs/`, `src/content/songs.ts`, `src/content/songCatalog.ts`)
+— 26 songs: 4 original technique studies plus 22 public-domain traditionals,
+each with a difficulty, a style, a key and a one-line reason to play it.
+Search (`searchSongs`) is a pure AND-match over title/artist/style/key/tags
+with title matches ranked first; ties keep catalogue order so results never
+reshuffle between keystrokes.
+
+Songs come in two shapes and the model enforces exactly one of them:
+
+- **Chord-chart songs** carry `chart` (sections of bar-by-bar chord names,
+  `-` meaning hold). `songToRiff` converts a chart into a `Riff` — strums
+  become one note per sounding string with a 0.02-beat spread, arpeggios
+  pluck a single string per eighth — so playback reuses `createRiffPlayer`
+  whole rather than growing a second, untested audio path. The test that
+  matters is `validateRiff(songToRiff(song))` over the entire catalogue: it
+  is what catches a note that would ring past the end of a song.
+- **Riff songs** carry a `Riff` directly and render on `TabStaff`.
+
+Charts are deliberately limited to the nine chords in `CHORDS`. That keeps
+every song learnable from the Learn tab, and adding a chord to the library
+widens the quiz pool at the same time — a deliberate coupling, not an
+oversight.
+
+**Sharing** (`src/share/`) — `shareId.ts` is pure string work with no
+content imports, so the URL format is testable in isolation; `resolve.ts`
+maps a target onto content. Ids are restricted to `[A-Za-z0-9-]` so the
+colon needs no percent-encoding and a link stays readable in a message.
+`AppShell` reads the parameter once on mount, strips it with
+`replaceState`, and holds the resolved content in state so it survives the
+"Tap to start" gate.
+
+Not done: no Open Graph preview image for a shared link (the site is an SPA
+with no prerender, so a shared link unfurls as bare `index.html`); no
+per-song progress or "learned" marking; no capo or transposition.
+
 ## Deployment
 
 The `guitar-rot` Vercel project (org `lipanovskis-projects`) auto-deploys

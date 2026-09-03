@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { getToneProfile, type AudioEngine } from '@/audio';
+import { RIFFS } from '@/content';
 import { emptyProgressState } from '@/progress';
 import type { ProgressHandle } from '@/app/useProgress';
 
@@ -71,6 +72,43 @@ describe('Feed', () => {
     // The first card owns the only player, so a riff opening the feed is
     // exactly the case where one gets created.
     expect(startedPlayers).toHaveLength(1);
+  });
+
+  it('opens on the card a shared link named', () => {
+    const riff = RIFFS.find((r) => r.id === 'blues-shuffle-e');
+    expect(riff).toBeDefined();
+
+    render(
+      <Feed
+        engine={fakeEngine()}
+        progress={fakeProgress()}
+        initialItem={{ kind: 'riff', id: 'shared-riff-blues-shuffle-e', riff: riff! }}
+      />,
+    );
+
+    const first = screen.getByTestId('feed-scroller').querySelector('[data-card-index="0"]');
+    expect(first).toHaveTextContent(riff!.title);
+  });
+
+  it('carries the feed on past a shared card rather than ending there', () => {
+    const riff = RIFFS[0]!;
+    render(
+      <Feed
+        engine={fakeEngine()}
+        progress={fakeProgress()}
+        initialItem={{ kind: 'riff', id: 'shared-riff-x', riff }}
+      />,
+    );
+
+    const cards = screen.getByTestId('feed-scroller').querySelectorAll('[data-card-index]');
+    expect(cards.length).toBeGreaterThan(8);
+  });
+
+  it('gives every card a share control, whatever kind it is', () => {
+    render(<Feed engine={fakeEngine()} progress={fakeProgress()} />);
+
+    const cards = screen.getByTestId('feed-scroller').querySelectorAll('[data-card-index]');
+    expect(screen.getAllByTestId('share-button')).toHaveLength(cards.length);
   });
 
   it('starts audio for the active card only, never for every riff on screen', () => {
