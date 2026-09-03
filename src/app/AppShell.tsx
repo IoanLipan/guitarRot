@@ -13,15 +13,15 @@ export function AppShell() {
 
   if (!ready || engine === null) {
     return (
-      <main className="flex h-dvh flex-col items-center justify-center gap-4 bg-[var(--color-ground)] p-8 text-center">
-        <h1 className="text-3xl font-black tracking-tight">guitarRot</h1>
-        <p className="max-w-xs text-sm text-[var(--color-ink-dim)]">
+      <main className="flex h-dvh flex-col items-center justify-center gap-4 bg-ground p-8 text-center">
+        <h1 className="text-4xl font-black tracking-tight">guitarRot</h1>
+        <p className="max-w-xs text-sm text-ink-dim">
           Phones keep audio suspended until you touch the screen.
         </p>
         <button
           type="button"
           onClick={() => void start()}
-          className="rounded-full bg-[var(--color-accent)] px-8 py-4 text-lg font-extrabold text-[var(--color-ground)]"
+          className="rounded-full bg-accent px-8 py-4 text-lg font-extrabold text-ground active:scale-95"
         >
           Tap to start
         </button>
@@ -30,12 +30,14 @@ export function AppShell() {
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-[var(--color-ground)]">
-      <div className="flex-1 overflow-hidden">
+    <div className="flex h-dvh flex-col bg-ground">
+      {/* min-h-0 lets this pane actually shrink, so its own scrollers work
+          instead of the whole page growing past the viewport. */}
+      <main className="min-h-0 flex-1 overflow-hidden pt-[env(safe-area-inset-top)]">
         {tab === 'feed' && <Feed engine={engine} progress={progress} />}
         {tab === 'learn' && <Learn engine={engine} />}
         {tab === 'quiz' && <Quiz progress={progress} />}
-      </div>
+      </main>
       <TabBar active={tab} onChange={setTab} />
     </div>
   );
