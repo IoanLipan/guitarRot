@@ -13,13 +13,23 @@ function fakeProgress(overrides: Partial<ProgressHandle> = {}): ProgressHandle {
   };
 }
 
+/**
+ * A constant 0.4 makes question generation fully deterministic: a note
+ * question on the D string at fret 2, whose answer is E, offered as
+ * D / E / F# / F. Both answer paths can then be driven by name.
+ */
+const CORRECT = 'E';
+const WRONG = 'D';
+
 describe('Quiz', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0.4);
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('shows the current streak from progress state', () => {
@@ -30,49 +40,58 @@ describe('Quiz', () => {
     expect(screen.getByText('Streak 6')).toBeInTheDocument();
   });
 
-  it('shows a prompt and a 2x2 answer grid before answering', () => {
+  it('offers four options before answering', () => {
     render(<Quiz progress={fakeProgress()} />);
+    expect(screen.getByRole('button', { name: CORRECT })).toBeInTheDocument();
     expect(screen.getAllByRole('button')).toHaveLength(4);
   });
 
-  it('records a correct answer and flashes PERFECT', () => {
+  it('records a correct answer, flashes PERFECT, and advances on its own', () => {
     const progress = fakeProgress();
     render(<Quiz progress={progress} />);
 
-    // Click whichever option renders first; assert on whatever outcome that
-    // produces rather than needing to know in advance which option is correct.
-    fireEvent.click(screen.getAllByRole('button')[0]!);
+    fireEvent.click(screen.getByRole('button', { name: CORRECT }));
 
-    expect(progress.recordAnswer).toHaveBeenCalledTimes(1);
-    const wasCorrect = (progress.recordAnswer as ReturnType<typeof vi.fn>).mock.calls[0]?.[0];
-    expect(screen.getByText(wasCorrect ? 'PERFECT' : 'MISS')).toBeInTheDocument();
-  });
-
-  it('disables all options once answered', () => {
-    const progress = fakeProgress();
-    render(<Quiz progress={progress} />);
-
-    const options = screen.getAllByRole('button');
-    fireEvent.click(options[0]!);
-
-    for (const button of screen.getAllByRole('button')) {
-      expect(button).toBeDisabled();
-    }
-  });
-
-  it('advances to a new question after the feedback hold', () => {
-    const progress = fakeProgress();
-    render(<Quiz progress={progress} />);
-
-    fireEvent.click(screen.getAllByRole('button')[0]!);
-    expect(screen.getAllByRole('button').every((b) => b.hasAttribute('disabled'))).toBe(true);
+    expect(progress.recordAnswer).toHaveBeenCalledWith(true);
+    expect(screen.getByText('PERFECT')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: CORRECT })).toBeDisabled();
 
     act(() => {
-      vi.advanceTimersByTime(1200);
+      vi.advanceTimersByTime(1100);
     });
 
-    const optionsAfter = screen.getAllByRole('button');
-    expect(optionsAfter).toHaveLength(4);
-    expect(optionsAfter.every((b) => !b.hasAttribute('disabled'))).toBe(true);
+    expect(screen.queryByText('PERFECT')).toBeNull();
+    expect(screen.getByRole('button', { name: CORRECT })).toBeEnabled();
+  });
+
+  it('explains a wrong answer and waits instead of auto-advancing', () => {
+    const progress = fakeProgress();
+    render(<Quiz progress={progress} />);
+
+    fireEvent.click(screen.getByRole('button', { name: WRONG }));
+
+    expect(progress.recordAnswer).toHaveBeenCalledWith(false);
+    expect(screen.getByText('MISS')).toBeInTheDocument();
+    // The D string is MIDI 50; fret 2 is E, and D itself is open on it.
+    expect(screen.getByTestId('quiz-explanation')).toHaveTextContent(
+      'String 4 is D open, so 2 frets up is E. D is at fret 0 on that string — 2 frets lower.',
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    // Still waiting on the user — a mistake you scroll past is a mistake you repeat.
+    expect(screen.getByText('MISS')).toBeInTheDocument();
+  });
+
+  it('moves on from a wrong answer when the user asks for the next question', () => {
+    render(<Quiz progress={fakeProgress()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: WRONG }));
+    fireEvent.click(screen.getByRole('button', { name: /Next question/ }));
+
+    expect(screen.queryByText('MISS')).toBeNull();
+    expect(screen.getByRole('button', { name: CORRECT })).toBeEnabled();
   });
 });
