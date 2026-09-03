@@ -1,4 +1,4 @@
-import { enharmonics, midiToPitchClass, type Midi, type PitchClass } from './notes';
+import { enharmonics, midiToPitchClass, pitchClassName, type Midi, type PitchClass } from './notes';
 import { fretToMidi } from './fretboard';
 import { MAX_FRET, STRING_COUNT, type Tuning } from './tuning';
 
@@ -63,6 +63,25 @@ export function chordVoicing(shape: ChordShape, tuning: Tuning): Midi[] {
 export function chordPitchClasses(shape: ChordShape, tuning: Tuning): PitchClass[] {
   const set = new Set(chordVoicing(shape, tuning).map(midiToPitchClass));
   return [...set].sort((a, b) => a - b);
+}
+
+/**
+ * The chord's tones spelled from its root upward, e.g. Am -> ["A", "C", "E"].
+ *
+ * `chordPitchClasses` sorts numerically from C, which spells Am as
+ * "C, E, A" — correct as a set, but useless for teaching, where the root
+ * has to lead.
+ */
+export function chordToneNames(
+  shape: ChordShape,
+  tuning: Tuning,
+  opts: { preferFlat?: boolean } = {},
+): string[] {
+  const root = midiToPitchClass(shape.root);
+  const fromRoot = (pc: PitchClass): number => (((pc - root) % 12) + 12) % 12;
+  return [...chordPitchClasses(shape, tuning)]
+    .sort((a, b) => fromRoot(a) - fromRoot(b))
+    .map((pc) => pitchClassName(pc, opts));
 }
 
 export function expectedPitchClasses(root: PitchClass, quality: ChordQuality): PitchClass[] {
