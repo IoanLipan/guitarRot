@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { STORAGE_KEY, WebProgressRepo, createDebouncedSaver } from './repo';
+import { STORAGE_KEY, WebProgressRepo, createDebouncedSaver, createProgressRepo } from './repo';
 import { emptyProgressState } from './types';
 
 describe('WebProgressRepo', () => {
@@ -134,5 +134,11 @@ describe('createDebouncedSaver', () => {
     await expect(saver.flush()).resolves.toBeUndefined();
 
     expect(onError).toHaveBeenCalledWith(failure);
+  });
+});
+
+describe('createProgressRepo', () => {
+  it('uses the web repo outside a native platform', () => {
+    expect(createProgressRepo()).toBeInstanceOf(WebProgressRepo);
   });
 });

@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 import { emptyProgressState, migrate, type ProgressState } from './types';
 
 export const STORAGE_KEY = 'guitarrot.progress.v1';
@@ -7,6 +9,39 @@ export interface ProgressRepo {
   save(state: ProgressState): Promise<void>;
   exportJson(): Promise<string>;
   importJson(json: string): Promise<void>;
+}
+
+/**
+ * Native implementation, backed by `@capacitor/preferences` (UserDefaults on
+ * iOS, SharedPreferences on Android). Same JSON-blob shape as the web repo,
+ * so export/import round-trips between a browser and a device build.
+ */
+export class NativeProgressRepo implements ProgressRepo {
+  async load(): Promise<ProgressState> {
+    try {
+      const { value } = await Preferences.get({ key: STORAGE_KEY });
+      if (value === null) return emptyProgressState();
+      return migrate(JSON.parse(value));
+    } catch {
+      return emptyProgressState();
+    }
+  }
+
+  async save(state: ProgressState): Promise<void> {
+    await Preferences.set({ key: STORAGE_KEY, value: JSON.stringify(state) });
+  }
+
+  async exportJson(): Promise<string> {
+    return JSON.stringify(await this.load(), null, 2);
+  }
+
+  async importJson(json: string): Promise<void> {
+    const parsed: unknown = JSON.parse(json);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      throw new Error('That file is not a guitarRot progress export.');
+    }
+    await this.save(migrate(parsed));
+  }
 }
 
 /** Browser implementation, used in `npm run dev` and in tests. */
@@ -42,12 +77,9 @@ export class WebProgressRepo implements ProgressRepo {
   }
 }
 
-/**
- * Plan 3 adds a Capacitor Preferences implementation and switches on
- * platform here. Nothing above this layer changes when it does.
- */
+/** Native builds get device-native storage; the browser keeps using localStorage. */
 export function createProgressRepo(): ProgressRepo {
-  return new WebProgressRepo();
+  return Capacitor.isNativePlatform() ? new NativeProgressRepo() : new WebProgressRepo();
 }
 
 /** Coalesces a burst of state changes into one write. */
