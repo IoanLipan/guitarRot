@@ -1,6 +1,12 @@
 import * as Tone from 'tone';
 import type { Midi } from '@/music';
-import { MANIFEST_URL, fetchManifest, selectBackend } from './manifest';
+import {
+  MANIFEST_URL,
+  fetchManifest,
+  resolveSetName,
+  selectBackend,
+  type SampleManifest,
+} from './manifest';
 import { SampledGuitar } from './SampledGuitar';
 import { SynthGuitar } from './SynthGuitar';
 import { strumOffsets } from './strum';
@@ -27,6 +33,16 @@ const REVERB_DECAY = 1.1;
 
 export class GuitarAudioEngine implements AudioEngine {
   private voice: GuitarVoice | null = null;
+  /** Loaded sample sets, keyed by manifest set name, so a tone switch is instant the second time. */
+  private readonly sampledVoices = new Map<string, GuitarVoice>();
+  /**
+   * Loads still in flight, keyed the same way. Picking a tone in settings
+   * calls setTone twice — once directly, once when the stored setting
+   * changes — and without this both calls start their own download of the
+   * same set and leave a second sampler connected to the chain.
+   */
+  private readonly loadingVoices = new Map<string, Promise<GuitarVoice>>();
+  private manifest: SampleManifest | null = null;
   private chain: Tone.ToneAudioNode[] = [];
   private currentBackend: EngineBackend = 'uninitialized';
   private isUnlocked = false;
@@ -36,6 +52,7 @@ export class GuitarAudioEngine implements AudioEngine {
   private driveNode: Tone.Distortion | null = null;
   private reverbNode: Tone.Reverb | null = null;
   private bodyNode: Tone.Filter | null = null;
+  private activeSet: string | null = null;
 
   get backend(): EngineBackend {
     return this.currentBackend;
@@ -65,10 +82,45 @@ export class GuitarAudioEngine implements AudioEngine {
       this.driveNode.wet.value = profile.amp.drive > 0 ? 1 : 0;
     }
     if (this.voice instanceof SynthGuitar) this.voice.setProfile(profile);
+    else void this.useSampleSet(profile);
+  }
+
+  /**
+   * Moves the sampled backend onto the instrument this tone asks for.
+   *
+   * Loading is async but `setTone` is not, so the current voice keeps
+   * playing until the new set is ready — a tone switch never goes silent,
+   * and a failed load leaves the working voice in place.
+   */
+  private async useSampleSet(profile: ToneProfile): Promise<void> {
+    const manifest = this.manifest;
+    const gain = this.gainNode;
+    if (manifest === null || gain === null) return;
+
+    const name = resolveSetName(manifest, profile.sampleSet);
+    if (name === null || name === this.activeSet) return;
+
+    let voice = this.sampledVoices.get(name);
+    if (voice === undefined) {
+      try {
+        voice = await this.loadSampleSet(manifest, name, gain);
+      } catch (error) {
+        console.warn(`Failed to load the "${name}" sample set; keeping the current one.`, error);
+        return;
+      }
+    }
+
+    // The tone may have changed again while this set was loading; the last
+    // choice the user made is the one that wins.
+    if (resolveSetName(manifest, this.profile.sampleSet) !== name) return;
+    this.voice?.stopAll();
+    this.voice = voice;
+    this.activeSet = name;
   }
 
   async init(fetchImpl: typeof fetch = globalThis.fetch): Promise<void> {
     const manifest = await fetchManifest(MANIFEST_URL, fetchImpl);
+    this.manifest = manifest;
     this.currentBackend = selectBackend(manifest);
 
     const profile = this.profile;
@@ -99,7 +151,10 @@ export class GuitarAudioEngine implements AudioEngine {
 
     if (this.currentBackend === 'sampled' && manifest !== null) {
       try {
-        this.voice = await SampledGuitar.load(manifest);
+        const sampled = await SampledGuitar.load(manifest, profile.sampleSet);
+        this.sampledVoices.set(sampled.setName, sampled);
+        this.activeSet = sampled.setName;
+        this.voice = sampled;
       } catch (error) {
         // A listed sample can 404 or be unreachable even when the manifest
         // itself parsed fine (Tone.loaded() rejects in that case). Fail
@@ -113,6 +168,26 @@ export class GuitarAudioEngine implements AudioEngine {
       this.voice = new SynthGuitar(profile);
     }
     this.voice.connect(gain);
+  }
+
+  private loadSampleSet(
+    manifest: SampleManifest,
+    name: string,
+    gain: Tone.Gain,
+  ): Promise<GuitarVoice> {
+    const inFlight = this.loadingVoices.get(name);
+    if (inFlight !== undefined) return inFlight;
+
+    const loading = SampledGuitar.load(manifest, name).then((voice) => {
+      voice.connect(gain);
+      this.sampledVoices.set(name, voice);
+      return voice;
+    });
+    this.loadingVoices.set(name, loading);
+    // A failed load must not poison the slot: dropping it lets the next
+    // tone change try again rather than replaying the same rejection.
+    loading.catch(() => this.loadingVoices.delete(name));
+    return loading;
   }
 
   /** Web audio stays suspended until a user gesture. Call this from a tap handler. */
@@ -143,8 +218,15 @@ export class GuitarAudioEngine implements AudioEngine {
   }
 
   dispose(): void {
-    this.voice?.dispose();
+    for (const voice of this.sampledVoices.values()) voice.dispose();
+    this.sampledVoices.clear();
+    this.loadingVoices.clear();
+    // Only dispose the live voice separately when it is the synth; sampled
+    // voices were just disposed above and doing it twice throws.
+    if (this.voice instanceof SynthGuitar) this.voice.dispose();
     for (const node of this.chain) node.dispose();
+    this.activeSet = null;
+    this.manifest = null;
     this.voice = null;
     this.chain = [];
     this.gainNode = null;

@@ -41,7 +41,11 @@ export const DEFAULT_SETTINGS: Settings = {
   leftHanded: false,
   preferFlats: false,
   defaultSpeed: 1,
-  toneId: 'clean',
+  // Kept in step with the audio module's DEFAULT_TONE_ID by a test rather
+  // than an import, so progress storage stays free of audio dependencies.
+  // They disagreed once, and a fresh install booted on acoustic and then
+  // immediately reloaded a second sample set to land on clean.
+  toneId: 'acoustic',
 };
 
 export const SEEN_LIMIT = 200;

@@ -437,6 +437,51 @@ Not done: no Open Graph preview image for a shared link (the site is an SPA
 with no prerender, so a shared link unfurls as bare `index.html`); no
 per-song progress or "learned" marking; no capo or transposition.
 
+## Sampled audio (built 2026-09-03)
+
+The synth was the sound for four rounds of tuning and still read as
+"electric piano". Karplus-Strong was the wrong tool: what makes a guitar
+sound like a guitar is the body, the pick, and the inharmonicity of a real
+string, none of which the model produces cheaply. The fix was to stop
+synthesising. `SampledGuitar`, `manifest.ts` and the backend-selection path
+already existed and had never been populated — this fills them in.
+
+**What ships** — `public/audio/guitar/{acoustic,electric}`, 17 notes each
+(E2 to E6, every three semitones), rendered from FluidR3_GM (CC BY 3.0, so
+the attribution is shown in Settings, not just in the repo). 696KB total.
+
+**Manifest sets** — the manifest grew named `sets` alongside the original
+unnamed `samples` block, and `ToneProfile` grew `sampleSet`. Acoustic plays
+the acoustic set; Clean, Rock, Blues and Country play the electric set and
+get their character from the amp chain, which is unchanged. Sets load
+lazily: startup fetches only the current tone's set, and switching back is
+instant from cache.
+
+**Two bugs this surfaced**, both found in the browser rather than by tests:
+
+- `DEFAULT_SETTINGS.toneId` was `clean` while `DEFAULT_TONE_ID` was
+  `acoustic`, so a fresh install loaded the acoustic set and then
+  immediately loaded the electric one to land somewhere else. Now aligned,
+  with a test pinning the two together.
+- Picking a tone in settings calls `setTone` twice (once directly, once via
+  the stored-setting effect). Both calls started their own download of the
+  same set and left a second sampler connected to the chain. Fixed with an
+  in-flight promise map in `GuitarAudioEngine.loadSampleSet`.
+
+**Verified in headless Chrome**: backend reports `sampled`; all 34 samples
+fetch and decode; every sample's fundamental is within 10 cents of the pitch
+its filename claims (autocorrelation with parabolic peak interpolation —
+without the interpolation the top note reads 23 cents flat, which is
+quantisation, not detuning); E3 carries nine harmonics above 5% of peak.
+Tone switching loads exactly one set per tone, once.
+
+**Coverage gap**: `GuitarAudioEngine` still has no unit test — it needs a
+live Tone context, so the load-dedupe and set-swap logic is currently only
+covered end-to-end by the headless-Chrome check described above. To
+reproduce: load the app, read `performance.getEntriesByType('resource')`
+filtered to `.mp3`, switch tone in Settings, read it again. Each set must
+appear exactly 17 times, never 34.
+
 ## Deployment
 
 The `guitar-rot` Vercel project (org `lipanovskis-projects`) auto-deploys

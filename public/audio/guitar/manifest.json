@@ -1,0 +1,43 @@
+{
+  "baseUrl": "/audio/guitar/",
+  "sets": {
+    "acoustic": {
+      "E2": "acoustic/E2.mp3",
+      "G2": "acoustic/G2.mp3",
+      "Bb2": "acoustic/Bb2.mp3",
+      "Db3": "acoustic/Db3.mp3",
+      "E3": "acoustic/E3.mp3",
+      "G3": "acoustic/G3.mp3",
+      "Bb3": "acoustic/Bb3.mp3",
+      "Db4": "acoustic/Db4.mp3",
+      "E4": "acoustic/E4.mp3",
+      "G4": "acoustic/G4.mp3",
+      "Bb4": "acoustic/Bb4.mp3",
+      "Db5": "acoustic/Db5.mp3",
+      "E5": "acoustic/E5.mp3",
+      "G5": "acoustic/G5.mp3",
+      "Bb5": "acoustic/Bb5.mp3",
+      "Db6": "acoustic/Db6.mp3",
+      "E6": "acoustic/E6.mp3"
+    },
+    "electric": {
+      "E2": "electric/E2.mp3",
+      "G2": "electric/G2.mp3",
+      "Bb2": "electric/Bb2.mp3",
+      "Db3": "electric/Db3.mp3",
+      "E3": "electric/E3.mp3",
+      "G3": "electric/G3.mp3",
+      "Bb3": "electric/Bb3.mp3",
+      "Db4": "electric/Db4.mp3",
+      "E4": "electric/E4.mp3",
+      "G4": "electric/G4.mp3",
+      "Bb4": "electric/Bb4.mp3",
+      "Db5": "electric/Db5.mp3",
+      "E5": "electric/E5.mp3",
+      "G5": "electric/G5.mp3",
+      "Bb5": "electric/Bb5.mp3",
+      "Db6": "electric/Db6.mp3",
+      "E6": "electric/E6.mp3"
+    }
+  }
+}

@@ -97,3 +97,12 @@ describe('tone profiles', () => {
     expect(isToneId(7)).toBe(false);
   });
 });
+
+describe('the default tone', () => {
+  it('matches the one a fresh install saves', async () => {
+    // Two defaults that disagree make a new install load one sample set,
+    // then immediately load another to land somewhere else.
+    const { DEFAULT_SETTINGS } = await import('@/progress');
+    expect(DEFAULT_SETTINGS.toneId).toBe(DEFAULT_TONE_ID);
+  });
+});

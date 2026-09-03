@@ -7,6 +7,12 @@ tab); a Learn tab (fretboard explorer, chord library, scale positions); and
 a focused Quiz tab. React 19 + TypeScript (strict) + Vite + Tailwind v4
 + Tone.js. Runs fully offline — no account, no backend.
 
+Notes are real recorded guitar, bundled with the app (`public/audio/guitar/`):
+an acoustic set and a clean electric set, one sample every three semitones,
+pitch-shifted by `Tone.Sampler` to fill the gaps. A Karplus-Strong synth
+remains as the fallback when samples cannot be loaded, so the app is never
+mute and pitch is exact either way.
+
 ## Status
 
 The music-theory core, audio engine, `Fretboard`/`TabStaff` renderers, and

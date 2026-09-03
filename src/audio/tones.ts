@@ -12,6 +12,12 @@ export type ToneProfile = {
   name: string;
   /** One line, shown under the name in settings. */
   blurb: string;
+  /**
+   * Which recorded instrument this tone plays, by name in the sample
+   * manifest. Ignored by the synth backend, which has no samples to pick
+   * from, and falls back to whatever set exists if the named one is absent.
+   */
+  sampleSet: 'acoustic' | 'electric';
   string: {
     /** Pick attack noisiness. Higher is scratchier and more aggressive. */
     attackNoise: number;
@@ -52,6 +58,7 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     id: 'acoustic',
     name: 'Acoustic',
     blurb: 'Steel strings over a wooden box. Woody, open, rings on.',
+    sampleSet: 'acoustic',
     // Soft pick, long ring, and plenty of top: an acoustic's brightness
     // comes from the strings and the top resonating, not from a bright amp.
     string: { attackNoise: 0.75, dampening: 5200, resonance: 0.975 },
@@ -64,6 +71,7 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     id: 'clean',
     name: 'Clean',
     blurb: 'Bare strings, no colour. Every note exactly as it is.',
+    sampleSet: 'electric',
     string: { attackNoise: 0.9, dampening: 3600, resonance: 0.965 },
     amp: { drive: 0, filterHz: 6000, reverbWet: 0.1, gain: 0.79, bodyHz: 200, bodyQ: 1, bodyGainDb: 0 },
   },
@@ -71,6 +79,7 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     id: 'rock',
     name: 'Rock',
     blurb: 'Driven and tight. Power chords bite, notes stop when you do.',
+    sampleSet: 'electric',
     // Drive needs top end to read as crunch: the old filterHz of 4200 muffled
     // this preset's own distortion, which is how Country ended up sounding
     // more aggressive than Rock. Resonance sits lowest of the four so notes
@@ -83,6 +92,7 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     id: 'blues',
     name: 'Blues',
     blurb: 'Warm, mid-heavy, just breaking up. Bends sing.',
+    sampleSet: 'electric',
     string: { attackNoise: 1.2, dampening: 3200, resonance: 0.972 },
     amp: { drive: 0.18, filterHz: 3400, reverbWet: 0.18, gain: 0.33, bodyHz: 200, bodyQ: 1, bodyGainDb: 0 },
   },
@@ -90,6 +100,7 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     id: 'country',
     name: 'Country',
     blurb: 'Bright twang with a spring-tank shimmer. Snappy and clean.',
+    sampleSet: 'electric',
     // Twang is a bright attack over a clean, ringing string. The old 0.985
     // sat on the edge of runaway feedback and built into a harsh sustain that
     // read as edgier than the actually-distorted Rock preset — backwards.

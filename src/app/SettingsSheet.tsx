@@ -111,8 +111,14 @@ export function SettingsSheet({
         <section className="px-6 pt-8">
           <h3 className="text-[13px] font-bold tracking-wider text-ink-dim uppercase">Sound</h3>
           <p className="mt-2 text-sm text-ink-dim">
-            Engine: <span className="font-bold text-ink">{engine.backend}</span>. The synth backend
-            needs no samples and plays exact pitches, so quizzes are always in tune.
+            Engine: <span className="font-bold text-ink">{engine.backend}</span>. Sampled plays
+            recorded guitar notes; synth is the fallback when samples are unavailable. Both play
+            exact pitches, so quizzes are always in tune.
+          </p>
+          {/* CC BY requires the attribution to travel with the work, so it
+              lives in the app and not only in the repository. */}
+          <p className="mt-3 text-xs leading-relaxed text-ink-dim/80" data-testid="sample-credit">
+            Guitar samples: FluidR3_GM by Frank Wen, CC BY 3.0.
           </p>
         </section>
       </div>
