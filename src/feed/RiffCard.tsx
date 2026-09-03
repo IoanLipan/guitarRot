@@ -55,8 +55,11 @@ export function RiffCard({
   }, [speed]);
 
   // The playhead moves by transform from rAF, never React state — a 60fps
-  // setState would re-render the whole staff every frame.
+  // setState would re-render the whole staff every frame. Only the active
+  // card runs a loop: this used to run on every card ever mounted, so a long
+  // scroll left dozens of them ticking forever.
   useEffect(() => {
+    if (!isActive) return;
     let frame = 0;
     const tick = () => {
       const player = playerRef.current;
@@ -73,7 +76,7 @@ export function RiffCard({
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [geometry]);
+  }, [geometry, isActive]);
 
   function handleToggle() {
     tapHaptic();

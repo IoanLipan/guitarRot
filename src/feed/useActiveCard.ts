@@ -11,6 +11,12 @@ export type ActiveCardHandle = {
   /** Put this on every card element, alongside `data-card-index`. */
   cardProps: (index: number) => { 'data-card-index': number };
   scrollToCard: (index: number) => void;
+  /**
+   * Call after dropping cards off the front of the list: every surviving
+   * card's index moves, so the tracked one has to move with it and the
+   * observer's memory of who was visible has to be thrown away.
+   */
+  shiftActiveIndex: (delta: number) => void;
 };
 
 /**
@@ -23,6 +29,8 @@ export type ActiveCardHandle = {
 export function useActiveCard(count: number): ActiveCardHandle {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  // Bumped whenever indices are reassigned, to force a fresh observer.
+  const [generation, setGeneration] = useState(0);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -59,7 +67,7 @@ export function useActiveCard(count: number): ActiveCardHandle {
 
     for (const card of container.querySelectorAll('[data-card-index]')) observer.observe(card);
     return () => observer.disconnect();
-  }, [count]);
+  }, [count, generation]);
 
   const cardProps = useCallback((index: number) => ({ 'data-card-index': index }), []);
 
@@ -71,5 +79,10 @@ export function useActiveCard(count: number): ActiveCardHandle {
     target?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   }, []);
 
-  return { activeIndex, containerRef, cardProps, scrollToCard };
+  const shiftActiveIndex = useCallback((delta: number) => {
+    setActiveIndex((current) => Math.max(0, current + delta));
+    setGeneration((current) => current + 1);
+  }, []);
+
+  return { activeIndex, containerRef, cardProps, scrollToCard, shiftActiveIndex };
 }

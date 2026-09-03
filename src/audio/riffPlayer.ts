@@ -51,31 +51,58 @@ export function createRiffPlayer(
   part.loopStart = 0;
   part.loopEnd = riffLoopEnd(riff);
 
+  /**
+   * Tone's transport keeps its own timeline, and stopping a part at the wrong
+   * instant can land microscopically past zero — a real crash seen in the
+   * feed was `RangeError: Value must be within [0, Infinity], got:
+   * -2.6e-13`, thrown out of `dispose()` while React was unmounting a card
+   * that had been swiped away. An exception escaping an effect cleanup takes
+   * the whole React tree down with it, which showed up as the app going
+   * blank after a dozen swipes.
+   *
+   * Teardown of an audio graph is never worth a blank screen, so these calls
+   * are contained: the worst case of a swallowed error here is a voice that
+   * rings a moment longer than it should.
+   */
+  function quietly(what: string, run: () => void): void {
+    try {
+      run();
+    } catch (error) {
+      console.warn(`riffPlayer: ${what} failed`, error);
+    }
+  }
+
   return {
     totalBeats: riffTotalBeats(riff),
 
     start() {
-      transport.stop();
-      transport.cancel();
-      transport.position = 0;
-      transport.bpm.value = speedToBpm(riff.bpm, speed);
-      transport.loop = true;
-      transport.loopStart = 0;
-      transport.loopEnd = part.loopEnd;
-      part.start(0);
-      transport.start();
+      quietly('start', () => {
+        transport.stop();
+        transport.cancel();
+        transport.position = 0;
+        transport.bpm.value = speedToBpm(riff.bpm, speed);
+        transport.loop = true;
+        transport.loopStart = 0;
+        transport.loopEnd = part.loopEnd;
+        part.start(0);
+        transport.start();
+      });
     },
 
     stop() {
-      part.stop();
-      transport.stop();
-      transport.position = 0;
-      engine.stopAll();
+      quietly('stop', () => {
+        part.stop();
+        transport.stop();
+        transport.position = 0;
+        engine.stopAll();
+      });
     },
 
     setSpeed(next: number) {
       speed = next;
-      transport.bpm.value = speedToBpm(riff.bpm, next);
+      quietly('setSpeed', () => {
+        transport.bpm.value = speedToBpm(riff.bpm, next);
+      });
     },
 
     progress() {
@@ -83,10 +110,12 @@ export function createRiffPlayer(
     },
 
     dispose() {
-      part.stop();
-      part.dispose();
-      transport.stop();
-      transport.cancel();
+      // Each step is separately contained: if stopping throws, the part and
+      // the transport still have to be released or the leak outlives the card.
+      quietly('dispose/part.stop', () => part.stop());
+      quietly('dispose/part.dispose', () => part.dispose());
+      quietly('dispose/transport.stop', () => transport.stop());
+      quietly('dispose/transport.cancel', () => transport.cancel());
     },
   };
 }
