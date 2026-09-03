@@ -1,5 +1,6 @@
 import type * as Tone from 'tone';
 import type { Midi } from '@/music';
+import type { ToneProfile } from './tones';
 
 export type EngineBackend = 'sampled' | 'synth' | 'uninitialized';
 
@@ -32,6 +33,10 @@ export interface GuitarVoice {
 export interface AudioEngine {
   readonly backend: EngineBackend;
   readonly unlocked: boolean;
+  /** The voicing currently shaping the sound. */
+  readonly tone: ToneProfile;
+  /** Swaps the voicing live. */
+  setTone(profile: ToneProfile): void;
   init(): Promise<void>;
   /** Must be called from inside a real touch or click handler. */
   unlock(): Promise<void>;

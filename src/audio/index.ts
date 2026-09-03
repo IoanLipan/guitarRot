@@ -1,6 +1,7 @@
 export * from './types';
 export * from './manifest';
 export * from './strum';
+export * from './tones';
 export * from './timing';
 export { SynthGuitar } from './SynthGuitar';
 export { SampledGuitar } from './SampledGuitar';

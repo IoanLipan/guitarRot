@@ -1,5 +1,6 @@
 import * as Tone from 'tone';
 import type { Midi } from '@/music';
+import { DEFAULT_TONE_ID, getToneProfile, type ToneProfile } from './tones';
 import type { GuitarVoice, PlayNoteOptions } from './types';
 
 const VOICE_COUNT = 6;
@@ -14,15 +15,16 @@ export class SynthGuitar implements GuitarVoice {
   private readonly volumes: Tone.Volume[];
   private nextVoice = 0;
 
-  constructor() {
+  constructor(profile: ToneProfile = getToneProfile(DEFAULT_TONE_ID)) {
     this.volumes = Array.from({ length: VOICE_COUNT }, () => new Tone.Volume(0));
     this.voices = this.volumes.map((volume) =>
-      new Tone.PluckSynth({
-        attackNoise: 0.9,
-        dampening: 3800,
-        resonance: 0.96,
-      }).connect(volume),
+      new Tone.PluckSynth({ ...profile.string }).connect(volume),
     );
+  }
+
+  /** Reshapes the string model in place; playing notes keep their tails. */
+  setProfile(profile: ToneProfile): void {
+    for (const voice of this.voices) voice.set({ ...profile.string });
   }
 
   connect(node: Tone.InputNode): void {
