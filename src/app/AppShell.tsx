@@ -63,7 +63,7 @@ export function AppShell() {
       <main className="relative min-h-0 flex-1 overflow-hidden pt-[env(safe-area-inset-top)]">
         {tab === 'feed' && <Feed engine={engine} progress={progress} />}
         {tab === 'learn' && <Learn engine={engine} />}
-        {tab === 'quiz' && <Quiz progress={progress} />}
+        {tab === 'quiz' && <Quiz engine={engine} progress={progress} />}
 
         <button
           type="button"

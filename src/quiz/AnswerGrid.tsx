@@ -11,7 +11,7 @@ export function AnswerGrid({ options, correctAnswer, picked, onPick }: AnswerGri
   const answered = picked !== null;
 
   return (
-    <div className="grid w-full grid-cols-2 gap-3">
+    <div className="grid w-full grid-cols-2 gap-3" data-testid="answer-grid">
       {options.map((option) => {
         const isPicked = option === picked;
         const isCorrectPick = isPicked && option === correctAnswer;

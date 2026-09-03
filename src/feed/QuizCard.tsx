@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { errorHaptic, successHaptic } from '@/app/haptics';
+import type { AudioEngine } from '@/audio';
 import { AnswerGrid, explainAnswer, QuizVisual, type QuizQuestion } from '@/quiz';
 
 /** A right answer holds just long enough to register, then the feed moves on. */
@@ -7,10 +8,12 @@ export const CORRECT_ADVANCE_MS = 1000;
 
 export function QuizCard({
   question,
+  engine,
   onAnswered,
   onAdvance,
 }: {
   question: QuizQuestion;
+  engine: AudioEngine;
   onAnswered: (correct: boolean) => void;
   /** Called when this card is done and the feed should scroll onward. */
   onAdvance: () => void;
@@ -60,7 +63,7 @@ export function QuizCard({
       </span>
 
       <div className={`shrink-0 ${question.kind === 'note' ? 'h-48 w-full' : 'h-56 w-48'}`}>
-        <QuizVisual question={question} fit />
+        <QuizVisual question={question} engine={engine} fit />
       </div>
 
       <h2 className="shrink-0 text-center text-2xl font-black">{question.prompt}</h2>

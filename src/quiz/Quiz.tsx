@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { errorHaptic, successHaptic } from '@/app/haptics';
+import type { AudioEngine } from '@/audio';
 import type { ProgressHandle } from '@/app/useProgress';
 import { AnswerGrid } from './AnswerGrid';
 import { explainAnswer } from './explainAnswer';
@@ -15,7 +16,7 @@ function randomQuestion(random: () => number = Math.random): QuizQuestion {
   return random() < 0.5 ? generateNoteQuestion({ random }) : generateChordQuestion({ random });
 }
 
-export function Quiz({ progress }: { progress: ProgressHandle }) {
+export function Quiz({ engine, progress }: { engine: AudioEngine; progress: ProgressHandle }) {
   const [question, setQuestion] = useState<QuizQuestion>(() => randomQuestion());
   const [picked, setPicked] = useState<string | null>(null);
   const [answeredInRound, setAnsweredInRound] = useState(0);
@@ -89,7 +90,7 @@ export function Quiz({ progress }: { progress: ProgressHandle }) {
 
       <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-5">
         <div className={`shrink-0 ${question.kind === 'note' ? 'h-48 w-full' : 'h-56 w-48'}`}>
-          <QuizVisual question={question} fit />
+          <QuizVisual question={question} engine={engine} fit />
         </div>
 
         <h2 className="shrink-0 text-center text-2xl font-black">{question.prompt}</h2>
