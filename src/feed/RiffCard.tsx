@@ -3,39 +3,58 @@ import { createRiffPlayer, type AudioEngine, type RiffPlayer } from '@/audio';
 import type { Riff } from '@/content';
 import { createTabGeometry, TabStaff } from '@/render';
 
-export function RiffCard({ riff, engine }: { riff: Riff; engine: AudioEngine }) {
+export function RiffCard({
+  riff,
+  engine,
+  isActive,
+}: {
+  riff: Riff;
+  engine: AudioEngine;
+  isActive: boolean;
+}) {
   const playerRef = useRef<RiffPlayer | null>(null);
   const playheadRef = useRef<SVGGElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [looping, setLooping] = useState(true);
+  // Read inside the activation effect without making speed changes restart
+  // playback — the slider drives setSpeed on the live player instead.
+  const speedRef = useRef(speed);
+  speedRef.current = speed;
 
   const geometry = useMemo(
     () => createTabGeometry({ bars: riff.bars, timeSignature: riff.timeSignature }),
     [riff],
   );
 
-  function handlePlay() {
-    playerRef.current?.dispose();
-    const player = createRiffPlayer(riff, engine, { speed });
+  /**
+   * The spec's hard rule: exactly one card produces sound. Becoming the
+   * active card starts this riff; leaving it stops and disposes the player,
+   * so scrolling away can never leave audio running behind you.
+   */
+  useEffect(() => {
+    if (!isActive) return;
+
+    const player = createRiffPlayer(riff, engine, { speed: speedRef.current });
     playerRef.current = player;
     player.start();
     setPlaying(true);
-  }
 
-  function handleStop() {
-    playerRef.current?.stop();
-    setPlaying(false);
-  }
+    return () => {
+      player.stop();
+      player.dispose();
+      playerRef.current = null;
+      setPlaying(false);
+    };
+  }, [isActive, riff, engine]);
 
   useEffect(() => {
     playerRef.current?.setSpeed(speed);
   }, [speed]);
 
-  // The playhead is moved by transform from rAF, not React state, so a 60fps
-  // loop doesn't re-render the whole staff every frame.
+  // The playhead moves by transform from rAF, never React state — a 60fps
+  // setState would re-render the whole staff every frame.
   useEffect(() => {
     let frame = 0;
     const tick = () => {
@@ -46,10 +65,7 @@ export function RiffCard({ riff, engine }: { riff: Riff; engine: AudioEngine }) 
         head.style.transform = `translateX(${x}px)`;
         const scroller = scrollRef.current;
         if (scroller !== null) {
-          scroller.scrollLeft = Math.max(
-            0,
-            geometry.xForBeat(0) + x - scroller.clientWidth * 0.35,
-          );
+          scroller.scrollLeft = Math.max(0, geometry.xForBeat(0) + x - scroller.clientWidth * 0.35);
         }
       }
       frame = requestAnimationFrame(tick);
@@ -58,45 +74,58 @@ export function RiffCard({ riff, engine }: { riff: Riff; engine: AudioEngine }) 
     return () => cancelAnimationFrame(frame);
   }, [geometry]);
 
-  useEffect(
-    () => () => {
-      playerRef.current?.dispose();
-      playerRef.current = null;
-    },
-    [riff],
-  );
+  function handleToggle() {
+    const player = playerRef.current;
+    if (player === null) return;
+    if (playing) {
+      player.stop();
+      setPlaying(false);
+    } else {
+      player.start();
+      setPlaying(true);
+    }
+  }
 
   return (
-    <div className="flex h-full flex-col gap-4 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-ground)] p-6">
+    <div className="flex h-full min-h-0 flex-col gap-4 bg-linear-to-b from-surface to-ground px-6 pt-8 pb-6">
       <div className="flex flex-wrap gap-2">
         <Chip>{riff.style}</Chip>
         <Chip>Lvl {riff.level}</Chip>
         <Chip>{riff.bpm} BPM</Chip>
       </div>
 
-      <h2 className="text-[30px] font-black leading-tight">{riff.title}</h2>
+      <h2 className="text-3xl leading-tight font-black">{riff.title}</h2>
 
-      <div ref={scrollRef} className="my-auto overflow-x-auto rounded-2xl bg-[#0f0f14] p-4">
-        <TabStaff riff={riff} geometry={geometry} showPlayhead playheadRef={playheadRef} />
+      <div className="flex min-h-0 flex-1 items-center">
+        <div
+          ref={scrollRef}
+          className="max-h-full w-full overflow-x-auto rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8"
+        >
+          <TabStaff riff={riff} geometry={geometry} showPlayhead playheadRef={playheadRef} />
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex shrink-0 items-center gap-4">
         <button
           type="button"
-          onClick={playing ? handleStop : handlePlay}
-          aria-label={playing ? 'Stop' : 'Play'}
-          className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-[var(--color-accent)] shadow-[0_6px_18px_rgba(255,176,32,0.35)]"
+          onClick={handleToggle}
+          aria-label={playing ? 'Pause' : 'Play'}
+          className="flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent shadow-[0_6px_18px_rgba(255,176,32,0.35)] active:scale-95"
         >
           {playing ? (
-            <span className="h-3.5 w-3.5 rounded-sm bg-[var(--color-ground)]" />
+            <span className="flex gap-1">
+              <span className="h-4 w-1.5 rounded-xs bg-ground" />
+              <span className="h-4 w-1.5 rounded-xs bg-ground" />
+            </span>
           ) : (
-            <span className="ml-0.5 h-0 w-0 border-y-[10px] border-l-[16px] border-y-transparent border-l-[var(--color-ground)]" />
+            <span className="ml-0.5 h-0 w-0 border-y-10 border-l-16 border-y-transparent border-l-ground" />
           )}
         </button>
 
         <label className="flex-1">
-          <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-ink-dim)]">
-            Speed
+          <div className="mb-1.5 flex justify-between text-[11px] font-bold tracking-wider text-ink-dim uppercase">
+            <span>Speed</span>
+            <span className="tabular-nums">{Math.round(speed * 100)}%</span>
           </div>
           <input
             type="range"
@@ -105,23 +134,10 @@ export function RiffCard({ riff, engine }: { riff: Riff; engine: AudioEngine }) 
             step={0.1}
             value={speed}
             onChange={(event) => setSpeed(Number(event.target.value))}
-            className="w-full accent-[var(--color-accent)]"
+            className="w-full accent-accent"
             aria-label="Playback speed"
           />
         </label>
-
-        <button
-          type="button"
-          onClick={() => setLooping((value) => !value)}
-          aria-pressed={looping}
-          className="rounded-full border px-3 py-2 text-xs font-bold"
-          style={{
-            borderColor: looping ? 'var(--color-accent)' : '#33333e',
-            color: looping ? 'var(--color-accent)' : 'var(--color-ink-dim)',
-          }}
-        >
-          Loop ↻
-        </button>
       </div>
     </div>
   );
@@ -129,7 +145,7 @@ export function RiffCard({ riff, engine }: { riff: Riff; engine: AudioEngine }) 
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-[var(--color-surface-2)] px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-[var(--color-ink-dim)]">
+    <span className="rounded-full bg-surface-2 px-3 py-1.5 text-xs font-bold tracking-wider text-ink-dim uppercase">
       {children}
     </span>
   );
