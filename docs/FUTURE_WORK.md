@@ -196,6 +196,26 @@ browser already shows.
 
 ## Guitar tones
 
+**How to check a change to the sound.** Parameter assertions prove numbers
+moved, not that anything sounds better — and two audio bugs here were only
+visible by measuring rendered output. Render the engine offline in a real
+Web Audio context (headless Chrome, the same zero-dependency CDP setup the
+screenshots use), then measure: RMS in 250ms buckets gives the decay
+envelope, a first-order difference's share of total energy is a serviceable
+brightness proxy, and peak amplitude in the first 20ms shows the attack.
+Two traps: the Karplus-Strong excitation is a noise burst, so single renders
+vary by up to 2x — average several before trusting a level comparison — and
+measure through `GuitarAudioEngine`, not `SynthGuitar` alone, or the drive,
+filter, reverb and output trim are all missing from what you measured.
+
+**Resonance is the parameter to be careful with.** It is the energy a string
+keeps per round-trip of its delay line, so its effect on sustain is
+exponential in pitch, not linear. 0.86 reads reasonable and dies in under
+250ms. It also has to *rise* towards the thin strings — a 330Hz high e laps
+~4x as often as an 82Hz low E, so flat resonance across the neck measured
+0.25s of sustain up top against 1.75s at the bottom. Decay time is roughly
+`ln(0.05) / (f * ln(resonance))`; `stringVoicing.ts` holds the spread.
+
 `audio/tones.ts` holds four voicings (clean, rock, blues, country). Each
 shapes the Karplus-Strong string model *and* the chain after it
 (distortion, filter, reverb wet, gain); `GuitarAudioEngine.setTone` swaps
