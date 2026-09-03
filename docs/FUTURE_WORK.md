@@ -78,40 +78,40 @@ build` succeeds.
       under a later `frontend-design` step, and haptics needs the Capacitor
       `haptics` plugin from Plan 3 anyway.
 
-**The one correctness gap that matters — read this before touching Feed
-again:** spec §8 states a hard rule: *"An IntersectionObserver ...
-designates exactly one active card. ... At most one card produces sound at
-any time. Overlapping playback is the single most likely defect in the feed
-and must be tested."* That rule is **not implemented**. Every `RiffCard` in
-the Feed creates its own independent `RiffPlayer`, and `Tone.Transport` is
-global — `riffPlayer.ts`'s own doc comment already says so ("only one
-player may run at a time: `start()` cancels whatever was previously
-scheduled"). Concretely: start riff A, scroll to riff B, tap play on B — A's
-schedule is silently cancelled by B's `start()`, but A's own component state
-still shows "Stop." Fix this before shipping the Feed for real: add an
-`IntersectionObserver` (or equivalent) that designates one active card,
-starts its audio on activation, and calls `stopAll()`/disposes its player on
-deactivation.
+**Single-active-audio (spec §8's hard rule) — DONE.** `feed/useActiveCard.ts`
+runs an `IntersectionObserver` (threshold 0.6) over the cards and publishes
+one `activeIndex`; `RiffCard` starts its player when it becomes active and
+stops + disposes it on the way out, so scrolling can never leave audio
+running behind you and two cards can never overlap. `Feed.test.tsx` pins
+the rule: nine cards render, exactly one player is ever created and
+started. The active card also autoplays, which is what makes the feed feel
+like the spec's "play, play, answer" rhythm rather than a page of buttons.
+
+**Feed answer flow (the TikTok rhythm) — DONE.** A right answer flashes and
+the feed scrolls itself onward after 1s; a wrong answer stops, colours red,
+and prints a real explanation built from the theory core
+(`quiz/explainAnswer.ts`) — where the correct note sits relative to the one
+picked, or which notes each chord actually contains — and waits for a "Got
+it" tap. Advancing past a mistake you haven't read is how you repeat it.
 
 **Smaller judgment calls made while building the mockup as literally
 specified** (not spec violations, just worth knowing):
-- Riff card's "Loop ↻" chip is visual-only — `riffPlayer.ts`'s `start()`
-  always sets `transport.loop = true`. A real one-shot mode means changing
-  that function's contract.
+- Riff card's "Loop ↻" chip was removed rather than left as a lie: the
+  card now autoplays on becoming active and the button pauses/resumes.
+  `riffPlayer.ts`'s `start()` always sets `transport.loop = true`, so a
+  real one-shot mode still means changing that function's contract.
 - No sound plays on a quiz-answer tap; the design handoff's interaction
   list didn't call for it.
 - Quiz tab's progress bar tracks a 10-question rolling round — invented;
   neither the design handoff nor the spec define what the bar's denominator
   should be. Once a real SRS due-queue exists, this should probably become
   "due items remaining today" instead.
-- Correct/incorrect feedback holds 1.1s before auto-advancing to the next
-  question — duration wasn't specified anywhere.
+- A correct answer holds 1s before advancing; a wrong one waits for the
+  user. Neither duration was specified anywhere.
 
 ## Suggested order for closing the Plan 2 gaps
 
-1. **Fix the single-active-audio bug** above — small, correctness-critical,
-   independent of everything else. Do this first regardless of what else
-   changes.
+1. ~~Fix the single-active-audio bug~~ — **done**, see above.
 2. **Build `quiz/srs.ts`** and wire `ProgressState.srs` (the `SrsItem` type
    has existed since Foundation; nothing writes to it yet). This unlocks
    real due-queue-driven feed generation.
@@ -152,23 +152,51 @@ the native wrap lands — no change needed before then.
 
 ## Findings from the App-shell build (Plan 2)
 
+### How to actually look at the UI (no extra dependencies)
+The visual bugs in the first pass — dots rendered off the board, a quiz
+fretboard bursting out of its container — all survived a green test suite
+and a clean build, because none of those check layout. macOS Chrome plus
+Node 22's built-in `WebSocket` is enough to drive the real thing over the
+DevTools protocol with **zero new dependencies**: launch
+`/Applications/Google Chrome.app/.../Google Chrome --headless=new
+--remote-debugging-port=PORT`, read the page target from
+`http://127.0.0.1:PORT/json/list`, then `Page.navigate`,
+`Emulation.setDeviceMetricsOverride` (390×844, `deviceScaleFactor: 2`,
+`mobile: true`), `Runtime.evaluate` to click through the audio gate and the
+tabs, and `Page.captureScreenshot` per screen. Worth rebuilding whenever a
+screen changes shape — measuring `getBoundingClientRect()` on the shell
+elements catches the "everything is 0px tall" class of bug that screenshots
+alone can miss.
+
+One trap: run it against `vite preview` (or a dev server you have not
+edited in the last few seconds). Vite's dep pre-bundling and HMR both do a
+full page reload, and a reload landing mid-script produces a blank
+screenshot that looks exactly like a crash.
+
 ### Test coverage gaps
-- **No component tests for `RiffCard`, `ChordCard`, `QuizCard` (the Feed's
-  variant), `Feed`, `AppShell`, `TabBar`, `useAudioEngine`, or
-  `useProgress`.** Pure logic (`chords.ts`, `generateQuiz.ts`,
-  `feedItems.ts`, `applyAnswer.ts`) and the two most-scrutinized
-  screen-level components (`Learn`, the standalone `Quiz` tab) are tested;
-  the Feed's own card components and the shell plumbing are not. No known
-  bug hides here, but it's the largest coverage hole in Plan 2 — Foundation
-  gave `Fretboard`/`TabStaff` a full test file each, and these components
-  don't have the equivalent yet.
-- **Nothing in this build was clicked through in a real browser.** No
-  headless browser tool was available in the session that built it;
-  confirmed only via `tsc`, the full `vitest` suite, `vite build`, and
-  fetching every new module through Vite's dev server to rule out
-  compile/runtime-import errors. Do a real walkthrough (in particular the
-  Feed's scroll-snap behavior and the audio-unlock gate on an actual mobile
-  browser) before calling Plan 2 UI-complete.
+- **No component tests for `RiffCard`, `ChordCard`, `AppShell`, `TabBar`,
+  `useAudioEngine`, or `useProgress`.** `Feed`, `QuizCard`, `Learn` and the
+  `Quiz` tab now have them, as does every pure module. The shell plumbing
+  and the two remaining card components are still uncovered.
+- **Layout is not asserted anywhere.** The screenshot pass above is manual.
+  Nothing in CI would catch a container that clips its contents again.
+
+### Rendering decisions worth knowing before touching `Fretboard.tsx`
+- **The wood body spans the whole SVG canvas**, not just nut-to-last-fret.
+  Open-string markers, fret numbers, and dots on the outer strings all sit
+  in the geometry's margins; with a body drawn only around the fret grid
+  they rendered *off* the instrument and read as broken layout.
+- **A marker at fret 0 draws as a ring, not a filled dot** — an open string
+  is played, not fretted, and a solid dot there reads as a fretted note.
+  This is separate from `openStrings`/`mutedStrings`, which draw the small
+  O/× marks a chord diagram needs.
+- **`fit` scales a board to its container** (`width/height: 100%` plus the
+  viewBox's aspect ratio) instead of its intrinsic pixel size. Any parent
+  with a bounded height needs it; without it the SVG keeps its natural
+  aspect height and overflows. Never pair a bounded container with
+  `h-auto`.
+- **Chord finger dots use the `root` tone (amber)**, not `accent` (white):
+  white dots vanish against the fret wires at chord-diagram sizes.
 
 ### Design decisions to revisit deliberately (not bugs)
 - Every Feed/Learn/Quiz component takes the narrow `AudioEngine` interface

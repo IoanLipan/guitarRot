@@ -11,8 +11,7 @@ and a focused Quiz tab. React 19 + TypeScript (strict) + Vite + Tailwind v4
 The music-theory core, audio engine, `Fretboard`/`TabStaff` renderers, and
 progress storage (Foundation) are done. The Feed/Learn/Quiz app shell is
 built and working, but not yet at parity with the original design spec — no
-SRS scheduler, no weighted feed generator, no lesson content, and one known
-audio-overlap bug in the Feed.
+SRS scheduler, no weighted feed generator, and no lesson content yet.
 
 **Read [`docs/FUTURE_WORK.md`](docs/FUTURE_WORK.md) before starting new
 work.** It has the full done/not-done checklist, every gap against the
