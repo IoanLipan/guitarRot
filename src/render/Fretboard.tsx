@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 import {
   STANDARD_TUNING,
   fretToMidi,
@@ -41,6 +41,13 @@ export type FretboardProps = {
   showFretNumbers?: boolean;
   /** Passing this makes the board interactive: bigger cells and tap targets. */
   onFretTap?: (position: FretPosition) => void;
+  /**
+   * Scales the board to fill its container instead of rendering at its
+   * intrinsic pixel size. The viewBox keeps the aspect ratio, so the board
+   * letterboxes inside the box the parent gives it rather than overflowing
+   * it — which is what you want any time the parent has a bounded height.
+   */
+  fit?: boolean;
   className?: string;
   ariaLabel?: string;
 };
@@ -93,6 +100,7 @@ export function Fretboard({
   showInlays = true,
   showFretNumbers = true,
   onFretTap,
+  fit = false,
   className,
   ariaLabel,
 }: FretboardProps) {
@@ -105,32 +113,40 @@ export function Fretboard({
 
   const markerRadius = Math.min(geometry.stringSpacing, geometry.fretSpacing) * 0.34;
   const tappableFrets = geometry.hasNut ? [0, ...geometry.cellFrets] : geometry.cellFrets;
+  const woodId = `wood-${useId()}`;
 
   return (
     <svg
       className={className}
       viewBox={`0 0 ${geometry.width} ${geometry.height}`}
-      width={geometry.width}
-      height={geometry.height}
+      width={fit ? '100%' : geometry.width}
+      height={fit ? '100%' : geometry.height}
+      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={ariaLabel ?? 'Guitar fretboard'}
       data-testid="fretboard"
     >
+      {/*
+        The body covers the whole canvas, not just nut-to-last-fret. Open
+        string markers, fret numbers, and dots on the outer strings all sit
+        in the margins by design — with a tight body they render off the
+        instrument and read as broken.
+      */}
+      <defs>
+        <linearGradient id={woodId} x1="0" y1="0" x2="0.55" y2="1">
+          <stop offset="0%" stopColor="var(--color-wood-light)" />
+          <stop offset="55%" stopColor="var(--color-wood)" />
+          <stop offset="100%" stopColor="#1b120c" />
+        </linearGradient>
+      </defs>
       <rect
-        x={geometry.fretWire(0).x1}
-        y={geometry.fretWire(0).y1}
-        width={
-          orientation === 'horizontal'
-            ? geometry.cellFrets.length * geometry.fretSpacing
-            : 5 * geometry.stringSpacing
-        }
-        height={
-          orientation === 'horizontal'
-            ? 5 * geometry.stringSpacing
-            : geometry.cellFrets.length * geometry.fretSpacing
-        }
-        fill="var(--color-wood)"
-        rx={4}
+        data-testid="fretboard-body"
+        x={0}
+        y={0}
+        width={geometry.width}
+        height={geometry.height}
+        fill={`url(#${woodId})`}
+        rx={orientation === 'horizontal' ? 14 : 12}
       />
 
       {showInlays &&
@@ -240,15 +256,18 @@ export function Fretboard({
         const point = geometry.markerPoint(marker);
         const tone = marker.tone ?? 'accent';
         const text = markerText(marker, labelMode, tuning, intervalRootMidi);
+        // An open string is played, not fretted: notation draws it as a ring
+        // at the nut, and a solid dot there reads as a fretted note.
+        const isOpen = marker.fret === 0;
         return (
           <g key={`marker-s${marker.stringIndex}f${marker.fret}`}>
             <circle
               cx={point.x}
               cy={point.y}
-              r={markerRadius}
-              fill={TONE_FILL[tone]}
-              stroke={tone === 'ghost' ? 'var(--color-ink-dim)' : 'none'}
-              strokeWidth={1.2}
+              r={isOpen ? markerRadius * 0.82 : markerRadius}
+              fill={isOpen ? 'none' : TONE_FILL[tone]}
+              stroke={isOpen ? TONE_FILL[tone] : tone === 'ghost' ? 'var(--color-ink-dim)' : 'none'}
+              strokeWidth={isOpen ? 3 : 1.2}
             />
             <text
               data-testid={`marker-s${marker.stringIndex}f${marker.fret}`}
@@ -258,7 +277,7 @@ export function Fretboard({
               dominantBaseline="central"
               fontSize={markerRadius * 0.95}
               fontWeight={700}
-              fill={TONE_TEXT[tone]}
+              fill={isOpen ? TONE_FILL[tone] : TONE_TEXT[tone]}
             >
               {text}
             </text>

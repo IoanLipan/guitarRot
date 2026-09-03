@@ -31,7 +31,9 @@ export function chordShapeToFretboard(shape: ChordShape): ChordFretboardProps {
       stringIndex,
       fret,
       label: finger === null || finger === undefined ? undefined : String(finger),
-      tone: 'accent',
+      // Amber, per the design's "glowing finger dots" — the white "accent"
+      // tone disappears against the fret wires at chord-diagram sizes.
+      tone: 'root',
     });
   });
 
