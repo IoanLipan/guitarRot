@@ -4,10 +4,18 @@ import type { QuizQuestion } from './generateQuiz';
 export type QuizVisualProps = {
   question: QuizQuestion;
   dotTone?: MarkerTone;
+  /** Scale to the container instead of the board's intrinsic pixel size. */
+  fit?: boolean;
+  className?: string;
 };
 
 /** The fretboard (note question) or chord diagram (chord question) a quiz prompt shows. */
-export function QuizVisual({ question, dotTone = 'root' }: QuizVisualProps) {
+export function QuizVisual({
+  question,
+  dotTone = 'root',
+  fit = false,
+  className = 'h-full w-full',
+}: QuizVisualProps) {
   if (question.kind === 'note') {
     return (
       <Fretboard
@@ -16,8 +24,9 @@ export function QuizVisual({ question, dotTone = 'root' }: QuizVisualProps) {
         markers={[
           { stringIndex: question.position.stringIndex, fret: question.position.fret, tone: dotTone },
         ]}
-        className="h-auto w-full"
-        ariaLabel="Tap-to-identify note prompt"
+        fit={fit}
+        className={className}
+        ariaLabel="Name-this-note prompt"
       />
     );
   }
@@ -32,7 +41,9 @@ export function QuizVisual({ question, dotTone = 'root' }: QuizVisualProps) {
       openStrings={diagram.openStrings}
       barre={diagram.barre}
       labelMode="custom"
-      className="h-auto w-full"
+      showFretNumbers={diagram.fretRange[0] > 0}
+      fit={fit}
+      className={className}
       ariaLabel="Identify-this-chord prompt"
     />
   );
