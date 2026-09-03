@@ -6,6 +6,7 @@ import { getToneProfile } from '@/audio';
 import { Feed } from '@/feed/Feed';
 import { Learn } from '@/learn/Learn';
 import { Quiz } from '@/quiz/Quiz';
+import { Songs } from '@/songs';
 import { SettingsSheet } from './SettingsSheet';
 import { TabBar, type TabId } from './TabBar';
 import { useAudioEngine } from './useAudioEngine';
@@ -62,6 +63,7 @@ export function AppShell() {
           instead of the whole page growing past the viewport. */}
       <main className="relative min-h-0 flex-1 overflow-hidden pt-[env(safe-area-inset-top)]">
         {tab === 'feed' && <Feed engine={engine} progress={progress} />}
+        {tab === 'songs' && <Songs engine={engine} />}
         {tab === 'learn' && <Learn engine={engine} />}
         {tab === 'quiz' && <Quiz engine={engine} progress={progress} />}
 

@@ -1,9 +1,10 @@
 import { tapHaptic } from './haptics';
 
-export type TabId = 'feed' | 'learn' | 'quiz';
+export type TabId = 'feed' | 'songs' | 'learn' | 'quiz';
 
 const TABS: readonly { id: TabId; label: string }[] = [
   { id: 'feed', label: 'Feed' },
+  { id: 'songs', label: 'Songs' },
   { id: 'learn', label: 'Learn' },
   { id: 'quiz', label: 'Quiz' },
 ];
@@ -38,11 +39,23 @@ export function TabBar({ active, onChange }: { active: TabId; onChange: (id: Tab
 
 function TabIcon({ id, active }: { id: TabId; active: boolean }) {
   const color = active ? 'var(--color-accent)' : INACTIVE_COLOR;
-  const shape = id === 'quiz' ? 'rounded-full' : 'rounded-md';
+  const fill = active ? color : 'none';
+  const common = { stroke: color, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+
   return (
-    <span
-      className={`h-6 w-6 ${shape} transition-colors`}
-      style={active ? { background: color } : { border: `2px solid ${color}` }}
-    />
+    <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+      {id === 'feed' && <rect x="4" y="4" width="16" height="16" rx="4" fill={fill} {...common} />}
+      {id === 'songs' && (
+        <>
+          <path d="M9 18V6l10-2v12" fill={fill} {...common} />
+          <circle cx="6.5" cy="18" r="2.5" fill={fill} {...common} />
+          <circle cx="16.5" cy="16" r="2.5" fill={fill} {...common} />
+        </>
+      )}
+      {id === 'learn' && (
+        <path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z" fill={fill} {...common} />
+      )}
+      {id === 'quiz' && <circle cx="12" cy="12" r="8" fill={fill} {...common} />}
+    </svg>
   );
 }
