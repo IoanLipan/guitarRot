@@ -25,6 +25,8 @@ export class SynthGuitar implements GuitarVoice {
   private readonly picks: Tone.NoiseSynth[];
   private readonly pickGains: Tone.Gain[];
   private readonly pickFilters: Tone.Filter[];
+  /** Unvaried pick levels, so humanise() has something to vary around. */
+  private pickBaseLevels: number[] = [];
   private nextVoice = 0;
 
   constructor(profile: ToneProfile = getToneProfile(DEFAULT_TONE_ID)) {
@@ -46,6 +48,7 @@ export class SynthGuitar implements GuitarVoice {
       );
       this.pickGains.push(gain);
       this.pickFilters.push(filter);
+      this.pickBaseLevels.push(pick.level);
       return new Tone.NoiseSynth({
         noise: { type: 'white' },
         envelope: { attack: 0.001, decay: pick.decay, sustain: 0, release: 0.01 },
@@ -65,11 +68,27 @@ export class SynthGuitar implements GuitarVoice {
       const filter = this.pickFilters[stringIndex];
       if (gain !== undefined) gain.gain.value = next.level;
       if (filter !== undefined) filter.frequency.value = next.bandHz;
+      this.pickBaseLevels[stringIndex] = next.level;
     });
   }
 
   connect(node: Tone.InputNode): void {
     for (const volume of this.volumes) volume.connect(node);
+  }
+
+  /**
+   * Small per-note variation. A player never strikes a string exactly the
+   * same way twice, and identical repeats are a large part of what reads as
+   * robotic on a fast riff. Pitch is deliberately untouched: the quizzes
+   * depend on it being exact.
+   */
+  private humanise(stringIndex: number): number {
+    const pick = this.pickBaseLevels[stringIndex];
+    const gain = this.pickGains[stringIndex];
+    if (pick !== undefined && gain !== undefined) {
+      gain.gain.value = pick * (0.8 + Math.random() * 0.4);
+    }
+    return 0.94 + Math.random() * 0.12;
   }
 
   playNote(midi: Midi, opts: PlayNoteOptions = {}): void {
@@ -82,7 +101,7 @@ export class SynthGuitar implements GuitarVoice {
     const volume = this.volumes[index];
     if (voice === undefined || volume === undefined) return;
 
-    volume.volume.value = Tone.gainToDb(opts.velocity ?? 0.8);
+    volume.volume.value = Tone.gainToDb((opts.velocity ?? 0.8) * this.humanise(index));
     voice.triggerAttack(Tone.Frequency(midi, 'midi').toFrequency(), opts.time);
     this.picks[index]?.triggerAttack(opts.time);
   }

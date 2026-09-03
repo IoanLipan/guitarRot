@@ -28,6 +28,14 @@ export type ToneProfile = {
     /** Reverb wet, 0-1. */
     reverbWet: number;
     /**
+     * Body resonance: a peaking EQ standing in for the air cavity and top
+     * of an acoustic instrument. Electrics leave this at 0 dB, which makes
+     * the node transparent — a solid body has nothing to resonate.
+     */
+    bodyHz: number;
+    bodyQ: number;
+    bodyGainDb: number;
+    /**
      * Output trim, linear gain. Set by measuring each preset's rendered RMS
      * and levelling them: darker presets carry far more low-frequency energy
      * for the same nominal gain, and without this, switching tone sounds
@@ -37,15 +45,27 @@ export type ToneProfile = {
   };
 };
 
-export type ToneId = 'clean' | 'rock' | 'blues' | 'country';
+export type ToneId = 'acoustic' | 'clean' | 'rock' | 'blues' | 'country';
 
 export const TONE_PROFILES: readonly ToneProfile[] = [
+  {
+    id: 'acoustic',
+    name: 'Acoustic',
+    blurb: 'Steel strings over a wooden box. Woody, open, rings on.',
+    // Soft pick, long ring, and plenty of top: an acoustic's brightness
+    // comes from the strings and the top resonating, not from a bright amp.
+    string: { attackNoise: 0.75, dampening: 5200, resonance: 0.975 },
+    // The body stage is what makes this read as acoustic rather than as a
+    // clean electric: a broad lift around the ~110Hz air resonance every
+    // dreadnought has, which is exactly what a solid body lacks.
+    amp: { drive: 0, filterHz: 7000, reverbWet: 0.16, gain: 0.6, bodyHz: 110, bodyQ: 0.9, bodyGainDb: 7 },
+  },
   {
     id: 'clean',
     name: 'Clean',
     blurb: 'Bare strings, no colour. Every note exactly as it is.',
     string: { attackNoise: 0.9, dampening: 3600, resonance: 0.965 },
-    amp: { drive: 0, filterHz: 6000, reverbWet: 0.1, gain: 0.79 },
+    amp: { drive: 0, filterHz: 6000, reverbWet: 0.1, gain: 0.79, bodyHz: 200, bodyQ: 1, bodyGainDb: 0 },
   },
   {
     id: 'rock',
@@ -57,14 +77,14 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     // stop tight, but still high enough to sustain — see stringVoicing.ts on
     // why that ceiling is so unforgiving.
     string: { attackNoise: 1.7, dampening: 4800, resonance: 0.95 },
-    amp: { drive: 0.5, filterHz: 5800, reverbWet: 0.05, gain: 0.25 },
+    amp: { drive: 0.5, filterHz: 5800, reverbWet: 0.05, gain: 0.25, bodyHz: 200, bodyQ: 1, bodyGainDb: 0 },
   },
   {
     id: 'blues',
     name: 'Blues',
     blurb: 'Warm, mid-heavy, just breaking up. Bends sing.',
     string: { attackNoise: 1.2, dampening: 3200, resonance: 0.972 },
-    amp: { drive: 0.18, filterHz: 3400, reverbWet: 0.18, gain: 0.33 },
+    amp: { drive: 0.18, filterHz: 3400, reverbWet: 0.18, gain: 0.33, bodyHz: 200, bodyQ: 1, bodyGainDb: 0 },
   },
   {
     id: 'country',
@@ -75,11 +95,11 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     // read as edgier than the actually-distorted Rock preset — backwards.
     // Still bright, still rings, but no drive and no squeal.
     string: { attackNoise: 0.55, dampening: 6200, resonance: 0.958 },
-    amp: { drive: 0, filterHz: 7600, reverbWet: 0.24, gain: 1.1 },
+    amp: { drive: 0, filterHz: 7600, reverbWet: 0.24, gain: 1.1, bodyHz: 200, bodyQ: 1, bodyGainDb: 0 },
   },
 ];
 
-export const DEFAULT_TONE_ID: ToneId = 'clean';
+export const DEFAULT_TONE_ID: ToneId = 'acoustic';
 
 export function getToneProfile(id: string | undefined): ToneProfile {
   return (

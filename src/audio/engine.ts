@@ -35,6 +35,7 @@ export class GuitarAudioEngine implements AudioEngine {
   private filterNode: Tone.Filter | null = null;
   private driveNode: Tone.Distortion | null = null;
   private reverbNode: Tone.Reverb | null = null;
+  private bodyNode: Tone.Filter | null = null;
 
   get backend(): EngineBackend {
     return this.currentBackend;
@@ -54,6 +55,11 @@ export class GuitarAudioEngine implements AudioEngine {
     if (this.gainNode !== null) this.gainNode.gain.value = profile.amp.gain;
     if (this.filterNode !== null) this.filterNode.frequency.value = profile.amp.filterHz;
     if (this.reverbNode !== null) this.reverbNode.wet.value = profile.amp.reverbWet;
+    if (this.bodyNode !== null) {
+      this.bodyNode.frequency.value = profile.amp.bodyHz;
+      this.bodyNode.Q.value = profile.amp.bodyQ;
+      this.bodyNode.gain.value = profile.amp.bodyGainDb;
+    }
     if (this.driveNode !== null) {
       this.driveNode.distortion = profile.amp.drive;
       this.driveNode.wet.value = profile.amp.drive > 0 ? 1 : 0;
@@ -73,14 +79,23 @@ export class GuitarAudioEngine implements AudioEngine {
       distortion: profile.amp.drive,
       wet: profile.amp.drive > 0 ? 1 : 0,
     });
+    // Body sits before the drive: on a real instrument the box colours the
+    // string, and anything after it would be colouring the amplifier.
+    const body = new Tone.Filter({
+      type: 'peaking',
+      frequency: profile.amp.bodyHz,
+      Q: profile.amp.bodyQ,
+      gain: profile.amp.bodyGainDb,
+    });
     const gain = new Tone.Gain(profile.amp.gain);
-    gain.chain(drive, filter, reverb, Tone.getDestination());
+    gain.chain(body, drive, filter, reverb, Tone.getDestination());
 
-    this.chain = [gain, drive, filter, reverb];
+    this.chain = [gain, body, drive, filter, reverb];
     this.gainNode = gain;
     this.driveNode = drive;
     this.filterNode = filter;
     this.reverbNode = reverb;
+    this.bodyNode = body;
 
     if (this.currentBackend === 'sampled' && manifest !== null) {
       try {
@@ -136,6 +151,7 @@ export class GuitarAudioEngine implements AudioEngine {
     this.driveNode = null;
     this.filterNode = null;
     this.reverbNode = null;
+    this.bodyNode = null;
     this.currentBackend = 'uninitialized';
   }
 }

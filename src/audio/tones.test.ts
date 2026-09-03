@@ -2,8 +2,25 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_TONE_ID, getToneProfile, isToneId, TONE_PROFILES } from './tones';
 
 describe('tone profiles', () => {
-  it('ships the four voicings with unique ids', () => {
-    expect(TONE_PROFILES.map((p) => p.id)).toEqual(['clean', 'rock', 'blues', 'country']);
+  it('ships the voicings with unique ids, acoustic first', () => {
+    expect(TONE_PROFILES.map((p) => p.id)).toEqual([
+      'acoustic',
+      'clean',
+      'rock',
+      'blues',
+      'country',
+    ]);
+  });
+
+  // Only an instrument with a box resonates: the electrics leave the body
+  // stage at 0 dB, which makes the filter transparent.
+  it('gives the acoustic a body resonance and the electrics none', () => {
+    const acoustic = getToneProfile('acoustic');
+    expect(acoustic.amp.bodyGainDb).toBeGreaterThan(0);
+    expect(acoustic.amp.bodyHz).toBeLessThan(200);
+    for (const electric of TONE_PROFILES.filter((p) => p.id !== 'acoustic')) {
+      expect(electric.amp.bodyGainDb).toBe(0);
+    }
   });
 
   it('keeps every parameter inside what the audio nodes accept', () => {
