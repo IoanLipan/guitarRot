@@ -61,7 +61,7 @@ describe('QuizCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'G' }));
 
-    expect(onAnswered).toHaveBeenCalledWith(true);
+    expect(onAnswered).toHaveBeenCalledWith(true, noteQuestion.id);
     expect(screen.getByText('Nice — next one…')).toBeInTheDocument();
     expect(onAdvance).not.toHaveBeenCalled();
 

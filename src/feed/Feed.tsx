@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { AudioEngine } from '@/audio';
+import { dueSrsIds } from '@/quiz/srs';
 import type { ProgressHandle } from '@/app/useProgress';
 import { ShareButton, shareTargetOf, shareTitleOf } from '@/share';
 import { ChordCard } from './ChordCard';
@@ -33,7 +34,7 @@ export function Feed({
 }) {
   const cursorRef = useRef<FeedCursor>(emptyCursor());
   const [items, setItems] = useState<FeedItem[]>(() => {
-    const page = generateFeedPage(PAGE_SIZE, cursorRef.current);
+    const page = generateFeedPage(PAGE_SIZE, cursorRef.current, undefined, dueSrsIds(progress.state.srs, Date.now()));
     cursorRef.current = page.cursor;
     return initialItem === undefined ? page.items : [initialItem, ...page.items];
   });
@@ -45,10 +46,15 @@ export function Feed({
   const scrollDebtRef = useRef(0);
 
   const extend = useCallback(() => {
-    const page = generateFeedPage(PAGE_SIZE, cursorRef.current);
+    const page = generateFeedPage(
+      PAGE_SIZE,
+      cursorRef.current,
+      undefined,
+      dueSrsIds(progress.state.srs, Date.now()),
+    );
     cursorRef.current = page.cursor;
     setItems((current) => [...current, ...page.items]);
-  }, []);
+  }, [progress.state.srs]);
 
   // The feed never ends: as the active card approaches the tail, generate more.
   useEffect(() => {

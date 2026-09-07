@@ -1,6 +1,6 @@
 import { CHORDS, RIFFS, type Riff } from '@/content';
 import type { ChordShape } from '@/music';
-import { generateChordQuestion, generateNoteQuestion, type QuizQuestion } from '@/quiz';
+import { generateChordQuestion, generateNoteQuestion, questionForId, type QuizQuestion } from '@/quiz';
 
 export type FeedItem =
   | { kind: 'riff'; id: string; riff: Riff }
@@ -123,9 +123,12 @@ export function generateFeedPage(
   count: number,
   cursor: FeedCursor = emptyCursor(),
   random: () => number = Math.random,
+  /** Most-overdue-first ids from `dueSrsIds`; drained as quiz slots need them. */
+  dueIds: readonly string[] = [],
 ): { items: FeedItem[]; cursor: FeedCursor } {
   const items: FeedItem[] = [];
   let next = { ...cursor };
+  const due = [...dueIds];
 
   for (let i = 0; i < count; i += 1) {
     const kind = pickKind(next, random);
@@ -160,9 +163,12 @@ export function generateFeedPage(
       continue;
     }
 
-    const question = next.nextQuizIsNote
-      ? generateNoteQuestion({ random })
-      : generateChordQuestion({ random });
+    // A due review beats a fresh random question — that is the entire
+    // point of tracking SRS state instead of quizzing uniformly at random.
+    const dueQuestion = due.length > 0 ? questionForId(due.shift()!) : null;
+    const question =
+      dueQuestion ??
+      (next.nextQuizIsNote ? generateNoteQuestion({ random }) : generateChordQuestion({ random }));
     items.push({ kind, id: `feed-${sequence}-${question.id}`, question });
     next = {
       ...next,

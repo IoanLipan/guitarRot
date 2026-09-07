@@ -46,7 +46,7 @@ export function Quiz({ engine, progress }: { engine: AudioEngine; progress: Prog
     if (answered) return;
     setPicked(option);
     const isCorrect = option === question.correctAnswer;
-    progress.recordAnswer(isCorrect);
+    progress.recordAnswer(isCorrect, question.id);
     setAnsweredInRound((count) => count + 1);
     if (isCorrect) successHaptic();
     else errorHaptic();

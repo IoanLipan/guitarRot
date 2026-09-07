@@ -70,7 +70,7 @@ describe('Quiz', () => {
 
     fireEvent.click(screen.getByRole('button', { name: CORRECT }));
 
-    expect(progress.recordAnswer).toHaveBeenCalledWith(true);
+    expect(progress.recordAnswer).toHaveBeenCalledWith(true, expect.any(String));
     expect(screen.getByText('PERFECT')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: CORRECT })).toBeDisabled();
 
@@ -88,7 +88,7 @@ describe('Quiz', () => {
 
     fireEvent.click(screen.getByRole('button', { name: WRONG }));
 
-    expect(progress.recordAnswer).toHaveBeenCalledWith(false);
+    expect(progress.recordAnswer).toHaveBeenCalledWith(false, expect.any(String));
     expect(screen.getByText('MISS')).toBeInTheDocument();
     // The D string is MIDI 50; fret 2 is E, and D itself is open on it.
     expect(screen.getByTestId('quiz-explanation')).toHaveTextContent(

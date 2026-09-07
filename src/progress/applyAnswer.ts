@@ -1,7 +1,13 @@
 import { DAILY_KEEP_DAYS, pruneDaily, type ProgressState } from './types';
+import { reviewSrsItem } from '@/quiz/srs';
 
 /** Folds one quiz answer into progress state: streak, longest streak, and today's tally. */
-export function applyAnswer(state: ProgressState, correct: boolean, today: string): ProgressState {
+export function applyAnswer(
+  state: ProgressState,
+  correct: boolean,
+  today: string,
+  itemId?: string,
+): ProgressState {
   const current = correct ? state.streak.current + 1 : 0;
   const streak = {
     current,
@@ -23,5 +29,10 @@ export function applyAnswer(state: ProgressState, correct: boolean, today: strin
     today,
   );
 
-  return { ...state, streak, daily };
+  const srs =
+    itemId === undefined
+      ? state.srs
+      : { ...state.srs, [itemId]: reviewSrsItem(itemId, state.srs[itemId], correct, Date.now()) };
+
+  return { ...state, streak, daily, srs };
 }

@@ -131,3 +131,30 @@ describe('the first card', () => {
     }
   });
 });
+
+describe('due-weighted quiz selection', () => {
+  it('spends the next quiz slot on a due item instead of a random question', () => {
+    const random = mulberry32(1);
+    const page = generateFeedPage(20, emptyCursor(), random, ['note-s0f3']);
+    const quiz = page.items.find((item) => item.kind === 'quiz');
+    expect(quiz?.kind).toBe('quiz');
+    expect(quiz && quiz.kind === 'quiz' ? quiz.question.id : null).toBe('note-s0f3');
+  });
+
+  it('falls through to a normal random question once due items run out', () => {
+    const random = mulberry32(1);
+    const page = generateFeedPage(20, emptyCursor(), random, ['note-s0f3']);
+    const quizzes = page.items.filter((item) => item.kind === 'quiz');
+    expect(quizzes.length).toBeGreaterThan(1);
+    expect(quizzes[1] && quizzes[1].kind === 'quiz' ? quizzes[1].question.id : null).not.toBe(
+      'note-s0f3',
+    );
+  });
+
+  it('ignores a due id that no longer resolves to anything', () => {
+    const random = mulberry32(1);
+    const page = generateFeedPage(20, emptyCursor(), random, ['chord-not-a-real-chord']);
+    const quiz = page.items.find((item) => item.kind === 'quiz');
+    expect(quiz?.kind).toBe('quiz');
+  });
+});

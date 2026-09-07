@@ -125,3 +125,28 @@ export function generateChordQuestion(
   if (correct === undefined) throw new Error('Empty chord pool');
   return chordQuestionFor(correct, { ...opts, random });
 }
+
+const NOTE_QUESTION_ID = /^note-s(\d+)f(\d+)$/;
+
+/**
+ * Rebuilds the question a given quiz id names. Ids are deterministic
+ * (fret position or chord id), so this is the one place both sharing and
+ * SRS scheduling go to turn a stored id back into a real question.
+ */
+export function questionForId(id: string): QuizQuestion | null {
+  const note = NOTE_QUESTION_ID.exec(id);
+  if (note !== null) {
+    const stringIndex = Number(note[1]);
+    const fret = Number(note[2]);
+    const [lowFret, highFret] = NOTE_QUIZ_FRET_RANGE;
+    if (stringIndex >= STRING_COUNT || fret < lowFret || fret > highFret) return null;
+    return noteQuestionAt(stringIndex, fret);
+  }
+
+  if (id.startsWith('chord-')) {
+    const chord = CHORDS.find((c) => c.id === id.slice('chord-'.length));
+    return chord === undefined ? null : chordQuestionFor(chord);
+  }
+
+  return null;
+}

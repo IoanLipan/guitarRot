@@ -15,7 +15,7 @@ function todayIso(): string {
 export type ProgressHandle = {
   state: ProgressState;
   loaded: boolean;
-  recordAnswer: (correct: boolean) => void;
+  recordAnswer: (correct: boolean, itemId?: string) => void;
   updateSettings: (patch: Partial<Settings>) => void;
 };
 
@@ -43,9 +43,9 @@ export function useProgress(): ProgressHandle {
     return () => void saver.flush();
   }, []);
 
-  const recordAnswer = useCallback((correct: boolean) => {
+  const recordAnswer = useCallback((correct: boolean, itemId?: string) => {
     setState((prev) => {
-      const next = applyAnswer(prev, correct, todayIso());
+      const next = applyAnswer(prev, correct, todayIso(), itemId);
       saverRef.current.save(next);
       return next;
     });

@@ -14,7 +14,7 @@ export function QuizCard({
 }: {
   question: QuizQuestion;
   engine: AudioEngine;
-  onAnswered: (correct: boolean) => void;
+  onAnswered: (correct: boolean, itemId?: string) => void;
   /** Called when this card is done and the feed should scroll onward. */
   onAdvance: () => void;
 }) {
@@ -35,7 +35,7 @@ export function QuizCard({
     if (answered) return;
     setPicked(option);
     const isCorrect = option === question.correctAnswer;
-    onAnswered(isCorrect);
+    onAnswered(isCorrect, question.id);
     if (isCorrect) successHaptic();
     else errorHaptic();
 
