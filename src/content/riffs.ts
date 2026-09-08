@@ -265,6 +265,124 @@ const folkAlternatingBass: Riff = {
   ],
 };
 
+const emPentatonicBox2: Riff = {
+  id: 'em-pentatonic-box2',
+  title: 'E minor pentatonic, box two',
+  style: 'Scale',
+  level: 3,
+  bpm: 96,
+  timeSignature: [4, 4],
+  bars: 2,
+  source: 'original',
+  tags: ['pentatonic', 'E minor', 'box-two', 'solo'],
+  events: [
+    // Same shape as box one, three frets up the neck: the same five notes
+    // live in a different spot, which is the whole point of learning more
+    // than one box.
+    { stringIndex: 0, fret: 3, beat: 0, duration: 0.5 },
+    { stringIndex: 0, fret: 5, beat: 0.5, duration: 0.5 },
+    { stringIndex: 1, fret: 5, beat: 1, duration: 0.5 },
+    { stringIndex: 2, fret: 5, beat: 1.5, duration: 0.5 },
+    { stringIndex: 3, fret: 4, beat: 2, duration: 0.5 },
+    { stringIndex: 4, fret: 3, beat: 2.5, duration: 0.5 },
+    { stringIndex: 4, fret: 5, beat: 3, duration: 0.5 },
+    { stringIndex: 5, fret: 3, beat: 3.5, duration: 0.5 },
+    // The climb ends on the box's top note, held through the rest of the phrase.
+    { stringIndex: 5, fret: 5, beat: 4, duration: 4 },
+  ],
+};
+
+const emPentatonicBox3: Riff = {
+  id: 'em-pentatonic-box3',
+  title: 'E minor pentatonic, box three',
+  style: 'Scale',
+  level: 3,
+  bpm: 100,
+  timeSignature: [4, 4],
+  bars: 2,
+  source: 'original',
+  tags: ['pentatonic', 'E minor', 'box-three', 'solo'],
+  events: [
+    // Up the box, then straight back down it — the shape most solos actually
+    // use: arrive somewhere, then leave the way you came.
+    { stringIndex: 0, fret: 7, beat: 0, duration: 0.5 },
+    { stringIndex: 1, fret: 7, beat: 0.5, duration: 0.5 },
+    { stringIndex: 2, fret: 7, beat: 1, duration: 0.5 },
+    { stringIndex: 2, fret: 9, beat: 1.5, duration: 0.5 },
+    { stringIndex: 3, fret: 7, beat: 2, duration: 0.5 },
+    { stringIndex: 3, fret: 9, beat: 2.5, duration: 0.5 },
+    { stringIndex: 4, fret: 8, beat: 3, duration: 0.5 },
+    { stringIndex: 5, fret: 7, beat: 3.5, duration: 0.5 },
+    { stringIndex: 4, fret: 8, beat: 4, duration: 0.5 },
+    { stringIndex: 3, fret: 9, beat: 4.5, duration: 0.5 },
+    { stringIndex: 3, fret: 7, beat: 5, duration: 0.5 },
+    { stringIndex: 2, fret: 9, beat: 5.5, duration: 0.5 },
+    { stringIndex: 2, fret: 7, beat: 6, duration: 0.5 },
+    { stringIndex: 1, fret: 7, beat: 6.5, duration: 0.5 },
+    { stringIndex: 0, fret: 7, beat: 7, duration: 1 },
+  ],
+};
+
+const emPentatonicHighClimb: Riff = {
+  id: 'em-pentatonic-high-climb',
+  title: 'High-neck climb',
+  style: 'Lead',
+  level: 5,
+  bpm: 84,
+  timeSignature: [4, 4],
+  bars: 2,
+  source: 'original',
+  tags: ['pentatonic', 'E minor', 'high-position', 'bend', 'solo'],
+  events: [
+    // One box, near the top of the neck, all six strings, no repeats: the
+    // longest single run in the library, ending on a bend instead of a pluck.
+    { stringIndex: 0, fret: 10, beat: 0, duration: 0.5 },
+    { stringIndex: 0, fret: 12, beat: 0.5, duration: 0.5 },
+    { stringIndex: 1, fret: 10, beat: 1, duration: 0.5 },
+    { stringIndex: 1, fret: 12, beat: 1.5, duration: 0.5 },
+    { stringIndex: 2, fret: 9, beat: 2, duration: 0.5 },
+    { stringIndex: 2, fret: 12, beat: 2.5, duration: 0.5 },
+    { stringIndex: 3, fret: 9, beat: 3, duration: 0.5 },
+    { stringIndex: 3, fret: 12, beat: 3.5, duration: 0.5 },
+    { stringIndex: 4, fret: 10, beat: 4, duration: 0.5 },
+    { stringIndex: 4, fret: 12, beat: 4.5, duration: 0.5 },
+    { stringIndex: 5, fret: 10, beat: 5, duration: 0.5 },
+    { stringIndex: 5, fret: 12, beat: 5.5, duration: 2.5, technique: 'bend' },
+  ],
+};
+
+const gMajorScaleRun: Riff = {
+  id: 'g-major-scale-run',
+  title: 'G major scale, up and down',
+  style: 'Scale',
+  level: 2,
+  bpm: 88,
+  timeSignature: [4, 4],
+  bars: 2,
+  source: 'original',
+  tags: ['major', 'G major', 'open-position', 'scale'],
+  events: [
+    // Every riff up to here is minor or blues; this is the odd one out on
+    // purpose. A major scale is a different mood, not just different notes.
+    { stringIndex: 3, fret: 0, beat: 0, duration: 0.5 },
+    { stringIndex: 3, fret: 2, beat: 0.5, duration: 0.5 },
+    { stringIndex: 4, fret: 0, beat: 1, duration: 0.5 },
+    { stringIndex: 4, fret: 1, beat: 1.5, duration: 0.5 },
+    { stringIndex: 4, fret: 3, beat: 2, duration: 0.5 },
+    { stringIndex: 5, fret: 0, beat: 2.5, duration: 0.5 },
+    { stringIndex: 5, fret: 2, beat: 3, duration: 0.5 },
+    { stringIndex: 5, fret: 3, beat: 3.5, duration: 0.5 },
+    // Straight back down.
+    { stringIndex: 5, fret: 2, beat: 4, duration: 0.5 },
+    { stringIndex: 5, fret: 0, beat: 4.5, duration: 0.5 },
+    { stringIndex: 4, fret: 3, beat: 5, duration: 0.5 },
+    { stringIndex: 4, fret: 1, beat: 5.5, duration: 0.5 },
+    { stringIndex: 4, fret: 0, beat: 6, duration: 0.5 },
+    { stringIndex: 3, fret: 2, beat: 6.5, duration: 0.5 },
+    { stringIndex: 3, fret: 0, beat: 7, duration: 1 },
+  ],
+};
+
 export const RIFFS: readonly Riff[] = [
   chromaticWarmup,
   emPentatonicBox1,
@@ -275,6 +393,10 @@ export const RIFFS: readonly Riff[] = [
   rockPowerRun,
   bluesTurnaroundA,
   folkAlternatingBass,
+  emPentatonicBox2,
+  emPentatonicBox3,
+  emPentatonicHighClimb,
+  gMajorScaleRun,
 ];
 
 export function getRiff(id: string): Riff | undefined {
