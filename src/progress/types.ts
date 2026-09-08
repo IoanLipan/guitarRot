@@ -12,7 +12,6 @@ export type SrsItem = {
 };
 
 export type Settings = {
-  leftHanded: boolean;
   preferFlats: boolean;
   /** Feed riff playback speed, 0.25 to 1.5. */
   defaultSpeed: number;
@@ -38,7 +37,6 @@ export type ProgressState = {
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-  leftHanded: false,
   preferFlats: false,
   defaultSpeed: 1,
   // Kept in step with the audio module's DEFAULT_TONE_ID by a test rather
@@ -126,10 +124,6 @@ export function migrate(raw: unknown): ProgressState {
 
   const settings = isRecord(raw.settings)
     ? {
-        leftHanded:
-          typeof raw.settings.leftHanded === 'boolean'
-            ? raw.settings.leftHanded
-            : DEFAULT_SETTINGS.leftHanded,
         preferFlats:
           typeof raw.settings.preferFlats === 'boolean'
             ? raw.settings.preferFlats
