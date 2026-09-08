@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { tapHaptic } from '@/app/haptics';
-import { createRiffPlayer, type AudioEngine, type RiffPlayer } from '@/audio';
+import {
+  createMetronome,
+  createRiffPlayer,
+  speedToBpm,
+  type AudioEngine,
+  type Metronome,
+  type RiffPlayer,
+} from '@/audio';
 import { beatsPerBar, chartBars, chordByName, songToRiff, type Song } from '@/content';
 import { STANDARD_TUNING } from '@/music';
 import { chordShapeToFretboard, createTabGeometry, Fretboard, TabStaff } from '@/render';
 import { ShareButton } from '@/share';
 import { DifficultyPill } from './DifficultyPill';
 import { ChordChart } from './ChordChart';
+
+/** A tapped-out practice loop: the bar you tapped first, and the resulting range. */
+type LoopRange = { anchor: number; start: number; end: number };
 
 export function SongPlayer({
   song,
@@ -18,18 +28,24 @@ export function SongPlayer({
   onBack: () => void;
 }) {
   const riff = useMemo(() => songToRiff(song), [song]);
+  const barLength = beatsPerBar(riff.timeSignature);
   const geometry = useMemo(
     () => createTabGeometry({ bars: riff.bars, timeSignature: riff.timeSignature }),
     [riff],
   );
 
   const playerRef = useRef<RiffPlayer | null>(null);
+  const metronomeRef = useRef<Metronome | null>(null);
   const playheadRef = useRef<SVGGElement>(null);
   const staffScrollRef = useRef<HTMLDivElement>(null);
+  /** Blocks a second tap of Play from overlapping a count-in already in flight. */
+  const startingRef = useRef(false);
 
   const [playing, setPlaying] = useState(false);
   const [activeBar, setActiveBar] = useState<number | null>(null);
   const [speed, setSpeed] = useState(1);
+  const [metronomeOn, setMetronomeOn] = useState(false);
+  const [loopRange, setLoopRange] = useState<LoopRange | null>(null);
   const speedRef = useRef(speed);
   speedRef.current = speed;
 
@@ -37,35 +53,48 @@ export function SongPlayer({
   // The cleanup is what guarantees leaving the screen leaves no audio behind.
   useEffect(() => {
     const player = createRiffPlayer(riff, engine, { speed: speedRef.current });
+    const metronome = createMetronome(barLength);
     playerRef.current = player;
+    metronomeRef.current = metronome;
     player.start();
     setPlaying(true);
 
     return () => {
       player.stop();
+      metronome.stop();
       player.dispose();
+      metronome.dispose();
       playerRef.current = null;
+      metronomeRef.current = null;
       setPlaying(false);
       setActiveBar(null);
+      setMetronomeOn(false);
+      setLoopRange(null);
     };
-  }, [riff, engine]);
+  }, [riff, engine, barLength]);
 
   useEffect(() => {
     playerRef.current?.setSpeed(speed);
   }, [speed]);
 
+  useEffect(() => {
+    if (loopRange === null) playerRef.current?.setLoopRange(null, null);
+    else playerRef.current?.setLoopRange(loopRange.start * barLength, (loopRange.end + 1) * barLength);
+  }, [loopRange, barLength]);
+
   // One rAF loop drives both readouts. The playhead moves by transform,
   // never state; the bar highlight is state, but only re-renders on the few
-  // frames a bar actually changes.
-  const barLength = beatsPerBar(riff.timeSignature);
+  // frames a bar actually changes. currentBeat() (not progress()) is what
+  // keeps this correct once a practice loop shrinks the playable range —
+  // progress() would read as a fraction of that range, not of the song.
   useEffect(() => {
     let frame = 0;
     const tick = () => {
       const player = playerRef.current;
       if (player !== null) {
-        const beat = player.progress() * geometry.totalBeats;
+        const beat = player.currentBeat();
         setActiveBar((current) => {
-          const next = Math.min(riff.bars - 1, Math.floor(beat / barLength));
+          const next = Math.min(riff.bars - 1, Math.max(0, Math.floor(beat / barLength)));
           return next === current ? current : next;
         });
 
@@ -88,17 +117,59 @@ export function SongPlayer({
     return () => cancelAnimationFrame(frame);
   }, [geometry, riff.bars, barLength]);
 
-  function handleToggle() {
+  async function handleToggle() {
+    if (startingRef.current) return;
     tapHaptic();
     const player = playerRef.current;
     if (player === null) return;
+
     if (playing) {
       player.stop();
+      metronomeRef.current?.stop();
       setPlaying(false);
-    } else {
+      return;
+    }
+
+    startingRef.current = true;
+    if (metronomeOn) {
+      await metronomeRef.current?.playCountIn(speedToBpm(riff.bpm, speed), barLength);
+    }
+    // The toggle may have been raced by an unmount while the count-in ran.
+    if (playerRef.current === player) {
       player.start();
+      if (metronomeOn) metronomeRef.current?.start();
       setPlaying(true);
     }
+    startingRef.current = false;
+  }
+
+  function handleMetronomeToggle() {
+    tapHaptic();
+    setMetronomeOn((prev) => {
+      const next = !prev;
+      if (playing) {
+        if (next) metronomeRef.current?.start();
+        else metronomeRef.current?.stop();
+      }
+      return next;
+    });
+  }
+
+  /**
+   * Tap a bar to loop it; tap a second bar to stretch the loop to cover
+   * both. Tapping the first bar again clears it. One control instead of a
+   * start/end picker — a bar you can already see is faster to point at than
+   * a range to configure.
+   */
+  function handleBarTap(index: number) {
+    tapHaptic();
+    setLoopRange((current) => {
+      if (current !== null && current.anchor === index) return null;
+      if (current !== null) {
+        return { anchor: current.anchor, start: Math.min(current.anchor, index), end: Math.max(current.anchor, index) };
+      }
+      return { anchor: index, start: index, end: index };
+    });
   }
 
   const currentChord =
@@ -137,9 +208,31 @@ export function SongPlayer({
 
       <p className="shrink-0 text-[13px] leading-relaxed text-ink-dim">{song.about}</p>
 
+      {song.chart !== undefined && loopRange !== null && (
+        <div className="flex shrink-0 items-center gap-2 text-xs font-bold text-ink-dim">
+          <span data-testid="loop-range-label">
+            Looping bars {loopRange.start + 1}–{loopRange.end + 1}
+          </span>
+          <button
+            type="button"
+            onClick={() => setLoopRange(null)}
+            aria-label="Clear loop"
+            data-testid="loop-clear"
+            className="rounded-full bg-surface-2 px-2 py-0.5 text-ink-dim active:scale-95"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="min-h-0 flex-1 overflow-y-auto">
         {song.chart !== undefined ? (
-          <ChordChart chart={song.chart} activeBar={activeBar} />
+          <ChordChart
+            chart={song.chart}
+            activeBar={activeBar}
+            loopRange={loopRange}
+            onBarTap={handleBarTap}
+          />
         ) : (
           <div className="flex h-full items-center">
             <div
@@ -155,7 +248,7 @@ export function SongPlayer({
       <div className="flex shrink-0 items-center gap-3">
         <button
           type="button"
-          onClick={handleToggle}
+          onClick={() => void handleToggle()}
           aria-label={playing ? 'Pause' : 'Play'}
           className="flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent shadow-[0_6px_18px_rgba(255,176,32,0.35)] active:scale-95"
         >
@@ -167,6 +260,21 @@ export function SongPlayer({
           ) : (
             <span className="ml-0.5 h-0 w-0 border-y-10 border-l-16 border-y-transparent border-l-ground" />
           )}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleMetronomeToggle}
+          aria-label="Metronome"
+          aria-pressed={metronomeOn}
+          data-testid="metronome-toggle"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg active:scale-95"
+          style={{
+            background: metronomeOn ? 'var(--color-accent)' : 'var(--color-surface-2)',
+            color: metronomeOn ? 'var(--color-ground)' : 'var(--color-ink-dim)',
+          }}
+        >
+          ♩
         </button>
 
         <label className="min-w-0 flex-1">

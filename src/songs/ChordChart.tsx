@@ -3,13 +3,21 @@ import { chartBars, type SongChart } from '@/content';
 /** Bars per row. Four is what fits a phone and how charts are written. */
 const BARS_PER_ROW = 4;
 
+export type ChordChartLoopRange = { start: number; end: number };
+
 export function ChordChart({
   chart,
   activeBar,
+  loopRange = null,
+  onBarTap,
 }: {
   chart: SongChart;
   /** Index into the flattened bar list, or null when nothing is playing. */
   activeBar: number | null;
+  /** Bars currently set to repeat, inclusive; ringed rather than filled so it reads apart from the live playhead. */
+  loopRange?: ChordChartLoopRange | null;
+  /** Tap a bar to loop it — see SongPlayer.handleBarTap for the two-tap gesture. */
+  onBarTap?: (index: number) => void;
 }) {
   const bars = chartBars(chart);
   const sections = chart.sections.map((section) => section.label);
@@ -37,19 +45,26 @@ export function ChordChart({
                 <div key={rowIndex} className="grid grid-cols-4 gap-1.5">
                   {row.map((bar) => {
                     const isActive = bar.index === activeBar;
+                    const isLooped =
+                      loopRange !== null && bar.index >= loopRange.start && bar.index <= loopRange.end;
                     return (
-                      <div
+                      <button
                         key={bar.index}
+                        type="button"
+                        onClick={() => onBarTap?.(bar.index)}
                         data-testid={`chart-bar-${bar.index}`}
                         data-active={isActive ? 'true' : undefined}
-                        className={`rounded-xl border py-3 text-center text-lg font-black transition-colors ${
+                        data-looped={isLooped ? 'true' : undefined}
+                        className={`rounded-xl border py-3 text-center text-lg font-black transition-colors active:scale-95 ${
                           isActive
                             ? 'border-accent bg-accent text-ground'
-                            : 'border-[#2b2b36] bg-surface-2'
+                            : isLooped
+                              ? 'border-accent bg-surface-2 text-ink'
+                              : 'border-[#2b2b36] bg-surface-2'
                         } ${bar.isRepeat && !isActive ? 'text-ink-dim/45' : ''}`}
                       >
                         {bar.chordName}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>

@@ -7,3 +7,4 @@ export { SynthGuitar } from './SynthGuitar';
 export { SampledGuitar } from './SampledGuitar';
 export { GuitarAudioEngine } from './engine';
 export { createRiffPlayer, type RiffPlayer } from './riffPlayer';
+export { createMetronome, isDownbeat, type Metronome } from './metronome';

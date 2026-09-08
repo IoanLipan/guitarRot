@@ -4,6 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { getToneProfile, type AudioEngine } from '@/audio';
 import { SONGS } from '@/content';
 
+const metronomes: {
+  start: ReturnType<typeof vi.fn>;
+  stop: ReturnType<typeof vi.fn>;
+  playCountIn: ReturnType<typeof vi.fn>;
+}[] = [];
+
 vi.mock('@/audio', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/audio')>();
   return {
@@ -14,8 +20,20 @@ vi.mock('@/audio', async (importOriginal) => {
       dispose: vi.fn(),
       setSpeed: vi.fn(),
       progress: vi.fn(() => 0),
+      currentBeat: vi.fn(() => 0),
+      setLoopRange: vi.fn(),
       totalBeats: 16,
     })),
+    createMetronome: vi.fn(() => {
+      const metronome = {
+        start: vi.fn(),
+        stop: vi.fn(),
+        playCountIn: vi.fn(() => Promise.resolve()),
+        dispose: vi.fn(),
+      };
+      metronomes.push(metronome);
+      return metronome;
+    }),
   };
 });
 
@@ -119,5 +137,61 @@ describe('Songs', () => {
 
     expect(writeText).toHaveBeenCalledWith('https://guitar-rot.vercel.app/?p=song:tom-dooley');
     vi.unstubAllGlobals();
+  });
+
+  it('plays a count-in before starting once the metronome is on', async () => {
+    metronomes.length = 0;
+    render(<Songs engine={fakeEngine()} openSongId="tom-dooley" />);
+
+    // Autoplay starts the song immediately; pause it before testing the
+    // count-in, or there is nothing to press Play on.
+    await userEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    await userEvent.click(screen.getByTestId('metronome-toggle'));
+    await userEvent.click(screen.getByRole('button', { name: 'Play' }));
+
+    const metronome = metronomes[0]!;
+    expect(metronome.playCountIn).toHaveBeenCalledTimes(1);
+    expect(metronome.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts the click immediately when turned on mid-playback, no count-in', async () => {
+    metronomes.length = 0;
+    render(<Songs engine={fakeEngine()} openSongId="tom-dooley" />);
+
+    await userEvent.click(screen.getByTestId('metronome-toggle'));
+
+    const metronome = metronomes[0]!;
+    expect(metronome.playCountIn).not.toHaveBeenCalled();
+    expect(metronome.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('loops a tapped bar, and clears it on a second tap of the same bar', async () => {
+    render(<Songs engine={fakeEngine()} openSongId="tom-dooley" />);
+
+    await userEvent.click(screen.getByTestId('chart-bar-1'));
+    expect(screen.getByTestId('loop-range-label')).toHaveTextContent('Looping bars 2–2');
+    expect(screen.getByTestId('chart-bar-1')).toHaveAttribute('data-looped', 'true');
+
+    await userEvent.click(screen.getByTestId('chart-bar-1'));
+    expect(screen.queryByTestId('loop-range-label')).toBeNull();
+  });
+
+  it('stretches the loop to a second, different bar', async () => {
+    render(<Songs engine={fakeEngine()} openSongId="tom-dooley" />);
+
+    await userEvent.click(screen.getByTestId('chart-bar-1'));
+    await userEvent.click(screen.getByTestId('chart-bar-3'));
+
+    expect(screen.getByTestId('loop-range-label')).toHaveTextContent('Looping bars 2–4');
+    expect(screen.getByTestId('chart-bar-2')).toHaveAttribute('data-looped', 'true');
+  });
+
+  it('clears the loop from its own button', async () => {
+    render(<Songs engine={fakeEngine()} openSongId="tom-dooley" />);
+
+    await userEvent.click(screen.getByTestId('chart-bar-0'));
+    await userEvent.click(screen.getByTestId('loop-clear'));
+
+    expect(screen.queryByTestId('loop-range-label')).toBeNull();
   });
 });

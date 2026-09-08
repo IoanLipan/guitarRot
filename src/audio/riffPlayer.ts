@@ -2,6 +2,7 @@ import * as Tone from 'tone';
 import { riffTotalBeats, type Riff } from '@/content';
 import { STANDARD_TUNING, type Tuning } from '@/music';
 import {
+  beatsToTransportTime,
   riffLoopEnd,
   riffToScheduledNotes,
   speedToBpm,
@@ -16,6 +17,20 @@ export type RiffPlayer = {
   setSpeed(speed: number): void;
   /** 0 to 1 through the loop. Read this from requestAnimationFrame. */
   progress(): number;
+  /**
+   * Absolute beats elapsed from the start of the riff (bar 0, beat 0),
+   * unaffected by `setLoopRange` — unlike `progress()`, which is a fraction
+   * of whatever range is currently looping. Use this to place a playhead or
+   * highlight a bar while a practice loop is active.
+   */
+  currentBeat(): number;
+  /**
+   * Restricts playback to `[startBeat, endBeat)` and jumps there right
+   * away — practicing a section means going straight to it, not waiting for
+   * the loop to come back around. `null` for both bounds restores the full
+   * riff (also jumping back to its start).
+   */
+  setLoopRange(startBeat: number | null, endBeat: number | null): void;
   readonly totalBeats: number;
 };
 
@@ -107,6 +122,23 @@ export function createRiffPlayer(
 
     progress() {
       return transport.progress;
+    },
+
+    currentBeat() {
+      const secondsPerBeat = 60 / transport.bpm.value;
+      return Tone.Time(transport.position).toSeconds() / secondsPerBeat;
+    },
+
+    setLoopRange(startBeat, endBeat) {
+      quietly('setLoopRange', () => {
+        const loopStart = startBeat === null ? 0 : beatsToTransportTime(startBeat);
+        const loopEnd = endBeat === null ? riffLoopEnd(riff) : beatsToTransportTime(endBeat);
+        part.loopStart = loopStart;
+        part.loopEnd = loopEnd;
+        transport.loopStart = loopStart;
+        transport.loopEnd = loopEnd;
+        transport.position = loopStart;
+      });
     },
 
     dispose() {
