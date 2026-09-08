@@ -482,6 +482,47 @@ reproduce: load the app, read `performance.getEntriesByType('resource')`
 filtered to `.mp3`, switch tone in Settings, read it again. Each set must
 appear exactly 17 times, never 34.
 
+## Metronome, count-in, loop-a-section, more solos (built 2026-09-08)
+
+**Metronome** (`src/audio/metronome.ts`) — its own `Tone.Synth`, connected
+straight to destination, never through the guitar amp chain, so tone/drive
+changes never touch the click. `SongPlayer` toggles it; turning it on
+mid-playback starts on the next quarter note (`loop.start('@4n')`), turning
+it on before pressing Play adds a one-bar count-in
+(`metronome.playCountIn`) ahead of `player.start()`. A `startingRef` guard
+stops a second tap of Play from overlapping a count-in already in flight.
+
+**Loop-a-section** — chord-chart songs only (riff/tab songs don't have
+clickable bars to anchor on). Tap a bar to loop it, tap another to stretch
+the range, tap the first bar again to clear. `RiffPlayer` grew
+`setLoopRange(startBeat, endBeat)` (shrinks `part`/`transport` loop bounds
+and jumps there) and `currentBeat()` (absolute beats from bar 0, unlike
+`progress()` which reads as a fraction of whatever range is currently
+looping — `SongPlayer`'s playhead and bar-highlight now read `currentBeat()`
+for this reason; `RiffCard` in the feed is untouched and still uses
+`progress()`, since it never sets a loop range).
+
+**leftHanded setting deleted.** It was stored and validated but nothing
+ever read it — a real toggle that did nothing. Removed from `Settings`
+rather than wired up.
+
+**Four more riffs** (`em-pentatonic-box2`, `em-pentatonic-box3`,
+`em-pentatonic-high-climb`, `g-major-scale-run`) — the feed's riff pool was
+9, capped at 8 before repeats per `NO_REPEAT_WINDOW`'s `poolSize - 1` rule,
+so it looped back on itself fast. Every new riff's pitches were checked
+against `scalePositions()` and `fretToMidi()` in a throwaway test before
+being hand-written into `TabEvent`s, rather than trusted from memory of
+"standard box shapes" — box two, box three and the high-position climb are
+each a strictly ascending MIDI sequence, verified, not assumed. Pool is now
+13; the window opens to 12.
+
+**Deliberately not done, per direction:** mic input (still text-and-tap
+only — "let's be able to play without a guitar"), any server-side or
+cross-device progress sync ("if you uninstall the app, bad luck for now" —
+`Preferences`/localStorage stays the only store), and `preferFlats` was
+left alone (not asked about, and unlike `leftHanded` it's at least
+plausible future work rather than confirmed dead).
+
 ## Deployment
 
 The `guitar-rot` Vercel project (org `lipanovskis-projects`) auto-deploys
