@@ -34,14 +34,14 @@ const REVERB_DECAY = 1.1;
 export class GuitarAudioEngine implements AudioEngine {
   private voice: GuitarVoice | null = null;
   /** Loaded sample sets, keyed by manifest set name, so a tone switch is instant the second time. */
-  private readonly sampledVoices = new Map<string, GuitarVoice>();
+  private readonly sampledVoices = new Map<string, SampledGuitar>();
   /**
    * Loads still in flight, keyed the same way. Picking a tone in settings
    * calls setTone twice — once directly, once when the stored setting
    * changes — and without this both calls start their own download of the
    * same set and leave a second sampler connected to the chain.
    */
-  private readonly loadingVoices = new Map<string, Promise<GuitarVoice>>();
+  private readonly loadingVoices = new Map<string, Promise<SampledGuitar>>();
   private manifest: SampleManifest | null = null;
   private chain: Tone.ToneAudioNode[] = [];
   private currentBackend: EngineBackend = 'uninitialized';
@@ -81,8 +81,10 @@ export class GuitarAudioEngine implements AudioEngine {
       this.driveNode.distortion = profile.amp.drive;
       this.driveNode.wet.value = profile.amp.drive > 0 ? 1 : 0;
     }
-    if (this.voice instanceof SynthGuitar) this.voice.setProfile(profile);
-    else void this.useSampleSet(profile);
+    if (this.voice instanceof SynthGuitar || this.voice instanceof SampledGuitar) {
+      this.voice.setProfile(profile);
+    }
+    if (!(this.voice instanceof SynthGuitar)) void this.useSampleSet(profile);
   }
 
   /**
@@ -113,6 +115,10 @@ export class GuitarAudioEngine implements AudioEngine {
     // The tone may have changed again while this set was loading; the last
     // choice the user made is the one that wins.
     if (resolveSetName(manifest, this.profile.sampleSet) !== name) return;
+    // A cached voice was last profiled for whichever tone activated it
+    // previously; bring its pick transient in line with the current one
+    // before it goes live.
+    voice.setProfile(this.profile);
     this.voice?.stopAll();
     this.voice = voice;
     this.activeSet = name;
@@ -151,7 +157,7 @@ export class GuitarAudioEngine implements AudioEngine {
 
     if (this.currentBackend === 'sampled' && manifest !== null) {
       try {
-        const sampled = await SampledGuitar.load(manifest, profile.sampleSet);
+        const sampled = await SampledGuitar.load(manifest, profile.sampleSet, profile);
         this.sampledVoices.set(sampled.setName, sampled);
         this.activeSet = sampled.setName;
         this.voice = sampled;
@@ -174,11 +180,11 @@ export class GuitarAudioEngine implements AudioEngine {
     manifest: SampleManifest,
     name: string,
     gain: Tone.Gain,
-  ): Promise<GuitarVoice> {
+  ): Promise<SampledGuitar> {
     const inFlight = this.loadingVoices.get(name);
     if (inFlight !== undefined) return inFlight;
 
-    const loading = SampledGuitar.load(manifest, name).then((voice) => {
+    const loading = SampledGuitar.load(manifest, name, this.profile).then((voice) => {
       voice.connect(gain);
       this.sampledVoices.set(name, voice);
       return voice;
