@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest';
+import { DRILLS } from './drills';
+import { legatoProblems } from './legato';
 import { RIFFS, getRiff } from './riffs';
+import { SONGS } from './songCatalog';
+import { songToRiff } from './songs';
 import { riffTotalBeats, validateRiff } from './types';
 import { STANDARD_TUNING, fretToMidi, midiToPitchClass } from '@/music';
 
 describe('the riff library', () => {
   it('ships at least three riffs', () => {
     expect(RIFFS.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('ships twenty-one riffs: the original thirteen and eight more styles', () => {
+    expect(RIFFS).toHaveLength(21);
   });
 
   it('has a unique id for every riff', () => {
@@ -21,6 +29,21 @@ describe('the riff library', () => {
   it('passes validation for every riff', () => {
     const problems = RIFFS.flatMap((riff) => validateRiff(riff));
     expect(problems).toEqual([]);
+  });
+
+  it('passes validation for everything the app can play: feed riffs, drills and every song', () => {
+    // One net over all three libraries, so a new kind of content can't ship
+    // without being checked.
+    const playable = [...RIFFS, ...DRILLS, ...SONGS.map((song) => songToRiff(song))];
+    expect(playable.flatMap((riff) => validateRiff(riff))).toEqual([]);
+  });
+
+  it('only tags a hammer-on or pull-off where the tab can be played that way', () => {
+    // Every feed riff and every drill. The song catalogue's own riffs are
+    // left out on purpose: study-bend-and-wail has a hammer-on (beat 12.5)
+    // that follows a note on a different string. Fix that tab, then widen
+    // this to cover SONGS too.
+    expect([...RIFFS, ...DRILLS].flatMap((riff) => legatoProblems(riff))).toEqual([]);
   });
 
   it('starts every riff on beat 0 so a loop has no dead air at the front', () => {
