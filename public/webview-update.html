@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>guitarRot - update needed</title>
+    <!--
+      Shown by the Android app (Capacitor's server.errorPath) when the phone's
+      Android System WebView is older than the app supports. Deliberately plain:
+      no JavaScript, no external files, no custom properties, no flex gap, nothing
+      newer than the oldest browser engine it can possibly be shown in.
+    -->
+    <style>
+      html, body { margin: 0; padding: 0; background: #0b0b0f; }
+      body {
+        color: #f4f4f6;
+        font-family: sans-serif;
+        line-height: 1.55;
+        text-align: center;
+      }
+      main { box-sizing: border-box; max-width: 420px; margin: 0 auto; padding: 72px 24px 48px; }
+      svg { display: block; width: 112px; height: 120px; margin: 0 auto 28px; }
+      h1 { margin: 0 0 12px; font-size: 26px; line-height: 1.2; font-weight: 900; }
+      h1 span { color: #ffb020; }
+      h2 { margin: 0 0 12px; font-size: 20px; line-height: 1.3; }
+      p { margin: 0 0 14px; font-size: 16px; color: #d4d4dc; }
+      .dim { color: #9a9aa8; font-size: 14px; }
+      a.button {
+        display: inline-block;
+        margin: 12px 0 22px;
+        padding: 14px 32px;
+        border-radius: 999px;
+        background: #ffb020;
+        color: #0b0b0f;
+        font-size: 17px;
+        font-weight: 800;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg viewBox="160 150 704 760" aria-hidden="true">
+        <defs>
+          <linearGradient id="pick" x1="0.2" y1="0" x2="0.75" y2="1">
+            <stop offset="0" stop-color="#ffd27a" />
+            <stop offset="0.45" stop-color="#ffb020" />
+            <stop offset="1" stop-color="#d9861a" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M512 180 C680 180 812 232 812 384 C812 560 646 752 566 838 Q512 892 458 838 C378 752 212 560 212 384 C212 232 344 180 512 180 Z"
+          fill="url(#pick)"
+        />
+        <path
+          d="M458 372 L458 568 L628 470 Z"
+          fill="#0b0b0f"
+          stroke="#0b0b0f"
+          stroke-width="44"
+          stroke-linejoin="round"
+        />
+      </svg>
+
+      <h1>guitar<span>Rot</span></h1>
+      <h2>Your Android System WebView needs an update</h2>
+      <p>
+        guitarRot runs on the WebView that ships with your phone, and the version installed is
+        too old to show it properly.
+      </p>
+      <p>
+        Open Google Play, update <strong>Android System WebView</strong> (and Google Chrome, if
+        your phone has it), then open guitarRot again.
+      </p>
+      <a class="button" href="https://play.google.com/store/apps/details?id=com.google.android.webview">
+        Update WebView
+      </a>
+      <p class="dim">Nothing is lost: your progress stays on this phone.</p>
+    </main>
+  </body>
+</html>

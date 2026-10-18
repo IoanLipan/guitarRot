@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The splash icon: the guitarRot pick, drawn from the same geometry as
+  assets/brand/icon-foreground.svg (the pick scaled to 0.8 about the centre).
+
+  Android masks a splash icon that has no icon background to a circle two
+  thirds the size of the canvas, so the artwork is kept well inside that: a
+  288dp canvas, the pick about 135dp wide. A vector rather than the launcher
+  foreground PNG because the system draws this at 288dp, and the PNG is only
+  192px at its largest density.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <group
+        android:pivotX="512"
+        android:pivotY="512"
+        android:scaleX="0.8"
+        android:scaleY="0.8">
+        <path android:pathData="M512,180 C680,180 812,232 812,384 C812,560 646,752 566,838 Q512,892 458,838 C378,752 212,560 212,384 C212,232 344,180 512,180 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="332"
+                    android:startY="180"
+                    android:endX="662"
+                    android:endY="892">
+                    <item android:offset="0.0" android:color="#FFFFD27A" />
+                    <item android:offset="0.45" android:color="#FFFFB020" />
+                    <item android:offset="1.0" android:color="#FFD9861A" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- The soft highlight on the upper-left shoulder. -->
+        <path android:pathData="M512,180 C680,180 812,232 812,384 C812,560 646,752 566,838 Q512,892 458,838 C378,752 212,560 212,384 C212,232 344,180 512,180 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="radial"
+                    android:centerX="404"
+                    android:centerY="337"
+                    android:gradientRadius="330">
+                    <item android:offset="0.0" android:color="#3DFFFFFF" />
+                    <item android:offset="1.0" android:color="#00FFFFFF" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- Play, cut out of the pick. -->
+        <path
+            android:pathData="M458,372 L458,568 L628,470 Z"
+            android:fillColor="#FF0B0B0F"
+            android:strokeColor="#FF0B0B0F"
+            android:strokeWidth="44"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

@@ -13,6 +13,7 @@
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
+            android:screenOrientation="portrait"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -37,4 +38,10 @@
          into the Android runtime prompt, which needs RECORD_AUDIO declared here. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- RECORD_AUDIO implies a *required* microphone feature, which would hide the
+         app from Play on devices without one. The mic is optional here: every
+         lesson and the whole feed work without it, and only the tuner and the
+         "listen for me" checks need it. -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 </manifest>
