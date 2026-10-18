@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import { useMicPitch, type MicReading } from '@/app/useMicPitch';
 import type { AudioEngine } from '@/audio';
-import { fretToMidi, noteName, STANDARD_TUNING, stringNumber, type Midi } from '@/music';
+import { fretToMidi, noteLabel, noteName, STANDARD_TUNING, stringNumber } from '@/music';
 
 /** Within this many cents of the note counts as dead on. */
 const IN_TUNE_CENTS = 5;
@@ -10,23 +10,6 @@ const IN_TUNE_CENTS = 5;
 const IN_TUNE_HOLD_MS = 400;
 /** The meter shows this far either side of the note. A half step is 100 cents, so this is the nearest note's whole catchment. */
 const METER_RANGE_CENTS = 50;
-
-// TODO(merge): replace with noteLabel from @/music once Task 1 lands
-const FIXED_DO: Record<string, string> = {
-  C: 'Do',
-  D: 'Re',
-  E: 'Mi',
-  F: 'Fa',
-  G: 'Sol',
-  A: 'La',
-  B: 'Si',
-};
-
-/** "E (Mi)", "F# (Fa#)": letter name, then fixed-do solfège in brackets. */
-function solfegeLabel(midi: Midi): string {
-  const name = noteName(midi);
-  return `${name} (${FIXED_DO[name.charAt(0)] ?? ''}${name.slice(1)})`;
-}
 
 /**
  * The string you are most likely tuning. Measured against the exact pitch, not
@@ -107,7 +90,7 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
           className="min-h-[1.1em] text-center text-6xl font-black tracking-tight"
           style={{ color: inTune ? 'var(--color-good)' : 'var(--color-ink)' }}
         >
-          {reading === null ? '—' : solfegeLabel(reading.midi)}
+          {reading === null ? '—' : noteLabel(reading.midi)}
         </p>
 
         {reading === null ? (
@@ -246,13 +229,13 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
                 type="button"
                 data-testid={`hear-string-${stringIndex}`}
                 data-closest={isClosest}
-                aria-label={`Hear string ${stringNumber(stringIndex)}, ${solfegeLabel(open)}`}
+                aria-label={`Hear string ${stringNumber(stringIndex)}, ${noteLabel(open)}`}
                 onClick={() => handleHear(stringIndex)}
                 className={`flex flex-col items-center gap-0.5 rounded-2xl px-2 py-4 transition-all duration-200 active:scale-95 ${
                   isClosest ? 'bg-accent/12 ring-2 ring-accent' : 'bg-surface ring-2 ring-transparent'
                 }`}
               >
-                <span className="text-xl font-extrabold">{solfegeLabel(open)}</span>
+                <span className="text-xl font-extrabold">{noteLabel(open)}</span>
                 <span className="text-xs text-ink-dim">String {stringNumber(stringIndex)}</span>
               </button>
             );
