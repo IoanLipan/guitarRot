@@ -1,5 +1,5 @@
 import type { AudioEngine } from '@/audio';
-import { chordVoicing, fretToMidi, STANDARD_TUNING, type FretPosition } from '@/music';
+import { chordStrings, chordVoicing, fretToMidi, STANDARD_TUNING, type FretPosition } from '@/music';
 import { chordShapeToFretboard, Fretboard, type MarkerTone } from '@/render';
 import type { QuizQuestion } from './generateQuiz';
 
@@ -56,7 +56,7 @@ export function QuizVisual({
     <button
       type="button"
       disabled={engine === undefined}
-      onClick={() => engine?.strum(chordVoicing(chord, STANDARD_TUNING))}
+      onClick={() => engine?.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) })}
       aria-label={`Hear this chord`}
       className="h-full w-full"
     >

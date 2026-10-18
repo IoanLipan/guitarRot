@@ -59,6 +59,7 @@ export function createRiffPlayer(
       duration: note.durationBeats * secondsPerBeat,
       stringIndex: note.stringIndex,
       velocity: 0.85,
+      technique: note.technique,
     });
   }, notes);
 

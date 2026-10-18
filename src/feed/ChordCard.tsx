@@ -5,6 +5,7 @@ import {
   chordSolfegeName,
   chordToneNames,
   chordVoicing,
+  chordStrings,
   STANDARD_TUNING,
   withSolfege,
   type ChordShape,
@@ -28,7 +29,7 @@ export function ChordCard({ chord, engine }: { chord: ChordShape; engine: AudioE
 
   function handleStrum() {
     tapHaptic();
-    engine.strum(chordVoicing(chord, STANDARD_TUNING));
+    engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
     setStrumming(true);
     if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => setStrumming(false), STRUM_FLASH_MS);

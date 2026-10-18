@@ -216,8 +216,8 @@ exponential in pitch, not linear. 0.86 reads reasonable and dies in under
 0.25s of sustain up top against 1.75s at the bottom. Decay time is roughly
 `ln(0.05) / (f * ln(resonance))`; `stringVoicing.ts` holds the spread.
 
-`audio/tones.ts` holds four voicings (clean, rock, blues, country). Each
-shapes the Karplus-Strong string model *and* the chain after it
+`audio/tones.ts` holds six voicings (acoustic, classical, clean, rock, blues,
+country). Each shapes the Karplus-Strong string model *and* the chain after it
 (distortion, filter, reverb wet, gain); `GuitarAudioEngine.setTone` swaps
 both live. Two constraints worth knowing before adding a voicing:
 
@@ -230,7 +230,14 @@ both live. Two constraints worth knowing before adding a voicing:
   for an unknown stored id, which is what makes that safe.
 
 The sampled backend ignores the string half of a profile and still gets the
-amp half, so tones remain audible once real samples land.
+amp half, so tones remain audible once real samples land. The one exception
+inside the amp half is the body EQ: it was tuned to give the *synth* a box, so
+`engine.ts` applies `bodyGainDb` only while the live voice is `SynthGuitar`
+(`liveBodyGainDb`) and keeps it flat on recordings, which already carry the
+resonance of the guitar they were made on. The boost used to put a ~110Hz
+boom on every acoustic note. **Classical** (nylon recordings, no drive,
+`filterHz` 5000) is the sixth voicing; its string/body numbers only matter on
+the synth fallback and are "acoustic, but darker and softer".
 
 ## Findings from the App-shell build (Plan 2)
 
@@ -446,7 +453,9 @@ string, none of which the model produces cheaply. The fix was to stop
 synthesising. `SampledGuitar`, `manifest.ts` and the backend-selection path
 already existed and had never been populated — this fills them in.
 
-**What ships** — `public/audio/guitar/{acoustic,electric}`, 17 notes each
+**What ships** *(superseded 2026-10-18: the recordings below were replaced by
+real instrument recordings, and the voice was rewritten — see "Playing like a
+guitar" at the end of this section)* — `public/audio/guitar/{acoustic,electric}`, 17 notes each
 (E2 to E6, every three semitones), rendered from FluidR3_GM (CC BY 3.0, so
 the attribution is shown in Settings, not just in the repo). 696KB total.
 
@@ -475,12 +484,67 @@ without the interpolation the top note reads 23 cents flat, which is
 quantisation, not detuning); E3 carries nine harmonics above 5% of peak.
 Tone switching loads exactly one set per tone, once.
 
-**Coverage gap**: `GuitarAudioEngine` still has no unit test — it needs a
-live Tone context, so the load-dedupe and set-swap logic is currently only
-covered end-to-end by the headless-Chrome check described above. To
+**Coverage gap**: `engine.test.ts` now covers strums and the body EQ against a
+mocked Tone, but the load-dedupe and set-swap logic still needs a live Tone
+context, so it is only covered end-to-end by the headless-Chrome check
+described above. To
 reproduce: load the app, read `performance.getEntriesByType('resource')`
 filtered to `.mp3`, switch tone in Settings, read it again. Each set must
-appear exactly 17 times, never 34.
+appear exactly 17 times, never 34. (Sets are bigger now — acoustic 41,
+nylon 28, electric 17 — but the rule is the same: once each, never twice.)
+
+### Playing like a guitar (2026-10-18)
+
+Real recordings alone still read as "electric piano", because the *playback*
+behaved like a keyboard. `SampledGuitar` was rewritten around
+`Tone.ToneAudioBuffers` plus one `Tone.ToneBufferSource` per note (no
+`Tone.Sampler`), and what changed is worth knowing before touching it:
+
+- **One note per string.** `RingingNotes` (pure, in `audio/playback.ts`)
+  remembers the note each string is sounding; picking the string again stops
+  it, the other five keep ringing, and a note with no `stringIndex` never
+  chokes. Strums now pass real strings (`chordStrings`), so a strum silences
+  the strum before it instead of stacking six more voices — that stacking was
+  the sustained-pad sound.
+- **Stop only what is still ringing.** `OneShotSource.stop()` cancels any stop
+  already scheduled, so stopping a note that was due to end *before* the new
+  one would move its end *later* and stretch it. The choke runs only when
+  `prev.end > nextStart`, and `end` is deliberately an underestimate (it uses
+  the fastest playback rate), because stopping a source that already ended
+  hits a disposed node.
+- **Natural decay.** No duration means the recording rings out; a duration cuts
+  the note at that length with an 80ms fade. The old `triggerAttackRelease(…,
+  1.4)` + 0.6s release gave every note the same hold-then-fade, like a key
+  being let go; `Tone.Sampler` cannot be bent to avoid that (its release
+  tracking drops the voice, and `triggerRelease(note)` stops every voice of
+  that pitch).
+- **No synthetic pick noise** on samples (the recordings start on the real
+  attack; files measured in the browser begin within ~0.001 of silence, so no
+  fade-in is needed either). `SynthGuitar` keeps its pick layer — it has no
+  recorded attack.
+- **Techniques reach the audio** via `ScheduledNote.technique` →
+  `PlayNoteOptions.technique` → `noteShape`: hammer/pull x0.6 level, palmMute
+  x0.8 and at most 0.12s, slide arrives from 2 semitones below over 0.07s,
+  bend rises a whole step over `min(0.18s, 0.3 x duration)` starting 0.03s in
+  (tab convention: a bend event's fret is where you fret). The synth ignores
+  `technique`.
+- **Strums are humanised**: 0–4ms jitter per string and a 1.0 → 0.85 level
+  taper in hit order (`planStrum`). Chart songs use real up-strokes: a hit on a
+  fractional beat is an upstroke over the top four sounding strings, high to
+  low, and the folk pattern is the standard D – D U – U D U. Chart strums also
+  keep each string ringing until it is picked again (or the bar ends), so an
+  upstroke does not cut the bass strings it never touched.
+
+**Checked in a real browser** (built-in browser pane against `vite preview`):
+Settings reports `Engine: sampled`, the console shows only Tone's banner, the
+manifest and every sample load once per set (Classical adds the 28 nylon
+files once). Instrumenting `AudioBufferSourceNode` showed an E strum tapped
+twice choking exactly the strings still ringing, and an Am strum on top
+choking strings 1–5 while the low E rang on to its natural end; the Tom Dooley
+chart played hits at beats 0, 1, 1.5, 2.5, 3, 3.5 with six strings on the
+downs and four on the ups; the bend schedules a ramp to 2^(2/12) 0.21s after
+its start. **Not checked by ear** — nothing here can listen, so whether it now
+*sounds* like a guitar is Ioan's call.
 
 ## Metronome, count-in, loop-a-section, more solos (built 2026-09-08)
 

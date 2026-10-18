@@ -67,6 +67,19 @@ export function chordVoicing(shape: ChordShape, tuning: Tuning): Midi[] {
   return voicing;
 }
 
+/**
+ * The sounding string indices, low to high — the strings `chordVoicing`'s
+ * pitches are played on, in the same order, so the two zip together.
+ */
+export function chordStrings(shape: ChordShape): number[] {
+  const strings: number[] = [];
+  for (let stringIndex = 0; stringIndex < STRING_COUNT; stringIndex += 1) {
+    const fret = shape.frets[stringIndex];
+    if (fret !== null && fret !== undefined) strings.push(stringIndex);
+  }
+  return strings;
+}
+
 export function chordPitchClasses(shape: ChordShape, tuning: Tuning): PitchClass[] {
   const set = new Set(chordVoicing(shape, tuning).map(midiToPitchClass));
   return [...set].sort((a, b) => a - b);
