@@ -48,7 +48,7 @@ folder; screenshots in `screenshots/`.
 |---|---|---|
 | App icon | `icon-512.png` | 512×512 PNG |
 | Feature graphic | `feature-graphic.jpg` | 1024×500 JPEG, no alpha |
-| Phone screenshots | `screenshots/*.png` | 2–8 images, 1080×2160 |
+| Phone screenshots | `screenshots/01-start.png` … `07-feed.png` | 7 images, 1080×2160, upload in file order |
 
 ## Data safety (Policy → App content → Data safety)
 
@@ -76,6 +76,10 @@ folder; screenshots in `screenshots/`.
 | Health | None |
 
 ## Release
+
+**1.0.0 is built and signed** (`scripts/release-android.sh`):
+`release/guitarRot-1.0.0.aab` is the file to upload to Play;
+`release/guitarRot.apk` is on GitHub as release v1.0.0.
 
 - Upload `guitarRot-<version>.aab` (Android App Bundle) to **Internal testing**
   first, then promote to Production.
