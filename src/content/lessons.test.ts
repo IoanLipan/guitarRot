@@ -89,6 +89,60 @@ describe('validateLesson', () => {
   });
 });
 
+describe('explain cards', () => {
+  const card = (over: Partial<Extract<LessonStep, { kind: 'explain' }>> = {}): LessonStep => ({
+    kind: 'explain',
+    headline: 'Six strings, **six names**',
+    visual: { kind: 'illustration', name: 'string-order' },
+    points: ['Thickest to thinnest: E (Mi), A (La), D (Re), G (Sol), B (Si), E (Mi).'],
+    ...over,
+  });
+
+  it('accepts a sound card with each kind of visual', () => {
+    const steps: LessonStep[] = [
+      card(),
+      card({ visual: { kind: 'neck', fretRange: [0, 3], dots: [{ stringIndex: 0, fret: 3 }], tapToHear: true } }),
+      card({ visual: { kind: 'chords', chordIds: ['Am-open', 'A-open'] } }),
+      card({ visual: { kind: 'notes', notes: ['E', 'G', 'B'] }, tip: 'Say them out loud.', warn: 'Not **G#**.' }),
+      check,
+    ];
+    expect(validateLesson(lesson(steps))).toEqual([]);
+  });
+
+  it('rejects an unknown illustration, chord or note', () => {
+    const problems = validateLesson(
+      lesson([
+        card({ visual: { kind: 'illustration', name: 'nope' as never } }),
+        card({ visual: { kind: 'chords', chordIds: ['H-open'] } }),
+        card({ visual: { kind: 'notes', notes: ['H'] } }),
+        check,
+      ]),
+    ).join('\n');
+    expect(problems).toMatch(/unknown illustration/);
+    expect(problems).toMatch(/unknown chord/);
+    expect(problems).toMatch(/isn't a note spelling/);
+  });
+
+  it('keeps cards short: headline, point count and point length', () => {
+    const long = 'x'.repeat(111);
+    const problems = validateLesson(
+      lesson([card({ headline: 'y'.repeat(49), points: ['a', 'b', 'c', 'd'] }), card({ points: [long] }), check]),
+    ).join('\n');
+    expect(problems).toMatch(/headline is 49 characters/);
+    expect(problems).toMatch(/has 4 points/);
+    expect(problems).toMatch(/point 1 is 111 characters/);
+  });
+
+  it('measures what the reader sees, not the markup', () => {
+    const marked = `**${'z'.repeat(108)}**`;
+    expect(validateLesson(lesson([card({ points: [marked] }), check]))).toEqual([]);
+  });
+
+  it('rejects unbalanced markup', () => {
+    expect(validateLesson(lesson([card({ points: ['a **b'] }), check])).join('\n')).toMatch(/unbalanced/);
+  });
+});
+
 describe('the course', () => {
   it('has only sound lessons', () => {
     expect(COURSE.flatMap((l) => validateLesson(l))).toEqual([]);

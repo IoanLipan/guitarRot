@@ -8,3 +8,5 @@ export * from './legato';
 export * from './drills';
 export * from './lessons';
 export * from './course';
+export * from './illustrations';
+export * from './rich';

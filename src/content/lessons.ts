@@ -1,7 +1,39 @@
-import { MAX_FRET, STRING_COUNT, type FretPosition } from '@/music';
+import { MAX_FRET, STRING_COUNT, parseNoteName, type FretPosition } from '@/music';
 import { CHORDS } from './chords';
 import { findRiff } from './drills';
+import { isIllustrationName, type IllustrationName } from './illustrations';
+import { plainText, richProblems } from './rich';
 import { SONGS } from './songCatalog';
+
+/** A dot on an explain card's neck picture. Labelled with its note by default. */
+export type NeckDot = FretPosition & {
+  /** What the dot says: its note name (default), its solfège, a finger number, or any short text. */
+  label?: 'note' | 'solfege' | 'none' | string;
+};
+
+/**
+ * The picture on top of an explain card. Every explain card has one: a
+ * screen of words alone is exactly what this app exists to replace.
+ */
+export type Visual =
+  /** A drawn illustration; see src/content/illustrations.ts for what each one shows. */
+  | { kind: 'illustration'; name: IllustrationName }
+  /** A window of the neck with labelled dots; optionally tap a fret to hear it. */
+  | {
+      kind: 'neck';
+      fretRange: [number, number];
+      dots: readonly NeckDot[];
+      /** Strings drawn brighter than the rest, e.g. the one the card talks about. */
+      highlightStrings?: readonly number[];
+      tapToHear?: boolean;
+    }
+  /** One or more chord diagrams side by side (e.g. Am next to A to compare). */
+  | { kind: 'chords'; chordIds: readonly string[] }
+  /** A row of big coloured note bubbles: chord tones, scale notes, an alphabet. */
+  | { kind: 'notes'; notes: readonly string[] };
+
+/** Length limits, in characters a reader sees (markup excluded). */
+export const EXPLAIN_LIMITS = { headline: 48, point: 110, callout: 110, points: 3 } as const;
 
 /**
  * One screen of a lesson. A lesson is a short run of these: explain, show,
@@ -11,7 +43,22 @@ import { SONGS } from './songCatalog';
  * prose and the hand-written check questions are authored.
  */
 export type LessonStep =
-  /** Plain-text paragraphs. Pair every note name with its solfège: "G (Sol)". */
+  /**
+   * The teaching card: a picture, a short headline, one to three short points,
+   * and optionally a tip or a common mistake. Text uses the markup in
+   * src/content/rich.ts (**strong**, ==highlight==, and "E (Mi)" note chips).
+   */
+  | {
+      kind: 'explain';
+      headline: string;
+      visual: Visual;
+      points: readonly string[];
+      /** 💡 A practical tip. */
+      tip?: string;
+      /** ⚠️ The mistake almost everyone makes here, and its fix. */
+      warn?: string;
+    }
+  /** @deprecated Being replaced by `explain`; the course must not use it. */
   | { kind: 'text'; title?: string; body: readonly string[] }
   /** Dots on the neck, labelled with their notes; the caption lists them with solfège. */
   | {
@@ -113,6 +160,9 @@ export function validateLesson(lesson: Lesson): string[] {
   lesson.steps.forEach((step, index) => {
     const where = `${id} step ${index + 1} (${step.kind})`;
     switch (step.kind) {
+      case 'explain':
+        problems.push(...explainProblems(where, step));
+        break;
       case 'text':
         if (step.body.length === 0 || step.body.some((paragraph) => blank(paragraph))) {
           problems.push(`${where} has an empty paragraph`);
@@ -172,5 +222,64 @@ export function validateLesson(lesson: Lesson): string[] {
     problems.push(`${id}: never tests the learner (needs a check, drill or listen step)`);
   }
 
+  return problems;
+}
+
+type ExplainStep = Extract<LessonStep, { kind: 'explain' }>;
+
+function textProblems(where: string, what: string, text: string, limit: number): string[] {
+  const problems = richProblems(text).map((p) => `${where} ${what}: ${p}`);
+  const plain = plainText(text);
+  if (plain.trim() === '') problems.push(`${where} ${what} is empty`);
+  if (plain.length > limit) problems.push(`${where} ${what} is ${plain.length} characters; keep it to ${limit}`);
+  return problems;
+}
+
+function visualProblems(where: string, visual: Visual): string[] {
+  switch (visual.kind) {
+    case 'illustration':
+      return isIllustrationName(visual.name) ? [] : [`${where} names an unknown illustration "${visual.name}"`];
+    case 'neck': {
+      const bad = rangeProblem(visual.fretRange);
+      const problems = bad === null ? [] : [`${where} neck ${bad}`];
+      if (visual.dots.length === 0 && (visual.highlightStrings ?? []).length === 0) {
+        problems.push(`${where} neck shows nothing: give it dots or highlighted strings`);
+      }
+      problems.push(...positionProblems(`${where} neck`, visual.dots, bad === null ? visual.fretRange : null));
+      for (const s of visual.highlightStrings ?? []) {
+        if (!isString(s)) problems.push(`${where} neck highlights string index ${s}, which doesn't exist`);
+      }
+      return problems;
+    }
+    case 'chords': {
+      const problems = visual.chordIds.length === 0 ? [`${where} chords visual is empty`] : [];
+      for (const chordId of visual.chordIds) {
+        if (!CHORDS.some((chord) => chord.id === chordId)) problems.push(`${where} names an unknown chord "${chordId}"`);
+      }
+      return problems;
+    }
+    case 'notes': {
+      const problems = visual.notes.length === 0 ? [`${where} notes visual is empty`] : [];
+      for (const note of visual.notes) {
+        try {
+          parseNoteName(note);
+        } catch {
+          problems.push(`${where} notes visual has "${note}", which isn't a note spelling`);
+        }
+      }
+      return problems;
+    }
+  }
+}
+
+function explainProblems(where: string, step: ExplainStep): string[] {
+  const problems = textProblems(where, 'headline', step.headline, EXPLAIN_LIMITS.headline);
+  if (step.points.length === 0 || step.points.length > EXPLAIN_LIMITS.points) {
+    problems.push(`${where} has ${step.points.length} points; give it 1 to ${EXPLAIN_LIMITS.points}`);
+  }
+  step.points.forEach((point, i) => problems.push(...textProblems(where, `point ${i + 1}`, point, EXPLAIN_LIMITS.point)));
+  if (step.tip !== undefined) problems.push(...textProblems(where, 'tip', step.tip, EXPLAIN_LIMITS.callout));
+  if (step.warn !== undefined) problems.push(...textProblems(where, 'warn', step.warn, EXPLAIN_LIMITS.callout));
+  problems.push(...visualProblems(where, step.visual));
   return problems;
 }
