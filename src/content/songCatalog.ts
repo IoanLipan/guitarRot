@@ -1,5 +1,6 @@
 import type { Riff, TabEvent } from './types';
 import type { Song, SongSection } from './songs';
+import { melodyRiff } from './melody';
 
 const TRAD = (where: string) => `Traditional ${where}; melody and harmony are in the public domain.`;
 
@@ -106,6 +107,149 @@ const bendAndWail: Riff = {
     { stringIndex: 1, fret: 14, beat: 14, duration: 2 },
   ],
 };
+
+// ---------------------------------------------------------------------------
+// Public-domain melodies, played as single notes.
+//
+// Written as pitch names and tabbed by `melodyEvents`, so what gets reviewed
+// is the tune itself rather than a column of fret numbers. All six are in
+// C major, in 4/4, and sit in first position. Each is checked note for note
+// against its tune in songs.test.ts.
+// ---------------------------------------------------------------------------
+
+type MelodySongSpec = {
+  id: string;
+  title: string;
+  artist: string;
+  style: string;
+  bpm: number;
+  attribution: string;
+  tags: readonly string[];
+  about: string;
+  notes: string;
+};
+
+function melodySong(spec: MelodySongSpec): Song {
+  const { notes, ...song } = spec;
+  return {
+    ...song,
+    difficulty: 'easy',
+    key: 'C',
+    source: 'public-domain',
+    riff: melodyRiff({
+      id: `melody-${spec.id}`,
+      title: spec.title,
+      style: spec.style,
+      level: 1,
+      bpm: spec.bpm,
+      tags: [...spec.tags],
+      source: 'public-domain',
+      attribution: spec.attribution,
+      notes,
+    }),
+  };
+}
+
+const MELODY_TAGS = ['melody', 'single-notes', 'first-position', 'C major'];
+
+const odeToJoy = melodySong({
+  id: 'ode-to-joy',
+  title: 'Ode to Joy',
+  artist: 'Ludwig van Beethoven',
+  style: 'Classical',
+  bpm: 100,
+  attribution: 'Ludwig van Beethoven, Symphony No. 9, fourth movement (1824); in the public domain.',
+  tags: [...MELODY_TAGS, 'classical', 'stepwise'],
+  about:
+    'The classic first melody. It opens Mi Mi Fa Sol, Sol Fa Mi Re, and almost never leaps, so the fretting hand barely has to travel.',
+  notes:
+    'E4:1 E4:1 F4:1 G4:1 | G4:1 F4:1 E4:1 D4:1 | C4:1 C4:1 D4:1 E4:1 | E4:1.5 D4:0.5 D4:2 | ' +
+    'E4:1 E4:1 F4:1 G4:1 | G4:1 F4:1 E4:1 D4:1 | C4:1 C4:1 D4:1 E4:1 | D4:1.5 C4:0.5 C4:2 | ' +
+    'D4:1 D4:1 E4:1 C4:1 | D4:1 E4:0.5 F4:0.5 E4:1 C4:1 | D4:1 E4:0.5 F4:0.5 E4:1 D4:1 | C4:1 D4:1 G3:2 | ' +
+    'E4:1 E4:1 F4:1 G4:1 | G4:1 F4:1 E4:1 D4:1 | C4:1 C4:1 D4:1 E4:1 | D4:1.5 C4:0.5 C4:2',
+});
+
+const twinkleTwinkle = melodySong({
+  id: 'twinkle-twinkle',
+  title: 'Twinkle, Twinkle, Little Star',
+  artist: 'Traditional',
+  style: 'Nursery rhyme',
+  bpm: 100,
+  attribution:
+    'French melody "Ah! vous dirai-je, maman", published in 1761; in the public domain.',
+  tags: [...MELODY_TAGS, 'nursery-rhyme', 'repetition'],
+  about:
+    'It opens Do Do Sol Sol La La Sol: a leap of a fifth, then steps. Sing the solfège as you play and the shape of the tune sticks.',
+  notes:
+    'C4:1 C4:1 G4:1 G4:1 | A4:1 A4:1 G4:2 | F4:1 F4:1 E4:1 E4:1 | D4:1 D4:1 C4:2 | ' +
+    'G4:1 G4:1 F4:1 F4:1 | E4:1 E4:1 D4:2 | G4:1 G4:1 F4:1 F4:1 | E4:1 E4:1 D4:2 | ' +
+    'C4:1 C4:1 G4:1 G4:1 | A4:1 A4:1 G4:2 | F4:1 F4:1 E4:1 E4:1 | D4:1 D4:1 C4:2',
+});
+
+const frereJacques = melodySong({
+  id: 'frere-jacques',
+  title: 'Frère Jacques',
+  artist: 'Traditional',
+  style: 'Nursery rhyme',
+  bpm: 100,
+  attribution: TRAD('French round'),
+  tags: [...MELODY_TAGS, 'round', 'frere-jacques', 'french'],
+  about:
+    'It opens Do Re Mi Do, twice over. A round: once it is steady, have a friend start the same tune two bars behind you.',
+  notes:
+    'C4:1 D4:1 E4:1 C4:1 | C4:1 D4:1 E4:1 C4:1 | E4:1 F4:1 G4:2 | E4:1 F4:1 G4:2 | ' +
+    'G4:0.5 A4:0.5 G4:0.5 F4:0.5 E4:1 C4:1 | G4:0.5 A4:0.5 G4:0.5 F4:0.5 E4:1 C4:1 | ' +
+    'C4:1 G3:1 C4:2 | C4:1 G3:1 C4:2',
+});
+
+const maryHadALittleLamb = melodySong({
+  id: 'mary-had-a-little-lamb',
+  title: 'Mary Had a Little Lamb',
+  artist: 'Traditional',
+  style: 'Nursery rhyme',
+  bpm: 100,
+  attribution: TRAD('American nursery song, first published in the 1830s'),
+  tags: [...MELODY_TAGS, 'nursery-rhyme', 'repeated-notes'],
+  about:
+    'It opens Mi Re Do Re, Mi Mi Mi. Three of the same note in a row is a fair test of an even picking hand.',
+  notes:
+    'E4:1 D4:1 C4:1 D4:1 | E4:1 E4:1 E4:2 | D4:1 D4:1 D4:2 | E4:1 G4:1 G4:2 | ' +
+    'E4:1 D4:1 C4:1 D4:1 | E4:1 E4:1 E4:1 E4:1 | D4:1 D4:1 E4:1 D4:1 | C4:4',
+});
+
+const jingleBells = melodySong({
+  id: 'jingle-bells',
+  title: 'Jingle Bells',
+  artist: 'James Lord Pierpont',
+  style: 'Carol',
+  bpm: 110,
+  attribution: 'James Lord Pierpont, "One Horse Open Sleigh" (1857), the chorus; in the public domain.',
+  tags: [...MELODY_TAGS, 'christmas', 'dotted-rhythm'],
+  about:
+    'The chorus opens Mi Mi Mi, Mi Mi Mi, Mi Sol Do Re Mi. Count the dotted rhythm in the third bar out loud before you play it.',
+  notes:
+    'E4:1 E4:1 E4:2 | E4:1 E4:1 E4:2 | E4:1 G4:1 C4:1.5 D4:0.5 | E4:4 | ' +
+    'F4:1 F4:1 F4:1.5 F4:0.5 | F4:1 E4:1 E4:1 E4:0.5 E4:0.5 | E4:1 D4:1 D4:1 E4:1 | D4:2 G4:2 | ' +
+    'E4:1 E4:1 E4:2 | E4:1 E4:1 E4:2 | E4:1 G4:1 C4:1.5 D4:0.5 | E4:4 | ' +
+    'F4:1 F4:1 F4:1.5 F4:0.5 | F4:1 E4:1 E4:1 E4:0.5 E4:0.5 | G4:1 G4:1 F4:1 D4:1 | C4:4',
+});
+
+const auClairDeLaLune = melodySong({
+  id: 'au-clair-de-la-lune',
+  title: 'Au Clair de la Lune',
+  artist: 'Traditional',
+  style: 'French song',
+  bpm: 90,
+  attribution: TRAD('French song'),
+  tags: [...MELODY_TAGS, 'french', 'lullaby'],
+  about:
+    'It opens Do Do Do Re, Mi Re. The second half drops to La and Sol on the G string, a first step down off the top two strings.',
+  notes:
+    'C4:1 C4:1 C4:1 D4:1 | E4:2 D4:2 | C4:1 E4:1 D4:1 D4:1 | C4:4 | ' +
+    'C4:1 C4:1 C4:1 D4:1 | E4:2 D4:2 | C4:1 E4:1 D4:1 D4:1 | C4:4 | ' +
+    'D4:1 D4:1 D4:1 D4:1 | A3:2 A3:2 | D4:1 C4:1 B3:1 A3:1 | G3:4 | ' +
+    'C4:1 C4:1 C4:1 D4:1 | E4:2 D4:2 | C4:1 E4:1 D4:1 D4:1 | C4:4',
+});
 
 // ---------------------------------------------------------------------------
 // The catalogue.
@@ -580,6 +724,14 @@ export const SONGS: readonly Song[] = [
       sections: [section('A', 'Am - - - Dm - Am -'), section('B', 'E - Am - Dm E Am -')],
     },
   },
+
+  // --- Public-domain melodies (single notes) -----------------------------
+  odeToJoy,
+  twinkleTwinkle,
+  frereJacques,
+  maryHadALittleLamb,
+  jingleBells,
+  auClairDeLaLune,
 ];
 
 export function getSong(id: string): Song | undefined {

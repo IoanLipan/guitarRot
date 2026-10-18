@@ -46,9 +46,10 @@ describe('generateFeedPage', () => {
     expect(run(500, 5, 10)).toHaveLength(500);
   });
 
-  // The library is smaller than the 15-card window (9 riffs, 9 chords), so the
-  // honest guarantee is per pool: a riff cannot come back until every other
-  // riff has had a turn. Widen this assertion as the content grows.
+  // The guarantee is per pool: a riff cannot come back inside the window, and
+  // a pool smaller than the window (the window is 15; there are 21 riffs and
+  // 29 chords now, but there were once 9 of each) falls back to "every other
+  // item has had a turn first". `expectedGap` computes whichever applies.
   it.each([
     ['riff', RIFFS.length],
     ['chord', CHORDS.length],

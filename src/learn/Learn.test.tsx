@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { getToneProfile, type AudioEngine } from '@/audio';
+import { CHORDS } from '@/content';
 import { Learn } from './Learn';
 
 function fakeEngine(): AudioEngine {
@@ -38,7 +39,7 @@ describe('Learn', () => {
 
   it('renders one tile per library chord', () => {
     render(<Learn engine={fakeEngine()} />);
-    expect(screen.getAllByTestId(/^chord-tile-/)).toHaveLength(9);
+    expect(screen.getAllByTestId(/^chord-tile-/)).toHaveLength(CHORDS.length);
   });
 
   it('strums the tapped chord', () => {
