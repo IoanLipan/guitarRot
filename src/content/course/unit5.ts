@@ -292,7 +292,7 @@ export const UNIT_5: readonly Lesson[] = [
           'B (Si), the V chord',
           'A (La), the IV chord',
           'E (Mi), the I chord',
-          'C# (Do#), the vi chord',
+          'C#m (Do# minor), the vi chord',
         ],
         answer: 'B (Si), the V chord',
         explain: 'Bars 9 to 12 go V IV I V, which in E (Mi) is B A E B. Bar 9 is the V: B (Si).',

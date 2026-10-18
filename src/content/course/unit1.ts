@@ -158,7 +158,7 @@ export const UNIT_1: readonly Lesson[] = [
         kind: 'text',
         title: 'What tab shows',
         body: [
-          'Tab tells you which string and which fret to play. It has six lines, one per string. The top line is the thinnest string (string 1) and the bottom line is the thickest (string 6): higher line, higher sound. That is the reverse of what you see when you look down at the guitar, so give your eyes a minute.',
+          'Tab tells you which string and which fret to play. It has six lines, one per string. The top line is the thinnest string (string 1) and the bottom line is the thickest (string 6): higher line, higher sound.',
           'A number on a line is the fret to press on that string. A 0 means play the string open, with no finger down.',
           'Read left to right, like a sentence. Numbers stacked in one column are played together.',
         ],
