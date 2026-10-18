@@ -28,3 +28,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Signed Android builds (scripts/release-android.sh); published as GitHub releases, never committed.
+/release/

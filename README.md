@@ -96,6 +96,20 @@ cd android && JAVA_HOME=/path/to/jdk-21 ./gradlew assembleDebug
 ```
 
 Produces `android/app/build/outputs/apk/debug/app-debug.apk`, installable
-by sideloading (no Play Store account needed). See
+by sideloading (no Play Store account needed).
+
+**Release builds** are signed with the Play upload key, which lives outside
+the repo and is referenced by the gitignored `android/keystore.properties`:
+
+```bash
+scripts/release-android.sh
+```
+
+Builds the web app, syncs it, and writes `release/guitarRot-<version>.aab`
+(for Google Play) and `release/guitarRot.apk` (for sideloading — the latest
+one is always at
+<https://github.com/IoanLipan/guitarRot/releases/latest/download/guitarRot.apk>).
+Bump `versionCode` in `android/app/build.gradle` before each Play upload.
+Store listing copy, policy answers and graphics are in [`store/`](store/listing.md). See
 [`docs/FUTURE_WORK.md`](docs/FUTURE_WORK.md)'s Plan 3 section for what's
 wired (Preferences, Haptics, StatusBar, SplashScreen) and what isn't (iOS).
