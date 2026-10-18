@@ -3,6 +3,7 @@ export * from './manifest';
 export * from './strum';
 export * from './tones';
 export * from './timing';
+export * from './pitch';
 export { SynthGuitar } from './SynthGuitar';
 export { SampledGuitar } from './SampledGuitar';
 export { GuitarAudioEngine } from './engine';

@@ -32,4 +32,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- The tuner and "play this note" lesson checks listen through the microphone.
+         Capacitor's BridgeWebChromeClient turns the WebView's getUserMedia request
+         into the Android runtime prompt, which needs RECORD_AUDIO declared here. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 </manifest>
