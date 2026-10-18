@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  addLessonDone,
   applyAnswer,
   createDebouncedSaver,
   createProgressRepo,
@@ -17,6 +18,8 @@ export type ProgressHandle = {
   loaded: boolean;
   recordAnswer: (correct: boolean, itemId?: string) => void;
   updateSettings: (patch: Partial<Settings>) => void;
+  /** Marks a course lesson finished. Safe to call twice for the same lesson. */
+  completeLesson: (lessonId: string) => void;
 };
 
 /** Loads progress once on mount and persists every answer, debounced. */
@@ -59,5 +62,14 @@ export function useProgress(): ProgressHandle {
     });
   }, []);
 
-  return { state, loaded, recordAnswer, updateSettings };
+  const completeLesson = useCallback((lessonId: string) => {
+    setState((prev) => {
+      if (prev.lessonsDone.includes(lessonId)) return prev;
+      const next = { ...prev, lessonsDone: addLessonDone(prev.lessonsDone, lessonId) };
+      saverRef.current.save(next);
+      return next;
+    });
+  }, []);
+
+  return { state, loaded, recordAnswer, updateSettings, completeLesson };
 }

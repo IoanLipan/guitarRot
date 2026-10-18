@@ -88,7 +88,7 @@ export function AppShell() {
         {tab === 'songs' && (
           <Songs engine={engine} openSongId={shared?.tab === 'songs' ? shared.song.id : null} />
         )}
-        {tab === 'learn' && <Learn engine={engine} />}
+        {tab === 'learn' && <Learn engine={engine} progress={progress} />}
         {tab === 'quiz' && <Quiz engine={engine} progress={progress} />}
 
         <button

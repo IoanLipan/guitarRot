@@ -45,3 +45,17 @@ body {
 .answer-pulse-wrong {
   animation: answer-wrong-pulse 1.4s ease-out infinite;
 }
+
+/* A lesson step arriving: a short rise and fade, so a new screen reads as a new screen. */
+@keyframes lesson-step-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.lesson-step-in {
+  animation: lesson-step-in 220ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-step-in { animation: none; }
+}

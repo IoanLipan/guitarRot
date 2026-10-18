@@ -51,6 +51,7 @@ function fakeProgress(): ProgressHandle {
     loaded: true,
     recordAnswer: vi.fn(),
     updateSettings: vi.fn(),
+    completeLesson: vi.fn(),
   };
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   PROGRESS_VERSION,
+  addLessonDone,
   emptyProgressState,
   migrate,
   pruneDaily,
@@ -60,6 +61,47 @@ describe('migrate', () => {
   it('drops srs entries that are not well formed', () => {
     const broken = { version: PROGRESS_VERSION, srs: { bad: { id: 'bad' } } };
     expect(migrate(broken).srs).toEqual({});
+  });
+});
+
+describe('lessonsDone', () => {
+  it('starts empty', () => {
+    expect(emptyProgressState().lessonsDone).toEqual([]);
+  });
+
+  it('defaults to empty for a state saved before the course existed', () => {
+    const { lessonsDone: _omitted, ...beforeTheCourse } = emptyProgressState();
+    expect(migrate(beforeTheCourse).lessonsDone).toEqual([]);
+  });
+
+  it('keeps the finished lesson ids it is given, in order', () => {
+    const saved = { ...emptyProgressState(), lessonsDone: ['strings', 'tuning'] };
+    expect(migrate(JSON.parse(JSON.stringify(saved))).lessonsDone).toEqual(['strings', 'tuning']);
+  });
+
+  it('keeps only strings, once each', () => {
+    const saved = { ...emptyProgressState(), lessonsDone: ['strings', 7, null, 'strings', 'tab'] };
+    expect(migrate(saved).lessonsDone).toEqual(['strings', 'tab']);
+  });
+
+  it('ignores a lessonsDone that is not a list', () => {
+    expect(migrate({ ...emptyProgressState(), lessonsDone: 'strings' }).lessonsDone).toEqual([]);
+  });
+});
+
+describe('addLessonDone', () => {
+  it('appends a new lesson', () => {
+    expect(addLessonDone(['a'], 'b')).toEqual(['a', 'b']);
+  });
+
+  it('does not repeat a lesson that is already done', () => {
+    expect(addLessonDone(['a', 'b'], 'a')).toEqual(['a', 'b']);
+  });
+
+  it('does not mutate its input', () => {
+    const done = ['a'];
+    addLessonDone(done, 'b');
+    expect(done).toEqual(['a']);
   });
 });
 

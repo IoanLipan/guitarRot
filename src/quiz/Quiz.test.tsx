@@ -11,6 +11,7 @@ function fakeProgress(overrides: Partial<ProgressHandle> = {}): ProgressHandle {
     loaded: true,
     recordAnswer: vi.fn(),
     updateSettings: vi.fn(),
+    completeLesson: vi.fn(),
     ...overrides,
   };
 }

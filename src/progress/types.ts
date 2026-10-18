@@ -33,6 +33,8 @@ export type ProgressState = {
   seenContent: string[];
   streak: { current: number; longest: number; lastActiveDate: string | null };
   daily: Record<string, DailyStat>;
+  /** Ids of finished course lessons, in the order they were finished. */
+  lessonsDone: string[];
   settings: Settings;
 };
 
@@ -56,6 +58,7 @@ export function emptyProgressState(): ProgressState {
     seenContent: [],
     streak: { current: 0, longest: 0, lastActiveDate: null },
     daily: {},
+    lessonsDone: [],
     settings: { ...DEFAULT_SETTINGS },
   };
 }
@@ -113,6 +116,13 @@ export function migrate(raw: unknown): ProgressState {
     ? raw.seenContent.filter((id): id is string => typeof id === 'string')
     : [];
 
+  // Optional on purpose: a state saved before the course existed has no such
+  // field, and that is not corruption, just "no lessons done yet". No version
+  // bump needed for the same reason.
+  const lessonsDone = Array.isArray(raw.lessonsDone)
+    ? [...new Set(raw.lessonsDone.filter((id): id is string => typeof id === 'string'))]
+    : [];
+
   const streak = isRecord(raw.streak)
     ? {
         current: typeof raw.streak.current === 'number' ? raw.streak.current : 0,
@@ -139,7 +149,7 @@ export function migrate(raw: unknown): ProgressState {
       }
     : { ...DEFAULT_SETTINGS };
 
-  return { version: PROGRESS_VERSION, srs, seenContent, streak, daily, settings };
+  return { version: PROGRESS_VERSION, srs, seenContent, streak, daily, lessonsDone, settings };
 }
 
 /** Appends an id, moving a repeat to the end and trimming to the limit. */
@@ -147,6 +157,11 @@ export function pushSeen(seen: string[], id: string, limit: number = SEEN_LIMIT)
   const without = seen.filter((existing) => existing !== id);
   without.push(id);
   return without.length > limit ? without.slice(without.length - limit) : without;
+}
+
+/** Adds a finished lesson id; a lesson already done is left where it was. */
+export function addLessonDone(done: readonly string[], id: string): string[] {
+  return done.includes(id) ? [...done] : [...done, id];
 }
 
 export function pruneDaily(

@@ -69,10 +69,9 @@ build` succeeds.
       (show a chord diagram, name it) also exists; it isn't in the original
       spec's mode list — it came from the design handoff.
 - [x] Learn tab: fretboard explorer, chord library — done.
-- [ ] Learn tab: lesson viewer — **not built**. No `Lesson` content type
-      exists either. The design handoff never covered lessons at all (its
-      Learn section only specs explorer + chord library + scale positions),
-      even though spec §3 and §8 both call for them.
+- [x] Learn tab: lesson viewer — **built 2026-10-18** (see "The course UI"
+      below). The design handoff never covered lessons, so the screens were
+      designed from the plan, not from a mockup.
 - [x] Bottom tab bar shell — done, but **routing is a plain `useState<TabId>`
       in `AppShell`**, not the React Router (memory/hash) spec §2 calls for.
       No practical downside yet since nothing needs deep-linking or the
@@ -169,9 +168,6 @@ Still open for Plan 3:
   current counts are 9 / 9 / 0. The riff library now spans blues, country,
   rock, fingerstyle and two lead solos; chords are still the nine open/barre
   shapes.
-- A `Lesson` content type and the Learn-tab lesson viewer UI (see Plan 2
-  gaps above — this didn't ship with the rest of Learn because the design
-  handoff never specified it).
 - The `frontend-design` visual/motion pass (spring animations, `ui/`
   primitives) — haptics landed already, ahead of this item, since they were
   cheap once the Capacitor wrap existed.
@@ -545,6 +541,34 @@ chart played hits at beats 0, 1, 1.5, 2.5, 3, 3.5 with six strings on the
 downs and four on the ups; the bend schedules a ramp to 2^(2/12) 0.21s after
 its start. **Not checked by ear** — nothing here can listen, so whether it now
 *sounds* like a guitar is Ioan's call.
+
+## The course UI (built 2026-10-18)
+
+The Learn tab is a segmented control: **Course** (default), **Tuner**, **Explore**
+(the old Learn screen, moved to `learn/Explore.tsx` unchanged). Course content
+is `COURSE` in `content/course.ts`; the UI takes `lessons` as a prop, so it works
+with any course and the tests use their own fixtures (`learn/testkit.ts`).
+
+- **Progress** is `ProgressState.lessonsDone` (ids, no version bump; a state
+  saved before it existed just defaults to `[]`) and `useProgress().completeLesson`.
+  A lesson is recorded when the learner taps through its last step, not when it
+  is opened. Nothing is locked; the first undone lesson is highlighted.
+- **Step kinds** live one per file in `learn/steps/`. `StepView.stepGate` is the
+  single place that says what each kind asks before Next works: `check` and
+  `drill` are `required`, `listen` is `skippable` (the footer button reads Skip
+  until it is done), the rest are `open`.
+- **Listen** checks the microphone with `useMicPitch`: same midi or +-12 held
+  250ms. Two traps it handles, both easy to reintroduce: after *Hear it* the
+  mic is ignored for 1.8s (the phone's speaker would tick the note off itself),
+  and a repeated target (Ode to Joy opens E E) needs the string to go quiet in
+  between, because a ringing string never stops matching.
+- **Players** (`PlayerPanel`) are created when the step appears and stopped and
+  disposed when it goes, the same rules as `SongPlayer`; they do not autoplay.
+- Not wired: drill answers do not feed the streak/SRS (a drill can ask about
+  frets above 5, which `questionForId` cannot rebuild). Worth doing together
+  with the SRS scheduler.
+- Checked in the built-in browser at 390x844. The pane blocks the microphone, so
+  the listen step's mic path is covered by tests only; try it once on a device.
 
 ## Metronome, count-in, loop-a-section, more solos (built 2026-09-08)
 

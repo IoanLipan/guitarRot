@@ -1,180 +1,102 @@
-import { useEffect, useRef, useState } from 'react';
-import type { AudioEngine } from '@/audio';
+import { useState } from 'react';
 import { tapHaptic } from '@/app/haptics';
-import { CHORDS } from '@/content';
-import {
-  chordSolfegeName,
-  chordToneNames,
-  chordVoicing,
-  chordStrings,
-  fretToMidi,
-  noteLabel,
-  SCALES,
-  scalePositions,
-  STANDARD_TUNING,
-  stringNumber,
-  withSolfege,
-  type ChordShape,
-  type FretPosition,
-} from '@/music';
-import { chordShapeToFretboard, Fretboard } from '@/render';
+import type { ProgressHandle } from '@/app/useProgress';
+import type { AudioEngine } from '@/audio';
+import { COURSE, type Lesson } from '@/content';
+import { Course } from './Course';
+import { Explore } from './Explore';
+import { LessonView } from './LessonView';
+import { Tuner } from './Tuner';
 
-const EXPLORER_FRET_RANGE: [number, number] = [0, 12];
-const SCALE_FRET_RANGE: [number, number] = [0, 3];
-/** E, for "E minor pentatonic, box one" (@see design_handoff_guitarrot_app/README.md). */
-const E_PITCH_CLASS = 4;
-/** How long a tap stays highlighted after the sound fires. */
-const TAP_FLASH_MS = 700;
+type Section = 'course' | 'tuner' | 'explore';
 
-const SCALE_DOTS = scalePositions(
-  STANDARD_TUNING,
-  E_PITCH_CLASS,
-  SCALES.minorPentatonic,
-  SCALE_FRET_RANGE,
-).map((position) => ({ ...position, tone: 'root' as const }));
+const SECTIONS: readonly { id: Section; label: string }[] = [
+  { id: 'course', label: 'Course' },
+  { id: 'tuner', label: 'Tuner' },
+  { id: 'explore', label: 'Explore' },
+];
 
-export function Learn({ engine }: { engine: AudioEngine }) {
-  const [tapped, setTapped] = useState<FretPosition | null>(null);
-  const [playedChord, setPlayedChord] = useState<ChordShape | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+/**
+ * The Learn tab: the Course (default), the Tuner, and free exploration of the
+ * neck. Opening a lesson takes over the whole pane, with no title or switch,
+ * so a lesson is one thing to look at.
+ */
+export function Learn({
+  engine,
+  progress,
+  lessons = COURSE,
+}: {
+  engine: AudioEngine;
+  progress: Pick<ProgressHandle, 'state' | 'completeLesson'>;
+  /** Defaults to the shipped course; tests hand in their own. */
+  lessons?: readonly Lesson[];
+}) {
+  const [section, setSection] = useState<Section>('course');
+  const [openId, setOpenId] = useState<string | null>(null);
 
-  useEffect(
-    () => () => {
-      if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
-    },
-    [],
-  );
+  const openIndex = openId === null ? -1 : lessons.findIndex((lesson) => lesson.id === openId);
+  const open = openIndex === -1 ? undefined : lessons[openIndex];
 
-  function flashChord(chord: ChordShape) {
-    setPlayedChord(chord);
-    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setPlayedChord(null), TAP_FLASH_MS);
+  if (open !== undefined) {
+    const nextLesson = lessons[openIndex + 1];
+    return (
+      <LessonView
+        // A new lesson id is a new lesson: start it from its first step.
+        key={open.id}
+        lesson={open}
+        engine={engine}
+        nextLesson={nextLesson}
+        onClose={() => setOpenId(null)}
+        onComplete={progress.completeLesson}
+        onOpenNext={nextLesson === undefined ? undefined : () => setOpenId(nextLesson.id)}
+      />
+    );
   }
-
-  function handleExplorerTap(position: FretPosition) {
-    tapHaptic();
-    const midi = fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret);
-    engine.playNote(midi, { stringIndex: position.stringIndex });
-    setTapped(position);
-  }
-
-  function handleChordTap(chord: ChordShape) {
-    tapHaptic();
-    engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
-    flashChord(chord);
-  }
-
-  const tappedNote =
-    tapped === null ? null : noteLabel(fretToMidi(STANDARD_TUNING, tapped.stringIndex, tapped.fret));
 
   return (
-    <div className="flex h-full flex-col gap-9 overflow-y-auto px-5 pt-8 pb-8">
-      <h1 className="text-3xl font-black">Learn</h1>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-[13px] font-bold tracking-wider text-ink-dim uppercase">
-          Fretboard explorer
-        </h2>
-        <div className="-mx-5 overflow-x-auto px-5">
-          <Fretboard
-            orientation="horizontal"
-            fretRange={EXPLORER_FRET_RANGE}
-            markers={tapped === null ? [] : [{ ...tapped, tone: 'root' }]}
-            onFretTap={handleExplorerTap}
-            ariaLabel="Fretboard explorer"
-          />
-        </div>
-        <p className="min-h-6 text-center text-sm text-ink-dim">
-          {tapped === null ? (
-            'Tap any fret to hear it.'
-          ) : (
-            <>
-              You tapped fret {tapped.fret}, string {stringNumber(tapped.stringIndex)} →{' '}
-              <strong data-testid="tapped-note" className="text-accent">
-                {tappedNote}
-              </strong>
-            </>
-          )}
-        </p>
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-[13px] font-bold tracking-wider text-ink-dim uppercase">
-            Chord library
-          </h2>
-          <span className="text-xs text-[#5f5f6b]">{CHORDS.length} shapes</span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3">
-          {CHORDS.map((chord) => {
-            const diagram = chordShapeToFretboard(chord);
-            const isPlaying = playedChord?.id === chord.id;
+    <div className="flex h-full min-h-0 flex-col">
+      <header className="flex shrink-0 flex-col gap-4 px-5 pt-8 pb-4">
+        <h1 className="text-3xl font-black">Learn</h1>
+        <div
+          role="tablist"
+          aria-label="Learn sections"
+          className="grid grid-cols-3 gap-1 rounded-full bg-surface p-1"
+        >
+          {SECTIONS.map(({ id, label }) => {
+            const selected = id === section;
             return (
               <button
-                key={chord.id}
+                key={id}
                 type="button"
-                data-testid={`chord-tile-${chord.id}`}
-                onClick={() => handleChordTap(chord)}
-                aria-pressed={isPlaying}
-                className={`flex flex-col items-center gap-1.5 rounded-2xl px-2 py-2.5 transition-all duration-200 active:scale-95 ${
-                  isPlaying ? 'bg-accent/12 ring-2 ring-accent' : 'bg-surface ring-2 ring-transparent'
+                role="tab"
+                aria-selected={selected}
+                data-testid={`learn-tab-${id}`}
+                onClick={() => {
+                  tapHaptic();
+                  setSection(id);
+                }}
+                className={`h-11 rounded-full text-sm font-extrabold transition-colors active:scale-95 ${
+                  selected ? 'bg-accent text-ground' : 'text-ink-dim'
                 }`}
               >
-                <div className="h-24 w-full">
-                  <Fretboard
-                    orientation="vertical"
-                    fretRange={diagram.fretRange}
-                    markers={diagram.markers}
-                    mutedStrings={diagram.mutedStrings}
-                    openStrings={diagram.openStrings}
-                    barre={diagram.barre}
-                    labelMode="custom"
-                    showFretNumbers={false}
-                    fit
-                    className="h-full w-full"
-                    ariaLabel={`${chord.name} chord`}
-                  />
-                </div>
-                <span
-                  className="text-sm font-extrabold transition-colors"
-                  style={{ color: isPlaying ? 'var(--color-accent)' : 'var(--color-ink)' }}
-                >
-                  {chord.name}
-                </span>
+                {label}
               </button>
             );
           })}
         </div>
+      </header>
 
-        <p className="min-h-10 text-center text-sm text-ink-dim" data-testid="chord-caption">
-          {playedChord === null ? (
-            'Tap a shape to hear it strummed.'
-          ) : (
-            <>
-              <strong className="text-accent">{playedChord.name}</strong> —{' '}
-              {chordSolfegeName(playedChord)} —{' '}
-              {chordToneNames(playedChord, STANDARD_TUNING).map(withSolfege).join(' · ')}
-            </>
-          )}
-        </p>
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-[13px] font-bold tracking-wider text-ink-dim uppercase">
-          Scale positions — E (Mi) minor pentatonic, box 1
-        </h2>
-        <div className="h-40 w-full">
-          <Fretboard
-            orientation="horizontal"
-            fretRange={SCALE_FRET_RANGE}
-            markers={SCALE_DOTS}
-            fit
-            className="h-full w-full"
-            ariaLabel="E minor pentatonic, box one"
-          />
-        </div>
-      </section>
+      <div role="tabpanel" className="min-h-0 flex-1 overflow-y-auto">
+        {section === 'course' && (
+          <Course lessons={lessons} done={progress.state.lessonsDone} onOpen={setOpenId} />
+        )}
+        {section === 'tuner' && (
+          <div className="px-5 pt-1 pb-8">
+            <Tuner engine={engine} />
+          </div>
+        )}
+        {section === 'explore' && <Explore engine={engine} />}
+      </div>
     </div>
   );
 }
