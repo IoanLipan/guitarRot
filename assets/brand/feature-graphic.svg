@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500" width="1024" height="500"><defs><linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#1a1a24"/><stop offset="1" stop-color="#0b0b0f"/></linearGradient>
+<radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffb020" stop-opacity="0.28"/><stop offset="1" stop-color="#ffb020" stop-opacity="0"/></radialGradient></defs><rect width="1024" height="500" fill="url(#bg)"/><g stroke="#9a9aa8" stroke-linecap="round" opacity="0"><line x1="0" y1="0" x2="0" y2="0" stroke-width="5"/><line x1="0" y1="0" x2="0" y2="0" stroke-width="6"/><line x1="0" y1="0" x2="0" y2="0" stroke-width="7"/><line x1="0" y1="0" x2="0" y2="0" stroke-width="8"/><line x1="0" y1="0" x2="0" y2="0" stroke-width="10"/><line x1="0" y1="0" x2="0" y2="0" stroke-width="12"/></g><g stroke="#9a9aa8" opacity="0.16"><line x1="0" y1="110" x2="1024" y2="110" stroke-width="2"/><line x1="0" y1="166" x2="1024" y2="166" stroke-width="3"/><line x1="0" y1="222" x2="1024" y2="222" stroke-width="3"/><line x1="0" y1="278" x2="1024" y2="278" stroke-width="4"/><line x1="0" y1="334" x2="1024" y2="334" stroke-width="5"/><line x1="0" y1="390" x2="1024" y2="390" stroke-width="6"/></g><circle cx="250" cy="250" r="260" fill="url(#glow)"/><g transform="translate(250 262) scale(0.46) translate(-512 -512)">
+  <defs>
+    <linearGradient id="pick" x1="0.2" y1="0" x2="0.75" y2="1">
+      <stop offset="0" stop-color="#ffd27a"/>
+      <stop offset="0.45" stop-color="#ffb020"/>
+      <stop offset="1" stop-color="#d9861a"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="0.32" cy="0.22" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- The pick: a classic 351 shape, broad shoulders tapering to a rounded tip. -->
+  <path id="pickShape" d="M512 180 C680 180 812 232 812 384 C812 560 646 752 566 838 Q512 892 458 838 C378 752 212 560 212 384 C212 232 344 180 512 180 Z" fill="url(#pick)"/>
+  <path d="M512 180 C680 180 812 232 812 384 C812 560 646 752 566 838 Q512 892 458 838 C378 752 212 560 212 384 C212 232 344 180 512 180 Z" fill="url(#shine)"/>
+  <!-- Play, cut out of the pick: press play, then play it yourself. -->
+  <path d="M458 372 L458 568 L628 470 Z" fill="#0b0b0f" stroke="#0b0b0f" stroke-width="44" stroke-linejoin="round"/>
+</g><text x="470" y="238" font-family="-apple-system, system-ui, sans-serif" font-weight="900" font-size="92" fill="#f4f4f6" letter-spacing="-3">guitar<tspan fill="#ffb020">Rot</tspan></text><text x="474" y="300" font-family="-apple-system, system-ui, sans-serif" font-weight="600" font-size="34" fill="#9a9aa8">Scroll less. Play more.</text></svg>

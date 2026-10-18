@@ -8,6 +8,7 @@ import { Learn } from '@/learn/Learn';
 import { Quiz } from '@/quiz/Quiz';
 import { readShareTarget, resolveShareTarget, type SharedContent } from '@/share';
 import { Songs } from '@/songs';
+import { LogoMark, Wordmark } from './Logo';
 import { SettingsSheet } from './SettingsSheet';
 import { TabBar, type TabId } from './TabBar';
 import { useAudioEngine } from './useAudioEngine';
@@ -57,15 +58,20 @@ export function AppShell() {
 
   if (!ready || engine === null) {
     return (
-      <main className="flex h-dvh flex-col items-center justify-center gap-4 bg-ground p-8 text-center">
-        <h1 className="text-4xl font-black tracking-tight">guitarRot</h1>
-        <p className="max-w-xs text-sm text-ink-dim">
-          Phones keep audio suspended until you touch the screen.
-        </p>
+      <main className="flex h-dvh flex-col items-center justify-center gap-6 bg-ground p-8 text-center">
+        <LogoMark className="h-32 w-auto drop-shadow-[0_0_48px_rgba(255,176,32,0.35)]" />
+        <div className="flex flex-col items-center gap-2">
+          <h1>
+            <Wordmark className="text-5xl" />
+          </h1>
+          <p className="text-base font-semibold text-ink-dim">Scroll less. Play more.</p>
+        </div>
+        {/* Web audio stays suspended until a real tap, so this button is also
+            what switches the sound on. */}
         <button
           type="button"
           onClick={() => void start()}
-          className="rounded-full bg-accent px-8 py-4 text-lg font-extrabold text-ground active:scale-95"
+          className="mt-4 rounded-full bg-accent px-10 py-4 text-lg font-extrabold text-ground active:scale-95"
         >
           Tap to start
         </button>

@@ -1,18 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="64" height="64"><defs><linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#1a1a24"/><stop offset="1" stop-color="#0b0b0f"/></linearGradient>
+<radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffb020" stop-opacity="0.28"/><stop offset="1" stop-color="#ffb020" stop-opacity="0"/></radialGradient></defs><rect width="1024" height="1024" rx="224" fill="url(#bg)"/><g transform="translate(512 512) scale(1.0) translate(-512 -512)">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0%" stop-color="#17171f"/>
-      <stop offset="100%" stop-color="#0b0b0f"/>
+    <linearGradient id="pick" x1="0.2" y1="0" x2="0.75" y2="1">
+      <stop offset="0" stop-color="#ffd27a"/>
+      <stop offset="0.45" stop-color="#ffb020"/>
+      <stop offset="1" stop-color="#d9861a"/>
     </linearGradient>
-    <radialGradient id="dot" cx="0.35" cy="0.32" r="0.75">
-      <stop offset="0%" stop-color="#ffd27a"/>
-      <stop offset="55%" stop-color="#ffb020"/>
-      <stop offset="100%" stop-color="#c9781a"/>
+    <radialGradient id="shine" cx="0.32" cy="0.22" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
-  <rect x="20.6" y="9.4" width="1" height="45.2" rx="0.5" fill="#e8e9ee" opacity="0.9"/>
-  <rect x="9.4" y="29.4" width="45.2" height="0.9" rx="0.45" fill="#9a9aa8" opacity="0.55"/>
-  <rect x="9.4" y="35" width="45.2" height="0.5" rx="0.25" fill="#cfd0d8" opacity="0.5"/>
-  <circle cx="38.3" cy="32" r="10.5" fill="url(#dot)"/>
-</svg>
+  <!-- The pick: a classic 351 shape, broad shoulders tapering to a rounded tip. -->
+  <path id="pickShape" d="M512 180 C680 180 812 232 812 384 C812 560 646 752 566 838 Q512 892 458 838 C378 752 212 560 212 384 C212 232 344 180 512 180 Z" fill="url(#pick)"/>
+  <path d="M512 180 C680 180 812 232 812 384 C812 560 646 752 566 838 Q512 892 458 838 C378 752 212 560 212 384 C212 232 344 180 512 180 Z" fill="url(#shine)"/>
+  <!-- Play, cut out of the pick: press play, then play it yourself. -->
+  <path d="M458 372 L458 568 L628 470 Z" fill="#0b0b0f" stroke="#0b0b0f" stroke-width="44" stroke-linejoin="round"/>
+</g></svg>

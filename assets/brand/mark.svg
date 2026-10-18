@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="pick" x1="0.2" y1="0" x2="0.75" y2="1">
+      <stop offset="0" stop-color="#ffd27a"/>
+      <stop offset="0.45" stop-color="#ffb020"/>
+      <stop offset="1" stop-color="#d9861a"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="0.32" cy="0.22" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- The pick: a classic 351 shape, broad shoulders tapering to a rounded tip. -->
+  <path id="pickShape" d="M512 180 C680 180 812 232 812 384 C812 560 646 752 566 838 Q512 892 458 838 C378 752 212 560 212 384 C212 232 344 180 512 180 Z" fill="url(#pick)"/>
+  <path d="M512 180 C680 180 812 232 812 384 C812 560 646 752 566 838 Q512 892 458 838 C378 752 212 560 212 384 C212 232 344 180 512 180 Z" fill="url(#shine)"/>
+  <!-- Play, cut out of the pick: press play, then play it yourself. -->
+  <path d="M458 372 L458 568 L628 470 Z" fill="#0b0b0f" stroke="#0b0b0f" stroke-width="44" stroke-linejoin="round"/>
+</svg>
