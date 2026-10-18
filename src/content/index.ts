@@ -6,3 +6,5 @@ export * from './songCatalog';
 export * from './melody';
 export * from './legato';
 export * from './drills';
+export * from './lessons';
+export * from './course';
