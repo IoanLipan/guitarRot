@@ -200,6 +200,40 @@ const legatoDrill: Riff = {
   ],
 };
 
+/**
+ * Slides and bends, every note drawn from E minor pentatonic so the whole
+ * drill sounds right over an Em chord. A slide event lands on its fret from
+ * two frets below, so each one follows a note exactly two frets lower. A
+ * bend event sits on the fret you press; the string is pushed up a whole
+ * step from there, so each bend is preceded by its target, the note two
+ * frets higher, to match by ear.
+ */
+const slideAndBend: Riff = {
+  id: 'slide-and-bend',
+  title: 'Slides and bends',
+  style: 'Drill',
+  level: 3,
+  bpm: 60,
+  timeSignature: [4, 4],
+  bars: 4,
+  source: 'original',
+  tags: ['slide', 'bend', 'pentatonic', 'E minor', 'ear-training'],
+  events: [
+    // Bar 1: slide up two frets on the G string.
+    note(3, 7, 0, 2),
+    note(3, 9, 2, 2, 'slide'),
+    // Bar 2: the same slide on the B string.
+    note(4, 3, 4, 2),
+    note(4, 5, 6, 2, 'slide'),
+    // Bar 3: hear the target on the B string, then bend up to it.
+    note(4, 10, 8, 2),
+    note(4, 8, 10, 2, 'bend'),
+    // Bar 4: the same on the high E string.
+    note(5, 12, 12, 2),
+    note(5, 10, 14, 2, 'bend'),
+  ],
+};
+
 // ---------------------------------------------------------------------------
 // Chord changes.
 //
@@ -307,6 +341,7 @@ export const DRILLS: readonly Riff[] = [
   cMajorScale,
   rhythmLadder,
   legatoDrill,
+  slideAndBend,
   emFourDowns,
   emAmChange,
   dAChange,

@@ -25,7 +25,7 @@ const spelled = (riff: Riff): string[] =>
   inOrder(riff).map((e) => noteName(midiOf(e), { withOctave: true }));
 
 describe('DRILLS', () => {
-  it('has the fourteen drills the course is built on', () => {
+  it('has the fifteen drills the course is built on', () => {
     expect(DRILLS.map((d) => d.id)).toEqual([
       'open-strings-walk',
       'mi-fa-sol',
@@ -35,6 +35,7 @@ describe('DRILLS', () => {
       'c-major-scale',
       'rhythm-ladder',
       'legato-drill',
+      'slide-and-bend',
       'em-four-downs',
       'em-am-change',
       'd-a-change',
@@ -224,6 +225,40 @@ describe('legato-drill', () => {
     const events = inOrder(riff);
     for (const e of events.slice(0, -1)) expect(e.duration).toBe(0.5);
     expect(events[events.length - 1]).toMatchObject({ fret: 0, beat: 15, duration: 1 });
+  });
+});
+
+describe('slide-and-bend', () => {
+  const riff = drill('slide-and-bend');
+  const events = inOrder(riff);
+
+  it('slides each time up exactly two frets from the note before it, on one string', () => {
+    const slides = events.filter((e) => e.technique === 'slide');
+    expect(slides).toHaveLength(2);
+    for (const slide of slides) {
+      const before = events[events.indexOf(slide) - 1];
+      expect(before?.stringIndex).toBe(slide.stringIndex);
+      expect(slide.fret - (before?.fret ?? 0)).toBe(2);
+    }
+  });
+
+  it('plays each bend note\'s target (two frets higher) just before the bend', () => {
+    const bends = events.filter((e) => e.technique === 'bend');
+    expect(bends).toHaveLength(2);
+    for (const bend of bends) {
+      const before = events[events.indexOf(bend) - 1];
+      expect(before?.stringIndex).toBe(bend.stringIndex);
+      expect((before?.fret ?? 0) - bend.fret).toBe(2);
+    }
+  });
+
+  it('stays inside E minor pentatonic', () => {
+    const pentatonic = new Set([4, 7, 9, 11, 2]);
+    for (const e of riff.events) expect(pentatonic.has(midiToPitchClass(midiOf(e))), `${e.stringIndex}/${e.fret}`).toBe(true);
+    // The notes a bend or slide travels to count too: the target of a bend is two frets up.
+    for (const e of riff.events.filter((x) => x.technique === 'bend')) {
+      expect(pentatonic.has(midiToPitchClass(midiOf(e) + 2))).toBe(true);
+    }
   });
 });
 
