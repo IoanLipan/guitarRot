@@ -39,11 +39,9 @@ describe('the riff library', () => {
   });
 
   it('only tags a hammer-on or pull-off where the tab can be played that way', () => {
-    // Every feed riff and every drill. The song catalogue's own riffs are
-    // left out on purpose: study-bend-and-wail has a hammer-on (beat 12.5)
-    // that follows a note on a different string. Fix that tab, then widen
-    // this to cover SONGS too.
-    expect([...RIFFS, ...DRILLS].flatMap((riff) => legatoProblems(riff))).toEqual([]);
+    // Every feed riff, every drill, and every song.
+    const playable = [...RIFFS, ...DRILLS, ...SONGS.map((song) => songToRiff(song))];
+    expect(playable.flatMap((riff) => legatoProblems(riff))).toEqual([]);
   });
 
   it('starts every riff on beat 0 so a loop has no dead air at the front', () => {

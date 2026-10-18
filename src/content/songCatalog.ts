@@ -102,8 +102,8 @@ const bendAndWail: Riff = {
     { stringIndex: 4, fret: 12, beat: 10, duration: 0.5 },
     { stringIndex: 3, fret: 14, beat: 10.5, duration: 1.5 },
     { stringIndex: 3, fret: 12, beat: 12, duration: 0.5 },
-    { stringIndex: 2, fret: 14, beat: 12.5, duration: 0.5, technique: 'hammer' },
-    { stringIndex: 2, fret: 12, beat: 13, duration: 1 },
+    { stringIndex: 2, fret: 14, beat: 12.5, duration: 0.5 },
+    { stringIndex: 2, fret: 12, beat: 13, duration: 1, technique: 'pull' },
     { stringIndex: 1, fret: 14, beat: 14, duration: 2 },
   ],
 };
