@@ -1,5 +1,5 @@
 import type { LessonStep } from '@/content';
-import { StepKicker } from './StepHeading';
+import { glueSolfege, StepKicker } from './StepHeading';
 
 export function TextStep({ step }: { step: Extract<LessonStep, { kind: 'text' }> }) {
   return (
@@ -14,7 +14,7 @@ export function TextStep({ step }: { step: Extract<LessonStep, { kind: 'text' }>
           read without losing your place, with room for the generous leading. */}
       {step.body.map((paragraph, index) => (
         <p key={index} className="text-[17px] leading-[1.7] text-ink">
-          {paragraph}
+          {glueSolfege(paragraph)}
         </p>
       ))}
     </article>

@@ -12,7 +12,7 @@ import {
   withSolfege,
 } from '@/music';
 import { chordShapeToFretboard, Fretboard } from '@/render';
-import { MissingContent, StepKicker } from './StepHeading';
+import { glueSolfege, MissingContent, StepKicker } from './StepHeading';
 
 /** How long the "just strummed" highlight holds after a tap. */
 const STRUM_FLASH_MS = 700;
@@ -105,7 +105,7 @@ export function ChordStep({
 
       <p className="text-sm leading-relaxed text-ink-dim">{strumAdvice}</p>
       {step.caption !== undefined && (
-        <p className="text-[17px] leading-[1.7] text-ink">{step.caption}</p>
+        <p className="text-[17px] leading-[1.7] text-ink">{glueSolfege(step.caption)}</p>
       )}
     </div>
   );

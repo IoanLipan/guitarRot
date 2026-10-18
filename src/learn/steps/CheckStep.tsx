@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { errorHaptic, successHaptic } from '@/app/haptics';
 import type { LessonStep } from '@/content';
 import { Reveal } from './Reveal';
-import { StepKicker } from './StepHeading';
+import { glueSolfege, StepKicker } from './StepHeading';
 
 /**
  * One hand-written multiple-choice question. A wrong tap turns that option red
@@ -37,7 +37,7 @@ export function CheckStep({
     <div className="flex flex-col gap-5" data-testid="step-check">
       <div className="flex flex-col gap-1.5">
         <StepKicker>Quick check</StepKicker>
-        <h2 className="text-2xl leading-snug font-black">{step.question}</h2>
+        <h2 className="text-2xl leading-snug font-black">{glueSolfege(step.question)}</h2>
       </div>
 
       <div className="flex flex-col gap-3" role="group" aria-label="Answers">
@@ -65,7 +65,7 @@ export function CheckStep({
               onClick={() => handlePick(option)}
               className={classes.join(' ')}
             >
-              {option}
+              {glueSolfege(option)}
             </button>
           );
         })}
@@ -80,7 +80,7 @@ export function CheckStep({
             <p className={`text-lg font-black ${solved ? 'text-good' : 'text-bad'}`}>
               {solved ? 'Correct' : 'Not quite'}
             </p>
-            <p className="mt-1 text-[15px] leading-relaxed text-ink">{step.explain}</p>
+            <p className="mt-1 text-[15px] leading-relaxed text-ink">{glueSolfege(step.explain)}</p>
             {!solved && <p className="mt-2 text-sm text-ink-dim">Have another go.</p>}
           </Reveal>
         )}

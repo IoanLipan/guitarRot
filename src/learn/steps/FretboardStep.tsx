@@ -10,7 +10,7 @@ import {
   type FretPosition,
 } from '@/music';
 import { Neck } from './Neck';
-import { StepKicker } from './StepHeading';
+import { StepCaption, StepKicker } from './StepHeading';
 
 function where(position: FretPosition, withString: boolean): string {
   const fret = position.fret === 0 ? 'open' : `fret ${position.fret}`;
@@ -41,7 +41,7 @@ export function FretboardStep({
     <div className="flex flex-col gap-5" data-testid="step-fretboard">
       <div className="flex flex-col gap-1.5">
         <StepKicker>Look</StepKicker>
-        <p className="text-xl leading-snug font-bold">{step.caption}</p>
+        <StepCaption>{step.caption}</StepCaption>
       </div>
 
       <Neck

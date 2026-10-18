@@ -121,16 +121,17 @@ specified** (not spec violations, just worth knowing):
 3. ~~Build `feed/generator.ts`~~ — **done**, except for the due-weighting
    hook, which is a small change to `pickContent` once #2 exists, and level
    gating, which needs a tracked user level.
-4. **Content authoring pass** to ~24 chords / ~40 riffs / ~30 lessons, plus
-   a `Lesson` content type and Learn-tab lesson viewer (Plan 3 scope, but
-   the chord count also feeds the SRS item universe in #2 — do these
-   together rather than content-then-SRS-then-content-again).
+4. ~~Content authoring pass~~ — **done 2026-10-18**: 29 chords, 21 feed
+   riffs + 15 lesson drills, 32 songs (6 public-domain melodies added), and
+   a 28-lesson course with its `Lesson` type and lesson player. See
+   `docs/superpowers/plans/2026-10-18-real-guitar-and-course.md`. The SRS
+   item universe in #2 can now be built over the full chord library.
 5. **`frontend-design` visual/motion pass** (Plan 3): spring animations,
    haptics, the `ui/` primitives the original spec names.
 6. ~~Capacitor wrap~~ — **done for Android** (see the Plan 3 section below).
    iOS still needs `npx cap add ios` and an Xcode signing pass.
-7. **Optional:** install real guitar samples, verify the engine upgrades to
-   `sampled`.
+7. ~~Real guitar samples~~ — **done**: recorded acoustic, nylon and electric
+   sets ship and the engine runs `sampled` (checked in the browser).
 
 ## Plan 3 — Content, design pass, Capacitor wrap
 
@@ -164,16 +165,14 @@ headless-Chrome-over-CDP approach as the UI screenshot passes, run through
 `@capacitor/assets`.
 
 Still open for Plan 3:
-- ~24 chords, ~40 riffs (original + public-domain), ~30 micro-lessons —
-  current counts are 9 / 9 / 0. The riff library now spans blues, country,
-  rock, fingerstyle and two lead solos; chords are still the nine open/barre
-  shapes.
+- ~~Content~~ — done 2026-10-18 (29 chords, 21 riffs, 15 drills, 28
+  lessons). The ~40-riff target is still short by ~19 if the Feed starts
+  feeling repetitive.
 - The `frontend-design` visual/motion pass (spring animations, `ui/`
   primitives) — haptics landed already, ahead of this item, since they were
   cheap once the Capacitor wrap existed.
 - iOS platform folder — not attempted. `npx cap add ios` plus an Xcode
   signing pass; no reason it wouldn't work, just not exercised this session.
-- Installing real guitar samples.
 
 **`MANIFEST_URL` is very likely already fine, but this is reasoning, not a
 verified test.** The APK was built and its signature/manifest checked with

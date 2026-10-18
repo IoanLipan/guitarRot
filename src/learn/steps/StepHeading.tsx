@@ -5,6 +5,23 @@ export function StepKicker({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Keeps a note and its solfège on one line: "E (Mi)" must never wrap into
+ * "E" at the end of one line and "(Mi)" at the start of the next.
+ */
+export function glueSolfege(text: string): string {
+  return text.replace(/ \((Do|Re|Mi|Fa|Sol|La|Si)\b/g, ' ($1');
+}
+
+/**
+ * A step's instruction. Captions are whole sentences, often two, so they read
+ * as body text; set as a heading they pushed the step's own buttons below the
+ * fold on a phone.
+ */
+export function StepCaption({ children }: { children: string }) {
+  return <p className="text-[17px] leading-relaxed font-semibold text-ink">{glueSolfege(children)}</p>;
+}
+
 /** Shown if a step names content that no longer exists; the course tests should make this unreachable. */
 export function MissingContent({ what }: { what: string }) {
   return (

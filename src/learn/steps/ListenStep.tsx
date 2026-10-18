@@ -12,7 +12,7 @@ import {
 } from '@/music';
 import type { FretMarker } from '@/render';
 import { Neck } from './Neck';
-import { StepKicker } from './StepHeading';
+import { StepCaption, StepKicker } from './StepHeading';
 
 /** How long the right pitch has to be held before it counts: a pluck passing through is not a played note. */
 const HOLD_MS = 250;
@@ -135,16 +135,8 @@ export function ListenStep({
     <div className="flex flex-col gap-4" data-testid="step-listen">
       <div className="flex flex-col gap-1.5">
         <StepKicker>Your turn</StepKicker>
-        <p className="text-xl leading-snug font-bold">{step.caption}</p>
+        <StepCaption>{step.caption}</StepCaption>
       </div>
-
-      <Neck
-        fretRange={fretRange}
-        markers={markers}
-        focus={target ?? null}
-        maxHeight={190}
-        ariaLabel="Where to play"
-      />
 
       {complete || target === undefined || targetMidi === undefined ? (
         <div
@@ -248,6 +240,17 @@ export function ListenStep({
           </p>
         </div>
       )}
+
+      {/* After the prompt and its buttons, not before: on a phone a long
+          caption plus the board pushed "Hear it" and "Listen for me" under
+          the footer. The board is the reference; the buttons are the task. */}
+      <Neck
+        fretRange={fretRange}
+        markers={markers}
+        focus={target ?? null}
+        maxHeight={170}
+        ariaLabel="Where to play"
+      />
     </div>
   );
 }
