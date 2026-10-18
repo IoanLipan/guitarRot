@@ -118,7 +118,8 @@ export function SettingsSheet({
           {/* CC BY requires the attribution to travel with the work, so it
               lives in the app and not only in the repository. */}
           <p className="mt-3 text-xs leading-relaxed text-ink-dim/80" data-testid="sample-credit">
-            Guitar samples: FluidR3_GM by Frank Wen, CC BY 3.0.
+            Guitar samples: tonejs-instruments by Nicholaus Brosowsky, CC BY 3.0 — recorded by
+            University of Iowa EMS, quartertone and Karoryfer.
           </p>
         </section>
       </div>

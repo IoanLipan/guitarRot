@@ -7,13 +7,19 @@ way, so quizzes are correct with or without samples.
 
 ## What is installed
 
-Two sets of real recorded notes, one sample every three semitones from E2 to
-E6 (the sampler pitch-shifts to fill the gaps):
+Three sets of real recorded guitar notes; the engine pitch-shifts the
+nearest one to fill any gap:
 
-- `acoustic/` — plays the Acoustic tone
-- `electric/` — plays Clean, Rock, Blues and Country, which get their
-  character from the amp chain (drive, tone, reverb, body) rather than from
-  a different recording
+- `acoustic/` — steel-string, **every semitone** from D2 to D5, so nothing
+  in first position is ever stretched; topped up to A#5 with the four
+  highest nylon recordings. Plays the Acoustic tone.
+- `nylon/` — classical guitar, B1 to A#5, roughly every two semitones.
+- `electric/` — clean electric, every three semitones, C#2 to C6. Plays
+  Clean, Rock, Blues and Country, which get their character from the amp
+  chain (drive, tone, reverb) rather than from a different recording.
+
+Every file starts within a few milliseconds of the pick — the originals had
+30-50ms of silence first, which made every strum and riff land late.
 
 See [`LICENSE.md`](LICENSE.md) for provenance and the required attribution.
 

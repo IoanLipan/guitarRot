@@ -65,7 +65,10 @@ describe('the manifest that actually ships', () => {
         .sort((a, b) => a - b);
 
       expect(midis[0], `${name} misses the open low E`).toBeLessThanOrEqual(40);
-      expect(midis[midis.length - 1], `${name} misses the top of the neck`).toBeGreaterThanOrEqual(88);
+      // A#5 (82) reaches fret 21 on the high E within the same three-semitone
+      // stretch; nothing in the content goes past fret 15. The recordings
+      // stop there, and inventing higher ones would just be stretching.
+      expect(midis[midis.length - 1], `${name} misses the top of the neck`).toBeGreaterThanOrEqual(82);
       for (let i = 1; i < midis.length; i += 1) {
         expect(midis[i]! - midis[i - 1]!, `${name} gap after midi ${midis[i - 1]}`).toBeLessThanOrEqual(3);
       }
