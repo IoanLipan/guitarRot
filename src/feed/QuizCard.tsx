@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { errorHaptic, successHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
+import { withSolfege } from '@/music';
 import { AnswerGrid, explainAnswer, QuizVisual, type QuizQuestion } from '@/quiz';
 
 /** A right answer holds just long enough to register, then the feed moves on. */
@@ -74,6 +75,7 @@ export function QuizCard({
           correctAnswer={question.correctAnswer}
           picked={picked}
           onPick={handlePick}
+          formatOption={question.kind === 'note' ? withSolfege : undefined}
         />
       </div>
 

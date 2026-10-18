@@ -14,6 +14,7 @@ import { chordShapeToFretboard, createTabGeometry, Fretboard, TabStaff } from '@
 import { ShareButton } from '@/share';
 import { DifficultyPill } from './DifficultyPill';
 import { ChordChart } from './ChordChart';
+import { keyLabel } from './keyLabel';
 
 /** A tapped-out practice loop: the bar you tapped first, and the resulting range. */
 type LoopRange = { anchor: number; start: number; end: number };
@@ -202,7 +203,7 @@ export function SongPlayer({
       <div className="flex shrink-0 flex-wrap gap-1.5">
         <DifficultyPill difficulty={song.difficulty} />
         <Chip>{song.style}</Chip>
-        <Chip>Key {song.key}</Chip>
+        <Chip>Key {keyLabel(song.key)}</Chip>
         <Chip>{song.bpm} BPM</Chip>
       </div>
 

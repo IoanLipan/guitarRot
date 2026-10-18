@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { errorHaptic, successHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { ProgressHandle } from '@/app/useProgress';
+import { withSolfege } from '@/music';
 import { AnswerGrid } from './AnswerGrid';
 import { explainAnswer } from './explainAnswer';
 import { generateChordQuestion, generateNoteQuestion, type QuizQuestion } from './generateQuiz';
@@ -101,6 +102,7 @@ export function Quiz({ engine, progress }: { engine: AudioEngine; progress: Prog
             correctAnswer={question.correctAnswer}
             picked={picked}
             onPick={handlePick}
+            formatOption={question.kind === 'note' ? withSolfege : undefined}
           />
         </div>
 

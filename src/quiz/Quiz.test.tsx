@@ -20,8 +20,8 @@ function fakeProgress(overrides: Partial<ProgressHandle> = {}): ProgressHandle {
  * question on the D string at fret 2, whose answer is E, offered as
  * D / E / F# / F. Both answer paths can then be driven by name.
  */
-const CORRECT = 'E';
-const WRONG = 'D';
+const CORRECT = 'E (Mi)';
+const WRONG = 'D (Re)';
 
 function fakeEngine(): AudioEngine {
   return {
@@ -92,7 +92,7 @@ describe('Quiz', () => {
     expect(screen.getByText('MISS')).toBeInTheDocument();
     // The D string is MIDI 50; fret 2 is E, and D itself is open on it.
     expect(screen.getByTestId('quiz-explanation')).toHaveTextContent(
-      'String 4 is D open, so 2 frets up is E. D is at fret 0 on that string — 2 frets lower.',
+      'String 4 is D (Re) open, so 2 frets up is E (Mi). D (Re) is at fret 0 on that string — 2 frets lower.',
     );
 
     act(() => {

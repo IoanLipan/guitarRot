@@ -4,10 +4,22 @@ export type AnswerGridProps = {
   /** null before the user has tapped an option. */
   picked: string | null;
   onPick: (option: string) => void;
+  /**
+   * How an option reads on its button. Display only: `picked`, `onPick` and
+   * `correctAnswer` keep the plain option, so answers never depend on how
+   * they are printed.
+   */
+  formatOption?: (option: string) => string;
 };
 
 /** The 2x2 answer grid shared by the Feed's quiz cards and the Quiz tab. */
-export function AnswerGrid({ options, correctAnswer, picked, onPick }: AnswerGridProps) {
+export function AnswerGrid({
+  options,
+  correctAnswer,
+  picked,
+  onPick,
+  formatOption = (option) => option,
+}: AnswerGridProps) {
   const answered = picked !== null;
 
   return (
@@ -40,7 +52,7 @@ export function AnswerGrid({ options, correctAnswer, picked, onPick }: AnswerGri
             onClick={() => onPick(option)}
             className={classes.join(' ')}
           >
-            {option}
+            {formatOption(option)}
           </button>
         );
       })}

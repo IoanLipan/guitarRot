@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import type { AudioEngine } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
 import {
+  chordSolfegeName,
   chordToneNames,
   chordVoicing,
-  QUALITY_LABELS,
   STANDARD_TUNING,
+  withSolfege,
   type ChordShape,
 } from '@/music';
 import { chordShapeToFretboard, Fretboard } from '@/render';
@@ -33,7 +34,7 @@ export function ChordCard({ chord, engine }: { chord: ChordShape; engine: AudioE
     timeoutRef.current = setTimeout(() => setStrumming(false), STRUM_FLASH_MS);
   }
 
-  const tones = chordToneNames(chord, STANDARD_TUNING).join(' · ');
+  const tones = chordToneNames(chord, STANDARD_TUNING).map(withSolfege);
 
   return (
     <button
@@ -45,7 +46,7 @@ export function ChordCard({ chord, engine }: { chord: ChordShape; engine: AudioE
       <div className="shrink-0">
         <div className="text-6xl leading-none font-black">{chord.name}</div>
         <div className="mt-1.5 text-sm tracking-wider text-ink-dim uppercase">
-          {QUALITY_LABELS[chord.quality]}
+          {chordSolfegeName(chord)}
         </div>
       </div>
 
@@ -69,8 +70,16 @@ export function ChordCard({ chord, engine }: { chord: ChordShape; engine: AudioE
         />
       </div>
 
-      <div className="flex h-16 shrink-0 flex-col items-center justify-center gap-1.5">
-        <div className="text-lg font-bold tracking-wide tabular-nums">{tones}</div>
+      <div className="flex min-h-16 shrink-0 flex-col items-center justify-center gap-1.5">
+        {/* Each tone stays whole if a longer chord has to wrap. */}
+        <div className="text-center text-base font-bold tracking-wide tabular-nums">
+          {tones.map((tone, index) => (
+            <Fragment key={tone}>
+              {index > 0 && ' · '}
+              <span className="whitespace-nowrap">{tone}</span>
+            </Fragment>
+          ))}
+        </div>
         <div
           className="flex items-center gap-2 text-sm font-semibold transition-colors"
           style={{ color: strumming ? 'var(--color-accent)' : 'var(--color-ink-dim)' }}

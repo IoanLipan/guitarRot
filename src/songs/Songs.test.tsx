@@ -103,6 +103,17 @@ describe('Songs', () => {
     expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
   });
 
+  it('shows the key with its solfège, minor keys included', async () => {
+    render(<Songs engine={fakeEngine()} />);
+
+    await userEvent.click(screen.getByTestId('song-row-tom-dooley'));
+    expect(screen.getByText('Key G (Sol)')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('song-back'));
+    await userEvent.click(screen.getByTestId('song-row-greensleeves'));
+    expect(screen.getByText('Key Am (La minor)')).toBeInTheDocument();
+  });
+
   it('opens a riff song into a tab staff rather than a chart', async () => {
     render(<Songs engine={fakeEngine()} />);
 

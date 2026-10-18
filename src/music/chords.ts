@@ -1,4 +1,11 @@
-import { enharmonics, midiToPitchClass, pitchClassName, type Midi, type PitchClass } from './notes';
+import {
+  enharmonics,
+  midiToPitchClass,
+  pitchClassName,
+  solfegeName,
+  type Midi,
+  type PitchClass,
+} from './notes';
 import { fretToMidi } from './fretboard';
 import { MAX_FRET, STRING_COUNT, type Tuning } from './tuning';
 
@@ -217,4 +224,16 @@ export function validateChordShape(shape: ChordShape, tuning: Tuning): string[] 
   }
 
   return errors;
+}
+
+/**
+ * The chord named in solfège, e.g. Am -> "La minor", Bb -> "Sib major".
+ *
+ * A flat root is always the second character of the display name ("Bb",
+ * "Ebm"); nothing else in a name starts with a lowercase b after the letter,
+ * so that is the whole flat test.
+ */
+export function chordSolfegeName(shape: ChordShape): string {
+  const preferFlat = shape.name.charAt(1) === 'b';
+  return `${solfegeName(shape.root, { preferFlat })} ${QUALITY_LABELS[shape.quality]}`;
 }

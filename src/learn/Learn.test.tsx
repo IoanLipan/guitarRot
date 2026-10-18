@@ -33,7 +33,7 @@ describe('Learn', () => {
 
     expect(engine.playNote).toHaveBeenCalledWith(45, { stringIndex: 0 });
     expect(screen.getByText(/You tapped fret 5, string 6/)).toBeInTheDocument();
-    expect(screen.getByTestId('tapped-note')).toHaveTextContent('A');
+    expect(screen.getByTestId('tapped-note')).toHaveTextContent('A (La)');
   });
 
   it('renders one tile per library chord', () => {
@@ -58,7 +58,9 @@ describe('Learn', () => {
 
     fireEvent.click(screen.getByTestId('chord-tile-Am-open'));
 
-    expect(screen.getByTestId('chord-caption')).toHaveTextContent('Am minor — A · C · E');
+    expect(screen.getByTestId('chord-caption')).toHaveTextContent(
+      'Am — La minor — A (La) · C (Do) · E (Mi)',
+    );
     expect(screen.getByTestId('chord-tile-Am-open')).toHaveAttribute('aria-pressed', 'true');
   });
 });

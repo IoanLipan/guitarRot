@@ -59,7 +59,7 @@ describe('QuizCard', () => {
       <QuizCard question={noteQuestion} engine={fakeEngine()} onAnswered={onAnswered} onAdvance={onAdvance} />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'G' }));
+    fireEvent.click(screen.getByRole('button', { name: 'G (Sol)' }));
 
     expect(onAnswered).toHaveBeenCalledWith(true, noteQuestion.id);
     expect(screen.getByText('Nice — next one…')).toBeInTheDocument();
@@ -78,10 +78,10 @@ describe('QuizCard', () => {
       <QuizCard question={noteQuestion} engine={fakeEngine()} onAnswered={vi.fn()} onAdvance={onAdvance} />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'A (La)' }));
 
     expect(screen.getByTestId('quiz-explanation')).toHaveTextContent(
-      'String 6 is E open, so 3 frets up is G. A is at fret 5 on that string — 2 frets higher.',
+      'String 6 is E (Mi) open, so 3 frets up is G (Sol). A (La) is at fret 5 on that string — 2 frets higher.',
     );
 
     act(() => {
@@ -97,7 +97,7 @@ describe('QuizCard', () => {
       <QuizCard question={noteQuestion} engine={fakeEngine()} onAnswered={vi.fn()} onAdvance={onAdvance} />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'A (La)' }));
     fireEvent.click(screen.getByRole('button', { name: /Got it/ }));
 
     expect(onAdvance).toHaveBeenCalledTimes(1);
@@ -111,7 +111,7 @@ describe('QuizCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'C' }));
 
     expect(screen.getByTestId('quiz-explanation')).toHaveTextContent(
-      'Am is minor: A, C, E. C is C, E, G.',
+      'Am is minor: A (La), C (Do), E (Mi). C is C (Do), E (Mi), G (Sol).',
     );
   });
 
@@ -121,8 +121,8 @@ describe('QuizCard', () => {
       <QuizCard question={noteQuestion} engine={fakeEngine()} onAnswered={onAnswered} onAdvance={vi.fn()} />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'A' }));
-    fireEvent.click(screen.getByRole('button', { name: 'G' }));
+    fireEvent.click(screen.getByRole('button', { name: 'A (La)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'G (Sol)' }));
 
     expect(onAnswered).toHaveBeenCalledTimes(1);
   });

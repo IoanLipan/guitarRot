@@ -3,6 +3,7 @@ import {
   STANDARD_TUNING,
   fretToMidi,
   intervalBetween,
+  noteLabel,
   noteName,
   stringNumber,
   type FretPosition,
@@ -301,7 +302,7 @@ export function Fretboard({
                 fill="transparent"
                 style={{ cursor: 'pointer' }}
                 role="button"
-                aria-label={`${noteName(midi, { withOctave: true })}, string ${stringNumber(stringIndex)}, fret ${fret}`}
+                aria-label={`${noteLabel(midi, { withOctave: true })}, string ${stringNumber(stringIndex)}, fret ${fret}`}
                 onClick={() => onFretTap?.({ stringIndex, fret })}
               />
             );

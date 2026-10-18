@@ -3,15 +3,16 @@ import type { AudioEngine } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
 import { CHORDS } from '@/content';
 import {
+  chordSolfegeName,
   chordToneNames,
   chordVoicing,
   fretToMidi,
-  noteName,
-  QUALITY_LABELS,
+  noteLabel,
   SCALES,
   scalePositions,
   STANDARD_TUNING,
   stringNumber,
+  withSolfege,
   type ChordShape,
   type FretPosition,
 } from '@/music';
@@ -63,7 +64,7 @@ export function Learn({ engine }: { engine: AudioEngine }) {
   }
 
   const tappedNote =
-    tapped === null ? null : noteName(fretToMidi(STANDARD_TUNING, tapped.stringIndex, tapped.fret));
+    tapped === null ? null : noteLabel(fretToMidi(STANDARD_TUNING, tapped.stringIndex, tapped.fret));
 
   return (
     <div className="flex h-full flex-col gap-9 overflow-y-auto px-5 pt-8 pb-8">
@@ -150,9 +151,9 @@ export function Learn({ engine }: { engine: AudioEngine }) {
             'Tap a shape to hear it strummed.'
           ) : (
             <>
-              <strong className="text-accent">{playedChord.name}</strong>{' '}
-              {QUALITY_LABELS[playedChord.quality]} —{' '}
-              {chordToneNames(playedChord, STANDARD_TUNING).join(' · ')}
+              <strong className="text-accent">{playedChord.name}</strong> —{' '}
+              {chordSolfegeName(playedChord)} —{' '}
+              {chordToneNames(playedChord, STANDARD_TUNING).map(withSolfege).join(' · ')}
             </>
           )}
         </p>
@@ -160,7 +161,7 @@ export function Learn({ engine }: { engine: AudioEngine }) {
 
       <section className="flex flex-col gap-3">
         <h2 className="text-[13px] font-bold tracking-wider text-ink-dim uppercase">
-          Scale positions — E minor pentatonic, box 1
+          Scale positions — E (Mi) minor pentatonic, box 1
         </h2>
         <div className="h-40 w-full">
           <Fretboard

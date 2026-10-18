@@ -3,12 +3,14 @@ import {
   chordToneNames,
   fretToMidi,
   midiToPitchClass,
+  noteLabel,
   noteName,
   openStringMidi,
   parseNoteName,
   QUALITY_LABELS,
   STANDARD_TUNING,
   stringNumber,
+  withSolfege,
   type ChordShape,
   type Tuning,
 } from '@/music';
@@ -32,14 +34,17 @@ export function explainNoteAnswer(
 ): string {
   const { stringIndex, fret } = question.position;
   const displayString = stringNumber(stringIndex);
-  const openName = noteName(openStringMidi(tuning, stringIndex));
-  const correct = noteName(fretToMidi(tuning, stringIndex, fret));
+  const openName = noteLabel(openStringMidi(tuning, stringIndex));
+  const correctMidi = fretToMidi(tuning, stringIndex, fret);
+  const correct = noteName(correctMidi);
+  const correctLabel = noteLabel(correctMidi);
 
   const where =
     fret === 0
-      ? `String ${displayString} played open is ${correct}.`
-      : `String ${displayString} is ${openName} open, so ${fret} ${fret === 1 ? 'fret' : 'frets'} up is ${correct}.`;
+      ? `String ${displayString} played open is ${correctLabel}.`
+      : `String ${displayString} is ${openName} open, so ${fret} ${fret === 1 ? 'fret' : 'frets'} up is ${correctLabel}.`;
 
+  // Compare the plain names; the solfège is only for the sentence.
   if (picked === correct) return where;
 
   const pickedPitchClass = midiToPitchClass(parseNoteName(picked));
@@ -48,11 +53,11 @@ export function explainNoteAnswer(
   const direction = distance > 0 ? 'higher' : 'lower';
   const frets = Math.abs(distance) === 1 ? 'fret' : 'frets';
 
-  return `${where} ${picked} is at fret ${pickedFret} on that string — ${Math.abs(distance)} ${frets} ${direction}.`;
+  return `${where} ${withSolfege(picked)} is at fret ${pickedFret} on that string — ${Math.abs(distance)} ${frets} ${direction}.`;
 }
 
 function chordNotes(shape: ChordShape, tuning: Tuning): string {
-  return chordToneNames(shape, tuning).join(', ');
+  return chordToneNames(shape, tuning).map(withSolfege).join(', ');
 }
 
 /**

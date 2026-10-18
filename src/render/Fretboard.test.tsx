@@ -126,7 +126,7 @@ describe('Fretboard', () => {
     );
     expect(screen.getByTestId('cell-s0f3')).toHaveAttribute(
       'aria-label',
-      'G2, string 6, fret 3',
+      'G2 (Sol), string 6, fret 3',
     );
   });
 });
