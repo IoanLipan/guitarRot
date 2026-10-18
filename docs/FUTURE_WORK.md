@@ -164,6 +164,90 @@ than left as the placeholder — see below — using the same zero-dependency
 headless-Chrome-over-CDP approach as the UI screenshot passes, run through
 `@capacitor/assets`.
 
+**Play Store pass (2026-10-18).** A read-only audit before the first release
+turned up platform problems; each claim was checked against the Capacitor 8 and
+core-splashscreen sources before changing anything. None of it has been run on a
+device or emulator (see the validation trick at the end).
+
+- **System bars (edge-to-edge).** targetSdk 36 forces edge-to-edge on Android 15+,
+  so `StatusBar.setBackgroundColor` (called in `AppShell`) is a no-op there and
+  the bar strips show whatever the window background is. `index.html` now has
+  `viewport-fit=cover`, the app themes set `android:windowBackground` to the new
+  `@color/ground` (`res/values/colors.xml`, `#0B0B0F`), and
+  `plugins.SystemBars.style` is `'DARK'` in `capacitor.config.ts` (DARK = light
+  icons for a dark background; the default follows the phone's light/dark mode
+  and would paint dark icons on our dark strip). Two things to know before
+  touching this: Capacitor's SystemBars plugin copies `windowBackground` onto the
+  decor view *as a colour int*, so it must stay a plain `@color`, never a
+  drawable; and `env(safe-area-inset-*)` is only non-zero when the plugin is
+  passing insets through (WebView 140+ with `viewport-fit=cover`), while on older
+  WebViews it pads the parent view instead and `env()` reads 0, so the existing
+  `env()` padding in `AppShell`, `TabBar`, `SettingsSheet` and `Feed` never
+  doubles up. `AppShell` still calls `StatusBar.setStyle(Dark)`/
+  `setBackgroundColor`, which only matter on Android 14 and older.
+- **Portrait only** (`android:screenOrientation="portrait"`): landscape left
+  lesson content ~144px tall and put the quiz grid under the tab bar. **Open
+  (P2):** Android 16 ignores orientation locks on screens of 600dp or more, so
+  tablets and unfolded foldables can still rotate and will show the phone layout
+  stretched; fixing that means a real wide layout, not a manifest flag.
+- **Microphone is optional** (`<uses-feature android.hardware.microphone
+  required="false">`): `RECORD_AUDIO` otherwise implies a required feature and
+  Play hides the app from mic-less devices.
+- **Android 12+ splash.** `AppTheme.NoActionBarLaunch` now sets
+  `windowSplashScreenBackground` (`@color/ground`), `windowSplashScreenAnimatedIcon`
+  (`@drawable/splash_icon`) and `postSplashScreenTheme`
+  (`@style/AppTheme.NoActionBar`); without them the system drew its own
+  background colour and the default Android robot. The icon is a vector of the
+  pick (`res/drawable/splash_icon.xml`, same geometry as
+  `assets/brand/icon-foreground.svg`) rather than `@mipmap/ic_launcher_foreground`,
+  because the system draws it at 288dp and that PNG is 192px at best. It does not
+  fight the Capacitor plugin: the plugin's `showOnLaunch` calls core-splashscreen's
+  `installSplashScreen` itself and holds the splash with a keep-on-screen
+  condition until `SplashScreen.hide()`, which `AppShell` calls once. Note that
+  `plugins.SplashScreen.backgroundColor` in `capacitor.config.ts` only reaches
+  the plugin's pre-Android-12 fallback path; the theme items above are what the
+  real splash uses. The old
+  green-robot `drawable/ic_launcher_background.xml` and
+  `drawable-v24/ic_launcher_foreground.xml` from the Capacitor template are
+  unreferenced leftovers.
+- **Old WebView.** Tailwind v4 needs Chrome 111, so `android.minWebViewVersion`
+  is 111 and `server.errorPath` points at `public/webview-update.html`: plain
+  CSS, no JS, the dark palette and the pick logo, with a link to the WebView
+  page on Google Play. Capacitor loads it from the app's own assets, and it also
+  replaces the page on *any* main-frame load error, so don't add a navigation
+  that can 404. (The Splash plugin already skips the launch splash when the
+  WebView is too old and an error page is configured, since nothing would ever
+  call `hide()`.)
+- **Native share.** `ShareButton` uses `@capacitor/share` on native (the WebView
+  has no `navigator.share`, so it only ever copied before); the web path is
+  unchanged. A dismissed sheet is silent; any other failure copies the link.
+  Capacitor hands native rejections to JS as a plain `{ message }` object, not an
+  `Error`, so test the message, never `instanceof`.
+- **About in Settings.** Version (from `package.json`, via `__APP_VERSION__`
+  defined in `vite.config.ts`, typed in `src/app-version.d.ts`), a Privacy
+  policy link (Play requires it inside the app), the sample credit, and on the
+  web build only a "Get the Android app" link. Links are plain
+  `target="_blank"` anchors: Capacitor's `BridgeWebViewClient` routes every
+  navigation through `Bridge.launchIntent`, which hands any host other than the
+  app's own to `ACTION_VIEW` and blocks the load, so the app's WebView is never
+  navigated away. Bump `package.json` `version` *and* `android/app/build.gradle`
+  `versionName`/`versionCode` together for a release; nothing keeps them in sync.
+- **Privacy policy wording.** `allowBackup` stays on (restoring progress on a new
+  phone is a feature), so the page no longer says uninstalling deletes
+  everything; it describes Android's encrypted Google backup instead, and the
+  share sentence now describes the native share sheet.
+- **Songs open easiest-first** (`searchSongs`: title-match rank, then difficulty,
+  then catalogue order).
+
+**Checking Android XML without a Gradle build** (the disk is tight): compile
+every resource directory with the SDK's `aapt2 compile --dir`, then `aapt2 link`
+the app plus the AppCompat / core-splashscreen / Capacitor `res` directories
+from the Gradle cache against `android.jar` with a `package=` attribute added to
+a copy of the manifest, and read the result with `aapt2 dump xmltree` and
+`aapt2 dump resources`. It catches malformed XML (a `--` inside a comment broke
+`colors.xml` once), unresolved `@style`/`@drawable` references and bad theme
+attributes. It does not prove how anything looks.
+
 Still open for Plan 3:
 - ~~Content~~ — done 2026-10-18 (29 chords, 21 riffs, 15 drills, 28
   lessons). The ~40-riff target is still short by ~19 if the Feed starts

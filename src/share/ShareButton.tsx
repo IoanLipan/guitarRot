@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
 import { tapHaptic } from '@/app/haptics';
 import { shareUrl, type ShareTarget } from './shareId';
 
@@ -13,10 +15,22 @@ export type ShareButtonProps = {
 };
 
 /**
+ * True when the Share plugin rejected because the sheet was dismissed
+ * ("Share canceled"). Capacitor hands native rejections to JS as a plain
+ * `{ message }` object rather than an `Error`, so don't test `instanceof`.
+ */
+function isCancellation(error: unknown): boolean {
+  const message = typeof error === 'string' ? error : (error as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && /cancel/i.test(message);
+}
+
+/**
  * Shares a card by link.
  *
- * Uses the OS share sheet where there is one (every phone, which is where
- * this app lives) and falls back to the clipboard on desktop.
+ * In the Android app it opens the native share sheet through Capacitor's Share
+ * plugin: the WebView has no `navigator.share`, so without this the button
+ * would only ever copy. On the web it uses the browser's share sheet where
+ * there is one (mobile browsers) and falls back to the clipboard on desktop.
  */
 export function ShareButton({ target, title, className }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
@@ -39,7 +53,21 @@ export function ShareButton({ target, title, className }: ShareButtonProps) {
     tapHaptic();
     const url = shareUrl(target);
 
-    if (typeof navigator.share === 'function') {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Share.share({
+          title,
+          text: `${title} — guitarRot`,
+          url,
+          dialogTitle: 'Share this with a friend',
+        });
+        return;
+      } catch (error) {
+        // Closing the sheet rejects; the user changed their mind, so say nothing.
+        // Anything else means the sheet could not open: copy the link instead.
+        if (isCancellation(error)) return;
+      }
+    } else if (typeof navigator.share === 'function') {
       try {
         await navigator.share({ title, text: `${title} — guitarRot`, url });
         return;

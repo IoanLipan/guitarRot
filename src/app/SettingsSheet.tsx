@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { getToneProfile, TONE_PROFILES, type AudioEngine } from '@/audio';
 import { getChord } from '@/content';
 import { chordStrings, chordVoicing, STANDARD_TUNING } from '@/music';
@@ -6,6 +7,12 @@ import type { ProgressHandle } from './useProgress';
 
 /** Strummed when you audition a tone — an open E, the first chord everyone learns. */
 const PREVIEW_CHORD_ID = 'E-open';
+
+/** Play requires the policy to be reachable from inside the app, not only from the store listing. */
+const PRIVACY_URL = 'https://guitar-rot.vercel.app/privacy.html';
+/** The sideloadable build, offered to people on the website. */
+const ANDROID_APP_URL =
+  'https://github.com/IoanLipan/guitarRot/releases/latest/download/guitarRot.apk';
 
 export function SettingsSheet({
   open,
@@ -117,15 +124,70 @@ export function SettingsSheet({
             recorded guitar notes; synth is the fallback when samples are unavailable. Both play
             exact pitches, so quizzes are always in tune.
           </p>
+        </section>
+
+        <section className="px-6 pt-8" data-testid="about-section">
+          <h3 className="text-[13px] font-bold tracking-wider text-ink-dim uppercase">About</h3>
+          <p className="mt-2 text-sm text-ink-dim">
+            guitarRot{' '}
+            <span className="font-bold text-ink" data-testid="app-version">
+              v{__APP_VERSION__}
+            </span>
+          </p>
+
+          <div className="mt-3 flex flex-col gap-2">
+            <AboutLink href={PRIVACY_URL} testId="privacy-link">
+              Privacy policy
+            </AboutLink>
+            {/* The Android app is already installed if this is running inside it. */}
+            {!Capacitor.isNativePlatform() && (
+              <AboutLink href={ANDROID_APP_URL} testId="android-app-link">
+                Get the Android app
+              </AboutLink>
+            )}
+          </div>
+
           {/* CC BY requires the attribution to travel with the work, so it
               lives in the app and not only in the repository. */}
-          <p className="mt-3 text-xs leading-relaxed text-ink-dim/80" data-testid="sample-credit">
+          <p className="mt-4 text-xs leading-relaxed text-ink-dim/80" data-testid="sample-credit">
             Guitar samples: tonejs-instruments by Nicholaus Brosowsky, CC BY 3.0 — recorded by
             University of Iowa EMS, quartertone and Karoryfer.
           </p>
         </section>
       </div>
     </div>
+  );
+}
+
+/**
+ * A link that leaves the app. `target="_blank"` is the whole mechanism on both
+ * platforms: in a browser it opens a tab, and in the Android app Capacitor's
+ * WebViewClient sees an address that is not the app's own and hands it to the
+ * system (ACTION_VIEW) instead of loading it, so the app's WebView is never
+ * navigated away from the app.
+ */
+function AboutLink({
+  href,
+  testId,
+  children,
+}: {
+  href: string;
+  testId: string;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-testid={testId}
+      className="flex items-center justify-between rounded-2xl bg-surface-2 px-4 py-3 text-[15px] font-bold text-ink active:scale-[0.99]"
+    >
+      {children}
+      <span aria-hidden="true" className="text-ink-dim">
+        ↗
+      </span>
+    </a>
   );
 }
 

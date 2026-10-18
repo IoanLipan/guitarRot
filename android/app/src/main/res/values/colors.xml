@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app's ground colour, the same value as the ground colour token in
+         src/index.css. Everything native that can show behind or around the web
+         view uses this one value: the window, the system-bar strips, and the
+         Android 12+ splash. -->
+    <color name="ground">#0B0B0F</color>
+</resources>
