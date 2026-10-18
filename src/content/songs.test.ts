@@ -3,9 +3,11 @@ import { SONGS, getSong } from './songCatalog';
 import {
   chartBars,
   chordByName,
+  isUpstroke,
   patternBeats,
   songBarCount,
   songToRiff,
+  strokeStrings,
   validateSong,
   type Song,
 } from './songs';
@@ -87,8 +89,8 @@ describe('chartBars', () => {
 });
 
 describe('patternBeats', () => {
-  it('puts a folk strum on the offbeats, in 4/4', () => {
-    expect(patternBeats('folk', 4)).toEqual([0, 1, 1.5, 2.5, 3]);
+  it('plays the standard folk strum in 4/4: D – D U – U D U', () => {
+    expect(patternBeats('folk', 4)).toEqual([0, 1, 1.5, 2.5, 3, 3.5]);
   });
 
   it('falls back to one hit per beat where a folk strum has no shape', () => {
@@ -98,6 +100,30 @@ describe('patternBeats', () => {
 
   it('fills a 6/8 bar with six eighths', () => {
     expect(patternBeats('arpeggio', 3)).toEqual([0, 0.5, 1, 1.5, 2, 2.5]);
+  });
+});
+
+describe('upstrokes', () => {
+  it('treats a hit between beats as the hand coming back up', () => {
+    expect(isUpstroke(0)).toBe(false);
+    expect(isUpstroke(3)).toBe(false);
+    expect(isUpstroke(1.5)).toBe(true);
+    expect(isUpstroke(0.5)).toBe(true);
+    expect(isUpstroke(3.5)).toBe(true);
+  });
+
+  it('plays a downstroke across every sounding string, low to high', () => {
+    expect(strokeStrings([0, 1, 2, 3, 4, 5], 1)).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+
+  it('plays an upstroke across only the top four sounding strings, high to low', () => {
+    expect(strokeStrings([0, 1, 2, 3, 4, 5], 1.5)).toEqual([5, 4, 3, 2]);
+    // A chord that mutes the low E still has its own top four.
+    expect(strokeStrings([1, 2, 3, 4, 5], 0.5)).toEqual([5, 4, 3, 2]);
+  });
+
+  it('plays an upstroke on a chord with fewer than four strings in full', () => {
+    expect(strokeStrings([2, 3, 4], 0.5)).toEqual([4, 3, 2]);
   });
 });
 
@@ -144,6 +170,57 @@ describe('songToRiff', () => {
     expect(new Set(beats).size).toBe(beats.length);
     // Low string first: this is a downstroke.
     expect(beats).toEqual([...beats].sort((a, b) => a - b));
+  });
+
+  describe('with an off-beat pattern', () => {
+    // Em is played on all six strings; eighths put an upstroke between every beat.
+    const eighths: Song = {
+      ...chartSong,
+      chart: { ...chartSong.chart!, pattern: 'eighths' },
+    };
+    const riff = songToRiff(eighths);
+    const hitAt = (beat: number) =>
+      riff.events
+        // A strum spreads its strings over about a tenth of a beat.
+        .filter((event) => event.beat >= beat - 1e-9 && event.beat < beat + 0.2)
+        .sort((a, b) => a.beat - b.beat);
+
+    it('strums the on-beat hits down across all six strings, low to high', () => {
+      expect(hitAt(1).map((event) => event.stringIndex)).toEqual([0, 1, 2, 3, 4, 5]);
+    });
+
+    it('strums the off-beat hits up across the top four strings, high to low', () => {
+      expect(hitAt(1.5).map((event) => event.stringIndex)).toEqual([5, 4, 3, 2]);
+    });
+
+    it('lets the bass strings ring through an upstroke instead of cutting them', () => {
+      // The upstroke does not touch string 0, so its note runs on to the next
+      // downbeat rather than stopping at the upstroke.
+      const bass = riff.events.find((event) => event.stringIndex === 0 && event.beat === 0);
+      expect(bass?.duration).toBeCloseTo(1);
+      const treble = riff.events.find((event) => event.stringIndex === 5 && event.beat < 0.2);
+      expect(treble?.duration).toBeLessThan(0.5);
+    });
+
+    it('never rings a string past the end of its bar', () => {
+      for (const event of riff.events) {
+        const barEnd = (Math.floor(event.beat / 4) + 1) * 4;
+        expect(event.beat + event.duration, `string ${event.stringIndex} at ${event.beat}`).toBeLessThanOrEqual(barEnd + 1e-9);
+      }
+    });
+  });
+
+  it('plays the folk pattern as three downs and three ups a bar', () => {
+    const folk: Song = {
+      ...chartSong,
+      chart: { ...chartSong.chart!, pattern: 'folk', sections: [{ label: 'V', bars: ['Em'] }] },
+    };
+    const riff = songToRiff(folk);
+    // Only a downstroke reaches the low E.
+    expect(riff.events.filter((e) => e.stringIndex === 0).map((e) => e.beat)).toEqual([0, 1, 3]);
+    // The high e is struck on every hit; rounding drops the strum's spread.
+    const highE = riff.events.filter((e) => e.stringIndex === 5);
+    expect(highE.map((e) => Math.round(e.beat * 2) / 2)).toEqual([0, 1, 1.5, 2.5, 3, 3.5]);
   });
 
   it('plucks one string at a time when the pattern is an arpeggio', () => {

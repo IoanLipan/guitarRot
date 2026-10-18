@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { getToneProfile, TONE_PROFILES, type AudioEngine } from '@/audio';
 import { getChord } from '@/content';
-import { chordVoicing, STANDARD_TUNING } from '@/music';
+import { chordStrings, chordVoicing, STANDARD_TUNING } from '@/music';
 import type { ProgressHandle } from './useProgress';
 
 /** Strummed when you audition a tone — an open E, the first chord everyone learns. */
@@ -36,7 +36,9 @@ export function SettingsSheet({
 
     // Audition it immediately — a tone you can't hear isn't a choice.
     const chord = getChord(PREVIEW_CHORD_ID);
-    if (chord !== undefined) engine.strum(chordVoicing(chord, STANDARD_TUNING));
+    if (chord !== undefined) {
+      engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
+    }
   }
 
   if (!open) return null;

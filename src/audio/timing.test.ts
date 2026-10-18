@@ -126,4 +126,22 @@ describe('riffToScheduledNotes', () => {
       expect(scheduled[i]?.durationBeats).toBe(event.duration);
     });
   });
+
+  it('carries each event\'s technique through, so the audio can play it', () => {
+    const withTechniques: Riff = {
+      ...riff,
+      events: [
+        { stringIndex: 3, fret: 2, beat: 0, duration: 1 },
+        { stringIndex: 3, fret: 4, beat: 1, duration: 1, technique: 'hammer' },
+        { stringIndex: 3, fret: 2, beat: 2, duration: 1, technique: 'pull' },
+        { stringIndex: 4, fret: 5, beat: 3, duration: 1, technique: 'bend' },
+      ],
+    };
+    expect(riffToScheduledNotes(withTechniques).map((note) => note.technique)).toEqual([
+      undefined,
+      'hammer',
+      'pull',
+      'bend',
+    ]);
+  });
 });

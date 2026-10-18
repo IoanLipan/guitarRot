@@ -5,6 +5,7 @@ import { CHORDS } from '@/content';
 import {
   chordToneNames,
   chordVoicing,
+  chordStrings,
   fretToMidi,
   noteName,
   QUALITY_LABELS,
@@ -58,7 +59,7 @@ export function Learn({ engine }: { engine: AudioEngine }) {
 
   function handleChordTap(chord: ChordShape) {
     tapHaptic();
-    engine.strum(chordVoicing(chord, STANDARD_TUNING));
+    engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
     flashChord(chord);
   }
 

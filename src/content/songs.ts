@@ -1,6 +1,6 @@
 import { CHORDS } from './chords';
 import { beatsPerBar, type Riff, type TabEvent, type TimeSignature } from './types';
-import type { ChordShape } from '@/music';
+import { chordStrings, type ChordShape } from '@/music';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -73,22 +73,30 @@ export function songBarCount(song: Song): number {
   return song.riff?.bars ?? 0;
 }
 
-/** The beats within a bar on which the right hand moves. */
+/**
+ * The beats within a bar on which the right hand moves. The folk pattern is
+ * the standard "D – D U – U D U": the hand never stops, and every hit that
+ * falls off the beat is an upstroke (see `isUpstroke`).
+ */
 export function patternBeats(pattern: StrumPattern, beatsInBar: number): number[] {
-  if (pattern === 'folk' && beatsInBar === 4) return [0, 1, 1.5, 2.5, 3];
+  if (pattern === 'folk' && beatsInBar === 4) return [0, 1, 1.5, 2.5, 3, 3.5];
   const step = pattern === 'downs' || pattern === 'folk' ? 1 : 0.5;
   const beats: number[] = [];
   for (let beat = 0; beat < beatsInBar - 1e-9; beat += step) beats.push(beat);
   return beats;
 }
 
-/** Sounding string indices of a shape, low to high. */
-function soundingStrings(shape: ChordShape): number[] {
-  const strings: number[] = [];
-  shape.frets.forEach((fret, stringIndex) => {
-    if (fret !== null && fret !== undefined) strings.push(stringIndex);
-  });
-  return strings;
+/** A hit that lands between beats is the hand coming back up. */
+export function isUpstroke(hit: number): boolean {
+  return Math.abs(hit - Math.round(hit)) > 1e-6;
+}
+
+/** An upstroke brushes only the thin strings; the bass strings are left to ring. */
+const UPSTROKE_STRING_COUNT = 4;
+
+/** The strings one stroke picks, in the order the pick meets them. */
+export function strokeStrings(strings: readonly number[], hit: number): number[] {
+  return isUpstroke(hit) ? strings.slice(-UPSTROKE_STRING_COUNT).reverse() : [...strings];
 }
 
 /**
@@ -125,8 +133,11 @@ export function songToRiff(song: Song): Riff {
   chartBars(chart).forEach((bar, barIndex) => {
     const shape = chordByName(bar.chordName);
     if (shape === undefined) return;
-    const strings = soundingStrings(shape);
+    const strings = chordStrings(shape);
     const barStart = barIndex * beatsInBar;
+    // Which strings each hit of the bar picks, worked out up front so a
+    // string's length can be "until it is picked again".
+    const picked = hits.map((hit) => strokeStrings(strings, hit));
 
     hits.forEach((hit, hitIndex) => {
       const nextHit = hits[hitIndex + 1] ?? beatsInBar;
@@ -143,15 +154,20 @@ export function songToRiff(song: Song): Riff {
         return;
       }
 
-      strings.forEach((stringIndex, order) => {
+      (picked[hitIndex] ?? []).forEach((stringIndex, order) => {
         const fret = shape.frets[stringIndex];
         if (fret === null || fret === undefined) return;
         const spread = order * STRUM_SPREAD_BEATS;
+        // A string rings until it is picked again, or the bar ends. An
+        // upstroke leaves the bass strings alone, so they must carry
+        // through it rather than being cut at the next hit.
+        const nextPick = picked.findIndex((later, i) => i > hitIndex && later.includes(stringIndex));
+        const until = nextPick === -1 ? beatsInBar : (hits[nextPick] ?? beatsInBar);
         events.push({
           stringIndex,
           fret,
           beat: barStart + hit + spread,
-          duration: Math.max(0.05, span - spread),
+          duration: Math.max(0.05, until - hit - spread),
         });
       });
     });

@@ -17,7 +17,7 @@ export type ToneProfile = {
    * manifest. Ignored by the synth backend, which has no samples to pick
    * from, and falls back to whatever set exists if the named one is absent.
    */
-  sampleSet: 'acoustic' | 'electric';
+  sampleSet: 'acoustic' | 'nylon' | 'electric';
   string: {
     /** Pick attack noisiness. Higher is scratchier and more aggressive. */
     attackNoise: number;
@@ -37,6 +37,10 @@ export type ToneProfile = {
      * Body resonance: a peaking EQ standing in for the air cavity and top
      * of an acoustic instrument. Electrics leave this at 0 dB, which makes
      * the node transparent — a solid body has nothing to resonate.
+     *
+     * Only the synth uses it (see `liveBodyGainDb`): a recording already
+     * carries the body of the guitar it was made on, and boosting it again
+     * puts a boom in every note.
      */
     bodyHz: number;
     bodyQ: number;
@@ -51,7 +55,7 @@ export type ToneProfile = {
   };
 };
 
-export type ToneId = 'acoustic' | 'clean' | 'rock' | 'blues' | 'country';
+export type ToneId = 'acoustic' | 'classical' | 'clean' | 'rock' | 'blues' | 'country';
 
 export const TONE_PROFILES: readonly ToneProfile[] = [
   {
@@ -62,10 +66,24 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     // Soft pick, long ring, and plenty of top: an acoustic's brightness
     // comes from the strings and the top resonating, not from a bright amp.
     string: { attackNoise: 0.75, dampening: 5200, resonance: 0.975 },
-    // The body stage is what makes this read as acoustic rather than as a
-    // clean electric: a broad lift around the ~110Hz air resonance every
-    // dreadnought has, which is exactly what a solid body lacks.
+    // For the synth, the body stage is what makes this read as acoustic
+    // rather than as a clean electric: a broad lift around the ~110Hz air
+    // resonance every dreadnought has, which is exactly what a solid body
+    // lacks. The recordings already have it, so samples skip the boost.
     amp: { drive: 0, filterHz: 7000, reverbWet: 0.16, gain: 0.6, bodyHz: 110, bodyQ: 0.9, bodyGainDb: 7 },
+  },
+  {
+    id: 'classical',
+    name: 'Classical',
+    blurb: 'Nylon strings and fingertips. Warm, round, soft attack.',
+    sampleSet: 'nylon',
+    // Synth half, which only plays when no recordings load: the acoustic's
+    // string, darker and softer — nylon has far less top end than steel and
+    // no pick to snap it.
+    string: { attackNoise: 0.45, dampening: 3400, resonance: 0.97 },
+    // The recording supplies the warmth, so the amp stays out of the way:
+    // no drive, a gently closed top, and a little room.
+    amp: { drive: 0, filterHz: 5000, reverbWet: 0.18, gain: 0.6, bodyHz: 100, bodyQ: 0.9, bodyGainDb: 5 },
   },
   {
     id: 'clean',
@@ -119,6 +137,15 @@ export function getToneProfile(id: string | undefined): ToneProfile {
     TONE_PROFILES.find((profile) => profile.id === DEFAULT_TONE_ID) ??
     (TONE_PROFILES[0] as ToneProfile)
   );
+}
+
+/**
+ * The body-EQ boost that actually applies. Recorded notes already carry the
+ * resonance of the box they were played on, so the boost is for the synth
+ * alone; on samples the stage stays flat.
+ */
+export function liveBodyGainDb(profile: ToneProfile, voiceIsSynth: boolean): number {
+  return voiceIsSynth ? profile.amp.bodyGainDb : 0;
 }
 
 export function isToneId(value: unknown): value is ToneId {

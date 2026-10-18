@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TONE_ID, getToneProfile, isToneId, TONE_PROFILES } from './tones';
+import { DEFAULT_TONE_ID, getToneProfile, isToneId, liveBodyGainDb, TONE_PROFILES } from './tones';
 
 describe('tone profiles', () => {
   it('ships the voicings with unique ids, acoustic first', () => {
     expect(TONE_PROFILES.map((p) => p.id)).toEqual([
       'acoustic',
+      'classical',
       'clean',
       'rock',
       'blues',
@@ -14,13 +15,44 @@ describe('tone profiles', () => {
 
   // Only an instrument with a box resonates: the electrics leave the body
   // stage at 0 dB, which makes the filter transparent.
-  it('gives the acoustic a body resonance and the electrics none', () => {
-    const acoustic = getToneProfile('acoustic');
-    expect(acoustic.amp.bodyGainDb).toBeGreaterThan(0);
-    expect(acoustic.amp.bodyHz).toBeLessThan(200);
-    for (const electric of TONE_PROFILES.filter((p) => p.id !== 'acoustic')) {
+  it('gives the hollow-bodied guitars a body resonance and the electrics none', () => {
+    for (const id of ['acoustic', 'classical']) {
+      const hollow = getToneProfile(id);
+      expect(hollow.amp.bodyGainDb, id).toBeGreaterThan(0);
+      expect(hollow.amp.bodyHz, id).toBeLessThan(200);
+    }
+    for (const electric of TONE_PROFILES.filter((p) => !['acoustic', 'classical'].includes(p.id))) {
       expect(electric.amp.bodyGainDb).toBe(0);
     }
+  });
+
+  // The boost was tuned for the synth. A recording already carries the body
+  // of the guitar it was made on, and boosting it again is a boom on every note.
+  it('applies the body boost to the synth and leaves recordings flat', () => {
+    const acoustic = getToneProfile('acoustic');
+    expect(liveBodyGainDb(acoustic, true)).toBe(acoustic.amp.bodyGainDb);
+    expect(liveBodyGainDb(acoustic, false)).toBe(0);
+    expect(liveBodyGainDb(getToneProfile('rock'), true)).toBe(0);
+  });
+
+  it('gives each tone the recorded instrument it is named for', () => {
+    expect(getToneProfile('acoustic').sampleSet).toBe('acoustic');
+    expect(getToneProfile('classical').sampleSet).toBe('nylon');
+    for (const id of ['clean', 'rock', 'blues', 'country']) {
+      expect(getToneProfile(id).sampleSet, id).toBe('electric');
+    }
+  });
+
+  it('keeps the classical tone clean, soft and darker than the acoustic', () => {
+    const classical = getToneProfile('classical');
+    const acoustic = getToneProfile('acoustic');
+    expect(classical.name).toBe('Classical');
+    expect(classical.amp.drive).toBe(0);
+    expect(classical.amp.filterHz).toBe(5000);
+    expect(classical.amp.reverbWet).toBeCloseTo(0.18);
+    expect(classical.amp.gain).toBe(0.6);
+    expect(classical.string.dampening).toBeLessThan(acoustic.string.dampening);
+    expect(classical.string.attackNoise).toBeLessThan(acoustic.string.attackNoise);
   });
 
   it('keeps every parameter inside what the audio nodes accept', () => {

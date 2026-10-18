@@ -1,109 +1,155 @@
 import * as Tone from 'tone';
-import { STRING_COUNT, type Midi } from '@/music';
+import { parseNoteName, type Midi } from '@/music';
 import { manifestSets, resolveSetName, type SampleManifest } from './manifest';
-import { pickParams } from './stringVoicing';
-import { DEFAULT_TONE_ID, getToneProfile, type ToneProfile } from './tones';
+import {
+  DEFAULT_VELOCITY,
+  RingingNotes,
+  nearestSample,
+  noteEnd,
+  noteShape,
+  semitonesToRate,
+  type RingingNote,
+} from './playback';
 import type { GuitarVoice, PlayNoteOptions } from './types';
 
-/** Which string a note without an explicit one is assumed plucked on. */
-const FALLBACK_STRING = 3;
+/**
+ * How long a stopped note takes to fade out. Long enough that cutting a
+ * string never clicks, short enough that a choke still reads as the pick
+ * landing on a string rather than as a slow release.
+ */
+const FADE_OUT_SECONDS = 0.08;
+
+/** Per-note level variation, x0.9 to x1.1. Pitch is never varied: the quizzes depend on it. */
+const HUMANISE_LOW = 0.9;
+const HUMANISE_SPAN = 0.2;
+
+type PlayingNote = RingingNote & { source: Tone.ToneBufferSource };
 
 /**
- * Real recorded guitar notes, pitch-shifted by Tone.Sampler to fill the
- * gaps, plus the same per-string pick-noise transient `SynthGuitar` uses.
+ * Real recorded guitar notes, one `ToneBufferSource` per note.
  *
- * Measured attack time on these samples is 10-40ms to peak with almost no
- * broadband energy in the first 15ms — a soft, rounded onset. A real pick
- * strike is closer to instant and throws a broadband click ahead of the
- * string's tone; without it, several of these stacked into a chord read as
- * a keyboard patch rather than six strummed strings.
+ * `Tone.Sampler` is not used because it models a keyboard: every note is
+ * `triggerAttackRelease`d, so each one holds then fades the way a key does,
+ * and it cannot say which string a note belongs to. Here a string is
+ * monophonic (picking it again stops the last note on it, the other strings
+ * keep ringing) and a note with no stated length simply rings out, which is
+ * what a plucked string does.
+ *
+ * There is deliberately no synthetic pick noise: the recordings start on the
+ * real pick attack.
  */
 export class SampledGuitar implements GuitarVoice {
-  private readonly sampler: Tone.Sampler;
-  private readonly picks: Tone.NoiseSynth[];
-  private readonly pickGains: Tone.Gain[];
+  private readonly buffers: Tone.ToneAudioBuffers;
+  /** Midi numbers of the recordings, ascending. */
+  private readonly sampleMidis: readonly Midi[];
+  private readonly output = new Tone.Gain(1);
+  private readonly ringing = new RingingNotes<PlayingNote>();
+  /** Every source not yet ended, so `dispose` reaches the ones already choked and fading. */
+  private readonly live = new Set<Tone.ToneBufferSource>();
   readonly setName: string;
 
-  private constructor(sampler: Tone.Sampler, setName: string, profile: ToneProfile) {
-    this.sampler = sampler;
+  private constructor(buffers: Tone.ToneAudioBuffers, sampleMidis: readonly Midi[], setName: string) {
+    this.buffers = buffers;
+    this.sampleMidis = sampleMidis;
     this.setName = setName;
-
-    this.pickGains = [];
-    this.picks = Array.from({ length: STRING_COUNT }, (_, stringIndex) => {
-      const pick = pickParams(profile.string, stringIndex);
-      const gain = new Tone.Gain(pick.level);
-      const filter = new Tone.Filter({ type: 'bandpass', frequency: pick.bandHz, Q: 1.1 }).connect(
-        gain,
-      );
-      this.pickGains.push(gain);
-      return new Tone.NoiseSynth({
-        noise: { type: 'white' },
-        envelope: { attack: 0.001, decay: pick.decay, sustain: 0, release: 0.01 },
-      }).connect(filter);
-    });
   }
 
-  static async load(
-    manifest: SampleManifest,
-    wantedSet?: string,
-    profile: ToneProfile = getToneProfile(DEFAULT_TONE_ID),
-  ): Promise<SampledGuitar> {
+  /** Fetches and decodes every recording in the set; rejects if any one fails. */
+  static async load(manifest: SampleManifest, wantedSet?: string): Promise<SampledGuitar> {
     const setName = resolveSetName(manifest, wantedSet);
     if (setName === null) throw new Error('manifest lists no usable sample set');
-    const urls = manifestSets(manifest)[setName] ?? {};
 
-    const sampler = new Tone.Sampler({
-      urls,
-      baseUrl: manifest.baseUrl,
-      // Long enough that a released note fades rather than clicks, short
-      // enough that a fast riff does not pile voices on top of each other.
-      release: 0.6,
-    });
-    await Tone.loaded();
-    return new SampledGuitar(sampler, setName, profile);
-  }
+    // Keyed by midi number, so picking the nearest recording is arithmetic
+    // and not string parsing on every note.
+    const urls: Record<string, string> = {};
+    for (const [note, file] of Object.entries(manifestSets(manifest)[setName] ?? {})) {
+      urls[String(parseNoteName(note))] = file;
+    }
+    const sampleMidis = Object.keys(urls)
+      .map(Number)
+      .sort((a, b) => a - b);
+    // ToneAudioBuffers only calls onload when something loaded, so an empty
+    // set would wait forever.
+    if (sampleMidis.length === 0) throw new Error(`sample set "${setName}" is empty`);
 
-  /** Reshapes the pick transient in place; the sampler itself never changes tone. */
-  setProfile(profile: ToneProfile): void {
-    this.picks.forEach((pick, stringIndex) => {
-      const next = pickParams(profile.string, stringIndex);
-      pick.set({ envelope: { decay: next.decay } });
-      const gain = this.pickGains[stringIndex];
-      if (gain !== undefined) gain.gain.value = next.level;
+    const buffers = await new Promise<Tone.ToneAudioBuffers>((resolve, reject) => {
+      const loading: Tone.ToneAudioBuffers = new Tone.ToneAudioBuffers({
+        urls,
+        baseUrl: manifest.baseUrl,
+        onload: () => resolve(loading),
+        onerror: (error) => {
+          loading.dispose();
+          reject(error);
+        },
+      });
     });
+    return new SampledGuitar(buffers, sampleMidis, setName);
   }
 
   connect(node: Tone.InputNode): void {
-    this.sampler.connect(node);
-    for (const gain of this.pickGains) gain.connect(node);
+    this.output.connect(node);
   }
 
   playNote(midi: Midi, opts: PlayNoteOptions = {}): void {
-    // Recorded notes already carry their own decay, so the only humanising
-    // worth doing is velocity: a bit-identical repeat is exactly what makes
-    // a sampler sound like a machine.
-    const velocity = Math.min(1, (opts.velocity ?? 0.8) * (0.88 + Math.random() * 0.24));
-    this.sampler.triggerAttackRelease(
-      Tone.Frequency(midi, 'midi').toNote(),
-      opts.duration ?? 1.4,
-      opts.time,
-      velocity,
+    const pick = nearestSample(midi, this.sampleMidis);
+    if (pick === undefined) return;
+    const buffer = this.buffers.get(pick.sampleMidi);
+
+    const time = opts.time ?? Tone.now();
+    // A bit-identical repeat is what makes a sampler sound like a machine.
+    const velocity = (opts.velocity ?? DEFAULT_VELOCITY) * (HUMANISE_LOW + Math.random() * HUMANISE_SPAN);
+    const shape = noteShape({ velocity, duration: opts.duration, technique: opts.technique });
+
+    const glide = shape.glide;
+    const startRate = semitonesToRate(pick.semitones + (glide?.from ?? 0));
+    const targetRate = semitonesToRate(pick.semitones + (glide?.to ?? 0));
+    const { end, cutShort } = noteEnd(
+      time,
+      shape.duration,
+      buffer.duration,
+      Math.max(startRate, targetRate),
     );
 
-    const index =
-      opts.stringIndex !== undefined && opts.stringIndex >= 0 && opts.stringIndex < STRING_COUNT
-        ? opts.stringIndex
-        : FALLBACK_STRING;
-    this.picks[index]?.triggerAttack(opts.time, velocity);
+    const source = new Tone.ToneBufferSource({
+      url: buffer,
+      playbackRate: startRate,
+      fadeOut: FADE_OUT_SECONDS,
+    }).connect(this.output);
+
+    // The rate is a constant until the glide begins; the explicit
+    // setValueAtTime also pins where the ramp starts, since a Web Audio ramp
+    // runs from the previous event rather than from "now".
+    if (glide !== undefined) {
+      source.playbackRate.setValueAtTime(startRate, time + glide.delay);
+      source.playbackRate.exponentialRampToValueAtTime(targetRate, time + glide.delay + glide.over);
+    }
+
+    source.start(time, 0, undefined, shape.velocity);
+    // Only schedule a stop for a note cut short. Stopping one that is
+    // already due to end would just move its end later.
+    if (cutShort) source.stop(end);
+
+    const note: PlayingNote = { source, end, stop: (at) => source.stop(at) };
+    this.live.add(source);
+    this.ringing.pick(note, opts.stringIndex, time);
+    // Tone disposes a source itself once it has ended, so there is nothing
+    // to free here — only the bookkeeping to drop.
+    source.onended = () => {
+      this.live.delete(source);
+      this.ringing.forget(note);
+    };
   }
 
   stopAll(): void {
-    this.sampler.releaseAll(Tone.now());
+    this.ringing.stopAll(Tone.now());
   }
 
   dispose(): void {
-    this.sampler.dispose();
-    for (const pick of this.picks) pick.dispose();
-    for (const gain of this.pickGains) gain.dispose();
+    for (const source of this.live) {
+      if (!source.disposed) source.dispose();
+    }
+    this.live.clear();
+    this.output.dispose();
+    this.buffers.dispose();
   }
 }

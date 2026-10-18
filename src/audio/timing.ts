@@ -1,4 +1,4 @@
-import { riffTotalBeats, type Riff } from '@/content';
+import { riffTotalBeats, type Riff, type Technique } from '@/content';
 import { STANDARD_TUNING, fretToMidi, type Midi, type Tuning } from '@/music';
 
 export const MIN_SPEED = 0.25;
@@ -10,6 +10,8 @@ export type ScheduledNote = {
   midi: Midi;
   stringIndex: number;
   durationBeats: number;
+  /** Carried through so the audio can play a hammer-on like one rather than like a pick. */
+  technique?: Technique;
 };
 
 /**
@@ -57,6 +59,7 @@ export function riffToScheduledNotes(
     midi: fretToMidi(tuning, event.stringIndex, event.fret),
     stringIndex: event.stringIndex,
     durationBeats: event.duration,
+    ...(event.technique === undefined ? {} : { technique: event.technique }),
   }));
 }
 

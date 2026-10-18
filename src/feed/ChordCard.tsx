@@ -4,6 +4,7 @@ import { tapHaptic } from '@/app/haptics';
 import {
   chordToneNames,
   chordVoicing,
+  chordStrings,
   QUALITY_LABELS,
   STANDARD_TUNING,
   type ChordShape,
@@ -27,7 +28,7 @@ export function ChordCard({ chord, engine }: { chord: ChordShape; engine: AudioE
 
   function handleStrum() {
     tapHaptic();
-    engine.strum(chordVoicing(chord, STANDARD_TUNING));
+    engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
     setStrumming(true);
     if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => setStrumming(false), STRUM_FLASH_MS);

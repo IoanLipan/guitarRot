@@ -7,10 +7,11 @@ import {
   selectBackend,
   type SampleManifest,
 } from './manifest';
+import { DEFAULT_VELOCITY } from './playback';
 import { SampledGuitar } from './SampledGuitar';
 import { SynthGuitar } from './SynthGuitar';
-import { strumOffsets } from './strum';
-import { DEFAULT_TONE_ID, getToneProfile, type ToneProfile } from './tones';
+import { planStrum } from './strum';
+import { DEFAULT_TONE_ID, getToneProfile, liveBodyGainDb, type ToneProfile } from './tones';
 import type {
   AudioEngine,
   EngineBackend,
@@ -72,19 +73,29 @@ export class GuitarAudioEngine implements AudioEngine {
     if (this.gainNode !== null) this.gainNode.gain.value = profile.amp.gain;
     if (this.filterNode !== null) this.filterNode.frequency.value = profile.amp.filterHz;
     if (this.reverbNode !== null) this.reverbNode.wet.value = profile.amp.reverbWet;
-    if (this.bodyNode !== null) {
-      this.bodyNode.frequency.value = profile.amp.bodyHz;
-      this.bodyNode.Q.value = profile.amp.bodyQ;
-      this.bodyNode.gain.value = profile.amp.bodyGainDb;
-    }
+    this.applyBodyEq();
     if (this.driveNode !== null) {
       this.driveNode.distortion = profile.amp.drive;
       this.driveNode.wet.value = profile.amp.drive > 0 ? 1 : 0;
     }
-    if (this.voice instanceof SynthGuitar || this.voice instanceof SampledGuitar) {
-      this.voice.setProfile(profile);
-    }
-    if (!(this.voice instanceof SynthGuitar)) void this.useSampleSet(profile);
+    if (this.voice instanceof SynthGuitar) this.voice.setProfile(profile);
+    else void this.useSampleSet(profile);
+  }
+
+  /**
+   * Sets the body stage for the voice that is live right now. The boost is
+   * tuned for the synth; a recording already has the body of the guitar it
+   * was made on, so it gets a flat stage — including straight after a tone
+   * switch or a fall back to the synth, which is why this runs whenever
+   * either the profile or the voice changes.
+   */
+  private applyBodyEq(): void {
+    const body = this.bodyNode;
+    if (body === null) return;
+    const { bodyHz, bodyQ } = this.profile.amp;
+    body.frequency.value = bodyHz;
+    body.Q.value = bodyQ;
+    body.gain.value = liveBodyGainDb(this.profile, this.voice instanceof SynthGuitar);
   }
 
   /**
@@ -115,13 +126,10 @@ export class GuitarAudioEngine implements AudioEngine {
     // The tone may have changed again while this set was loading; the last
     // choice the user made is the one that wins.
     if (resolveSetName(manifest, this.profile.sampleSet) !== name) return;
-    // A cached voice was last profiled for whichever tone activated it
-    // previously; bring its pick transient in line with the current one
-    // before it goes live.
-    voice.setProfile(this.profile);
     this.voice?.stopAll();
     this.voice = voice;
     this.activeSet = name;
+    this.applyBodyEq();
   }
 
   async init(fetchImpl: typeof fetch = globalThis.fetch): Promise<void> {
@@ -138,12 +146,13 @@ export class GuitarAudioEngine implements AudioEngine {
       wet: profile.amp.drive > 0 ? 1 : 0,
     });
     // Body sits before the drive: on a real instrument the box colours the
-    // string, and anything after it would be colouring the amplifier.
+    // string, and anything after it would be colouring the amplifier. It
+    // starts flat; `applyBodyEq` lifts it once we know the synth is live.
     const body = new Tone.Filter({
       type: 'peaking',
       frequency: profile.amp.bodyHz,
       Q: profile.amp.bodyQ,
-      gain: profile.amp.bodyGainDb,
+      gain: 0,
     });
     const gain = new Tone.Gain(profile.amp.gain);
     gain.chain(body, drive, filter, reverb, Tone.getDestination());
@@ -157,7 +166,7 @@ export class GuitarAudioEngine implements AudioEngine {
 
     if (this.currentBackend === 'sampled' && manifest !== null) {
       try {
-        const sampled = await SampledGuitar.load(manifest, profile.sampleSet, profile);
+        const sampled = await SampledGuitar.load(manifest, profile.sampleSet);
         this.sampledVoices.set(sampled.setName, sampled);
         this.activeSet = sampled.setName;
         this.voice = sampled;
@@ -174,6 +183,7 @@ export class GuitarAudioEngine implements AudioEngine {
       this.voice = new SynthGuitar(profile);
     }
     this.voice.connect(gain);
+    this.applyBodyEq();
   }
 
   private loadSampleSet(
@@ -184,7 +194,7 @@ export class GuitarAudioEngine implements AudioEngine {
     const inFlight = this.loadingVoices.get(name);
     if (inFlight !== undefined) return inFlight;
 
-    const loading = SampledGuitar.load(manifest, name, this.profile).then((voice) => {
+    const loading = SampledGuitar.load(manifest, name).then((voice) => {
       voice.connect(gain);
       this.sampledVoices.set(name, voice);
       return voice;
@@ -208,14 +218,18 @@ export class GuitarAudioEngine implements AudioEngine {
 
   strum(midis: Midi[], opts: StrumOptions = {}): void {
     const start = opts.time ?? Tone.now();
-    const offsets = strumOffsets(
-      midis.length,
-      opts.spreadMs ?? DEFAULT_SPREAD_MS,
-      opts.direction ?? 'down',
-    );
+    const velocity = opts.velocity ?? DEFAULT_VELOCITY;
+    const plan = planStrum(midis.length, opts.spreadMs ?? DEFAULT_SPREAD_MS, opts.direction ?? 'down');
     midis.forEach((midi, i) => {
-      const offset = offsets[i] ?? 0;
-      this.voice?.playNote(midi, { time: start + offset, velocity: opts.velocity });
+      const hit = plan[i];
+      if (hit === undefined) return;
+      // Naming each note's string is what lets a strum stop the strum
+      // before it instead of piling six more voices on top of it.
+      this.voice?.playNote(midi, {
+        time: start + hit.offset,
+        velocity: velocity * hit.level,
+        stringIndex: opts.strings?.[i],
+      });
     });
   }
 
