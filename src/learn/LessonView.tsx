@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { Lesson } from '@/content';
@@ -9,12 +9,23 @@ export type LessonViewProps = {
   engine: AudioEngine;
   /** The lesson after this one in the course, if there is one. */
   nextLesson?: Lesson;
+  /**
+   * Where to pick up: the step and the answered questions from a previous
+   * visit. The Learn tab unmounts when another tab is shown, so the shell keeps
+   * these and hands them back. Defaults to the first step.
+   */
+  initialStep?: number;
+  initialPassed?: readonly number[];
+  /** Told whenever the step or the answered questions change, so they can be kept. */
+  onStepChange?: (step: number, passed: readonly number[]) => void;
   /** The × and "Back to the course". */
   onClose: () => void;
   /** Called once, when the learner taps through the last step. */
   onComplete: (lessonId: string) => void;
   onOpenNext?: () => void;
 };
+
+const NO_STEPS: readonly number[] = [];
 
 /**
  * One lesson, one step per screen. The step list sits above a Next button that
@@ -26,15 +37,26 @@ export function LessonView({
   lesson,
   engine,
   nextLesson,
+  initialStep = 0,
+  initialPassed = NO_STEPS,
+  onStepChange,
   onClose,
   onComplete,
   onOpenNext,
 }: LessonViewProps) {
-  const [index, setIndex] = useState(0);
-  /** Steps whose question was answered. Kept so going Back and forward again does not re-lock Next. */
-  const [passed, setPassed] = useState<readonly number[]>([]);
-
   const total = lesson.steps.length;
+  // One past the last step is the "Lesson complete" screen, so that is as far as a saved place can be.
+  const [index, setIndex] = useState(() => Math.min(Math.max(0, initialStep), total));
+  /** Steps whose question was answered. Kept so going Back and forward again does not re-lock Next. */
+  const [passed, setPassed] = useState<readonly number[]>(initialPassed);
+
+  // Through a ref so a new callback identity on every parent render does not re-report.
+  const onStepChangeRef = useRef(onStepChange);
+  onStepChangeRef.current = onStepChange;
+  useEffect(() => {
+    onStepChangeRef.current?.(index, passed);
+  }, [index, passed]);
+
   const finished = index >= total;
   const step = lesson.steps[index];
   const gate = step === undefined ? 'open' : stepGate(step);

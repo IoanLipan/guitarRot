@@ -1,16 +1,15 @@
-import { useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import type { ProgressHandle } from '@/app/useProgress';
 import type { AudioEngine } from '@/audio';
 import { COURSE, type Lesson } from '@/content';
 import { Course } from './Course';
 import { Explore } from './Explore';
+import { placeAtLesson, placeWithoutLesson, type LearnPlace, type LearnSection } from './learnPlace';
 import { LessonView } from './LessonView';
 import { Tuner } from './Tuner';
 
-type Section = 'course' | 'tuner' | 'explore';
-
-const SECTIONS: readonly { id: Section; label: string }[] = [
+const SECTIONS: readonly { id: LearnSection; label: string }[] = [
   { id: 'course', label: 'Course' },
   { id: 'tuner', label: 'Tuner' },
   { id: 'explore', label: 'Explore' },
@@ -20,19 +19,26 @@ const SECTIONS: readonly { id: Section; label: string }[] = [
  * The Learn tab: the Course (default), the Tuner, and free exploration of the
  * neck. Opening a lesson takes over the whole pane, with no title or switch,
  * so a lesson is one thing to look at.
+ *
+ * Where you are (section, open lesson, step) is owned by the caller and handed
+ * in as `place`: this component unmounts whenever another tab is shown, and
+ * the place has to outlive that.
  */
 export function Learn({
   engine,
   progress,
+  place,
+  onPlaceChange,
   lessons = COURSE,
 }: {
   engine: AudioEngine;
   progress: Pick<ProgressHandle, 'state' | 'completeLesson'>;
+  place: LearnPlace;
+  onPlaceChange: Dispatch<SetStateAction<LearnPlace>>;
   /** Defaults to the shipped course; tests hand in their own. */
   lessons?: readonly Lesson[];
 }) {
-  const [section, setSection] = useState<Section>('course');
-  const [openId, setOpenId] = useState<string | null>(null);
+  const { section, lessonId: openId } = place;
 
   const openIndex = openId === null ? -1 : lessons.findIndex((lesson) => lesson.id === openId);
   const open = openIndex === -1 ? undefined : lessons[openIndex];
@@ -46,9 +52,18 @@ export function Learn({
         lesson={open}
         engine={engine}
         nextLesson={nextLesson}
-        onClose={() => setOpenId(null)}
+        initialStep={place.step}
+        initialPassed={place.passed}
+        onStepChange={(step, passed) =>
+          onPlaceChange((current) =>
+            current.step === step && current.passed === passed ? current : { ...current, step, passed },
+          )
+        }
+        onClose={() => onPlaceChange(placeWithoutLesson)}
         onComplete={progress.completeLesson}
-        onOpenNext={nextLesson === undefined ? undefined : () => setOpenId(nextLesson.id)}
+        onOpenNext={
+          nextLesson === undefined ? undefined : () => onPlaceChange(placeAtLesson(nextLesson.id))
+        }
       />
     );
   }
@@ -73,7 +88,7 @@ export function Learn({
                 data-testid={`learn-tab-${id}`}
                 onClick={() => {
                   tapHaptic();
-                  setSection(id);
+                  onPlaceChange((current) => ({ ...current, section: id }));
                 }}
                 className={`h-11 rounded-full text-sm font-extrabold transition-colors active:scale-95 ${
                   selected ? 'bg-accent text-ground' : 'text-ink-dim'
@@ -88,7 +103,11 @@ export function Learn({
 
       <div role="tabpanel" className="min-h-0 flex-1 overflow-y-auto">
         {section === 'course' && (
-          <Course lessons={lessons} done={progress.state.lessonsDone} onOpen={setOpenId} />
+          <Course
+            lessons={lessons}
+            done={progress.state.lessonsDone}
+            onOpen={(id) => onPlaceChange(placeAtLesson(id))}
+          />
         )}
         {section === 'tuner' && (
           <div className="px-5 pt-1 pb-8">

@@ -20,6 +20,11 @@ export type ProgressHandle = {
   updateSettings: (patch: Partial<Settings>) => void;
   /** Marks a course lesson finished. Safe to call twice for the same lesson. */
   completeLesson: (lessonId: string) => void;
+  /**
+   * Writes any pending save now instead of after the 500 ms debounce. Call it
+   * when the app is about to leave the screen, where a delayed write may never run.
+   */
+  flush: () => void;
 };
 
 /** Loads progress once on mount and persists every answer, debounced. */
@@ -71,5 +76,9 @@ export function useProgress(): ProgressHandle {
     });
   }, []);
 
-  return { state, loaded, recordAnswer, updateSettings, completeLesson };
+  const flush = useCallback(() => {
+    void saverRef.current.flush();
+  }, []);
+
+  return { state, loaded, recordAnswer, updateSettings, completeLesson, flush };
 }

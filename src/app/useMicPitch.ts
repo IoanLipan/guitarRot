@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Tone from 'tone';
 import { createPitchSmoother, detectPitch, nearestNote } from '@/audio';
 import type { Midi } from '@/music';
+import { subscribeAppState } from './appState';
 
 export type MicStatus = 'idle' | 'starting' | 'listening' | 'denied' | 'unsupported';
 
@@ -133,6 +134,23 @@ export function useMicPitch(): MicPitchHandle {
     setStatus('idle');
     setReading(null);
   }, [release]);
+
+  // The microphone must not stay open once the app is off screen: the privacy
+  // policy promises it is only on while you are on the tuner or listen step.
+  useEffect(
+    () =>
+      subscribeAppState({
+        onBackground: () => {
+          // On Android the system's microphone permission prompt pauses the
+          // app too. While a start is waiting on that prompt and the page is
+          // still visible, stopping would throw away the answer the user is
+          // about to give.
+          if (startingRef.current && document.visibilityState !== 'hidden') return;
+          stop();
+        },
+      }),
+    [stop],
+  );
 
   useEffect(
     () => () => {

@@ -140,6 +140,64 @@ describe('LessonView: moving through a lesson', () => {
   });
 });
 
+describe('LessonView: picking up where you left off', () => {
+  const steps = [
+    { kind: 'text', body: ['First.'] },
+    { kind: 'text', body: ['Second.'] },
+    CHECK,
+  ] as const satisfies readonly LessonStep[];
+
+  it('opens on the step it is told to start at', () => {
+    render(<LessonView lesson={lesson('x', steps)} engine={fakeEngine()} initialStep={1} onClose={vi.fn()} onComplete={vi.fn()} />);
+
+    expect(screen.getByText('Second.')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Lesson progress' })).toHaveAttribute('aria-valuenow', '1');
+  });
+
+  it('keeps an answered question answered, so Next stays unlocked on it', () => {
+    render(
+      <LessonView lesson={lesson('x', steps)} engine={fakeEngine()} initialStep={2} initialPassed={[2]} onClose={vi.fn()} onComplete={vi.fn()} />,
+    );
+
+    expect(next()).toBeEnabled();
+  });
+
+  it('never starts past its own end screen or before its first step', () => {
+    const { unmount } = render(
+      <LessonView lesson={lesson('x', steps)} engine={fakeEngine()} initialStep={99} onClose={vi.fn()} onComplete={vi.fn()} />,
+    );
+    expect(screen.getByTestId('lesson-complete')).toBeInTheDocument();
+    unmount();
+
+    render(<LessonView lesson={lesson('x', steps)} engine={fakeEngine()} initialStep={-3} onClose={vi.fn()} onComplete={vi.fn()} />);
+    expect(screen.getByText('First.')).toBeInTheDocument();
+  });
+
+  it('reports each step it moves to, and the questions answered', () => {
+    const onStepChange = vi.fn();
+    render(<LessonView lesson={lesson('x', steps)} engine={fakeEngine()} onStepChange={onStepChange} onClose={vi.fn()} onComplete={vi.fn()} />);
+    expect(onStepChange).toHaveBeenLastCalledWith(0, []);
+
+    clickNext();
+    clickNext();
+    expect(onStepChange).toHaveBeenLastCalledWith(2, []);
+
+    fireEvent.click(screen.getByText('String 1'));
+    expect(onStepChange).toHaveBeenLastCalledWith(2, [2]);
+  });
+
+  it('does not report again just because its parent re-rendered with a new callback', () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const props = { lesson: lesson('x', steps), engine: fakeEngine(), onClose: vi.fn(), onComplete: vi.fn() };
+    const { rerender } = render(<LessonView {...props} onStepChange={first} />);
+    rerender(<LessonView {...props} onStepChange={second} />);
+
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).not.toHaveBeenCalled();
+  });
+});
+
 describe('LessonView: finishing', () => {
   it('marks the lesson complete when the last step is passed, and shows the end screen', () => {
     const { props } = view(lesson('strings', [{ kind: 'text', body: ['Hi.'] }, CHECK], { goal: 'Name the strings.' }));

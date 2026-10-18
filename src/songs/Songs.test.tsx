@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -54,9 +55,15 @@ function fakeEngine(): AudioEngine {
   };
 }
 
+/** Holds the open song the way the app shell does, so the tests can drive Songs by clicking. */
+function SongsHarness({ initial = null }: { initial?: string | null }) {
+  const [openSongId, setOpenSongId] = useState<string | null>(initial);
+  return <Songs engine={fakeEngine()} openSongId={openSongId} onOpenSongChange={setOpenSongId} />;
+}
+
 describe('Songs', () => {
   it('lists the whole catalogue with a difficulty on every row', () => {
-    render(<Songs engine={fakeEngine()} />);
+    render(<SongsHarness />);
     const list = screen.getByTestId('song-list');
 
     expect(within(list).getAllByRole('listitem')).toHaveLength(SONGS.length);
@@ -65,7 +72,7 @@ describe('Songs', () => {
   });
 
   it('narrows the list as you type', async () => {
-    render(<Songs engine={fakeEngine()} />);
+    render(<SongsHarness />);
 
     await userEvent.type(screen.getByTestId('song-search'), 'greensleeves');
 
@@ -75,7 +82,7 @@ describe('Songs', () => {
   });
 
   it('filters by difficulty', async () => {
-    render(<Songs engine={fakeEngine()} />);
+    render(<SongsHarness />);
 
     await userEvent.click(screen.getByTestId('filter-hard'));
 
@@ -85,7 +92,7 @@ describe('Songs', () => {
   });
 
   it('says so when nothing matches instead of showing an empty list', async () => {
-    render(<Songs engine={fakeEngine()} />);
+    render(<SongsHarness />);
 
     await userEvent.type(screen.getByTestId('song-search'), 'zzzz');
 
@@ -93,7 +100,7 @@ describe('Songs', () => {
   });
 
   it('opens a chord-chart song into a playable chart', async () => {
-    render(<Songs engine={fakeEngine()} />);
+    render(<SongsHarness />);
 
     await userEvent.click(screen.getByTestId('song-row-tom-dooley'));
 
@@ -104,7 +111,7 @@ describe('Songs', () => {
   });
 
   it('shows the key with its solfège, minor keys included', async () => {
-    render(<Songs engine={fakeEngine()} />);
+    render(<SongsHarness />);
 
     await userEvent.click(screen.getByTestId('song-row-tom-dooley'));
     expect(screen.getByText('Key G (Sol)')).toBeInTheDocument();
@@ -115,7 +122,7 @@ describe('Songs', () => {
   });
 
   it('opens a riff song into a tab staff rather than a chart', async () => {
-    render(<Songs engine={fakeEngine()} />);
+    render(<SongsHarness />);
 
     await userEvent.click(screen.getByTestId('song-row-gallop-in-e'));
 
@@ -124,7 +131,7 @@ describe('Songs', () => {
   });
 
   it('goes back to the list, keeping the search that got you there', async () => {
-    render(<Songs engine={fakeEngine()} />);
+    render(<SongsHarness />);
 
     await userEvent.type(screen.getByTestId('song-search'), 'dooley');
     await userEvent.click(screen.getByTestId('song-row-tom-dooley'));
@@ -134,7 +141,7 @@ describe('Songs', () => {
   });
 
   it('opens straight into the song a shared link named', () => {
-    render(<Songs engine={fakeEngine()} openSongId="greensleeves" />);
+    render(<SongsHarness initial="greensleeves" />);
 
     expect(screen.getByRole('heading', { name: 'Greensleeves' })).toBeInTheDocument();
   });
@@ -142,7 +149,7 @@ describe('Songs', () => {
   it('offers a share link from the player', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: { writeText } });
-    render(<Songs engine={fakeEngine()} openSongId="tom-dooley" />);
+    render(<SongsHarness initial="tom-dooley" />);
 
     await userEvent.click(screen.getByTestId('share-button'));
 
@@ -152,7 +159,7 @@ describe('Songs', () => {
 
   it('plays a count-in before starting once the metronome is on', async () => {
     metronomes.length = 0;
-    render(<Songs engine={fakeEngine()} openSongId="tom-dooley" />);
+    render(<SongsHarness initial="tom-dooley" />);
 
     // Autoplay starts the song immediately; pause it before testing the
     // count-in, or there is nothing to press Play on.
@@ -167,7 +174,7 @@ describe('Songs', () => {
 
   it('starts the click immediately when turned on mid-playback, no count-in', async () => {
     metronomes.length = 0;
-    render(<Songs engine={fakeEngine()} openSongId="tom-dooley" />);
+    render(<SongsHarness initial="tom-dooley" />);
 
     await userEvent.click(screen.getByTestId('metronome-toggle'));
 
@@ -177,7 +184,7 @@ describe('Songs', () => {
   });
 
   it('loops a tapped bar, and clears it on a second tap of the same bar', async () => {
-    render(<Songs engine={fakeEngine()} openSongId="tom-dooley" />);
+    render(<SongsHarness initial="tom-dooley" />);
 
     await userEvent.click(screen.getByTestId('chart-bar-1'));
     expect(screen.getByTestId('loop-range-label')).toHaveTextContent('Looping bars 2–2');
@@ -188,7 +195,7 @@ describe('Songs', () => {
   });
 
   it('stretches the loop to a second, different bar', async () => {
-    render(<Songs engine={fakeEngine()} openSongId="tom-dooley" />);
+    render(<SongsHarness initial="tom-dooley" />);
 
     await userEvent.click(screen.getByTestId('chart-bar-1'));
     await userEvent.click(screen.getByTestId('chart-bar-3'));
@@ -198,7 +205,7 @@ describe('Songs', () => {
   });
 
   it('clears the loop from its own button', async () => {
-    render(<Songs engine={fakeEngine()} openSongId="tom-dooley" />);
+    render(<SongsHarness initial="tom-dooley" />);
 
     await userEvent.click(screen.getByTestId('chart-bar-0'));
     await userEvent.click(screen.getByTestId('loop-clear'));

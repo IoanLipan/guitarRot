@@ -1,32 +1,32 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { AudioEngine } from '@/audio';
 import { SONGS, getSong } from '@/content';
 import { EMPTY_FILTER, searchSongs, type SongFilter } from './searchSongs';
 import { SongList } from './SongList';
 import { SongPlayer } from './SongPlayer';
 
+/**
+ * The song browser, or the player for the open song. Which song is open is
+ * owned by the caller (`openSongId`), not by this component: it unmounts when
+ * another tab is shown, and the open song has to survive that. A shared link
+ * simply starts the caller with a song already open.
+ */
 export function Songs({
   engine,
-  /** Song a shared link asked for; opens straight into the player. */
-  openSongId = null,
+  openSongId,
+  onOpenSongChange,
 }: {
   engine: AudioEngine;
-  openSongId?: string | null;
+  openSongId: string | null;
+  onOpenSongChange: (songId: string | null) => void;
 }) {
   const [filter, setFilter] = useState<SongFilter>(EMPTY_FILTER);
-  const [selectedId, setSelectedId] = useState<string | null>(openSongId);
-
-  // A second shared link arriving while the tab is already open should still
-  // move the screen to the song it names.
-  useEffect(() => {
-    if (openSongId !== null) setSelectedId(openSongId);
-  }, [openSongId]);
 
   const results = useMemo(() => searchSongs(SONGS, filter), [filter]);
-  const selected = selectedId === null ? undefined : getSong(selectedId);
+  const selected = openSongId === null ? undefined : getSong(openSongId);
 
   if (selected !== undefined) {
-    return <SongPlayer song={selected} engine={engine} onBack={() => setSelectedId(null)} />;
+    return <SongPlayer song={selected} engine={engine} onBack={() => onOpenSongChange(null)} />;
   }
 
   return (
@@ -34,7 +34,7 @@ export function Songs({
       songs={results}
       filter={filter}
       onFilterChange={setFilter}
-      onOpen={(song) => setSelectedId(song.id)}
+      onOpen={(song) => onOpenSongChange(song.id)}
     />
   );
 }

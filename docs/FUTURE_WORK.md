@@ -258,10 +258,10 @@ full page reload, and a reload landing mid-script produces a blank
 screenshot that looks exactly like a crash.
 
 ### Test coverage gaps
-- **No component tests for `RiffCard`, `ChordCard`, `SettingsSheet`,
-  `AppShell`, `TabBar`, `useAudioEngine`, or `useProgress`.** `Feed`, `QuizCard`, `Learn` and the
-  `Quiz` tab now have them, as does every pure module. The shell plumbing
-  and the two remaining card components are still uncovered.
+- **No component tests for `RiffCard`, `ChordCard`, `SettingsSheet`, or
+  `useProgress`.** `Feed`, `QuizCard`, `Learn`, the `Quiz` tab, `AppShell`,
+  `TabBar`, `StartScreen` and `useAudioEngine` have them now (see "Native-app
+  behaviour" below), as does every pure module.
 - **Layout is not asserted anywhere.** The screenshot pass above is manual.
   Nothing in CI would catch a container that clips its contents again.
 
@@ -568,6 +568,56 @@ with any course and the tests use their own fixtures (`learn/testkit.ts`).
   with the SRS scheduler.
 - Checked in the built-in browser at 390x844. The pane blocks the microphone, so
   the listen step's mic path is covered by tests only; try it once on a device.
+
+## Native-app behaviour (built 2026-10-18)
+
+What the Android build needed before it could ship, all in `src/app/`:
+
+- **Back button** (`useBackButton.ts`). `backAction()` is the whole policy and is
+  pure: Settings sheet, then the open lesson (Learn tab only), then the open song
+  (Songs tab only), then any other tab goes to the Feed, and only the Feed
+  minimizes the app. A lesson open on a tab you are not looking at is left
+  alone, because closing something invisible looks like Back did nothing. The
+  Capacitor listener is registered only on a native platform, once, and calls
+  the latest handler through a ref. It cannot be exercised in a browser; the
+  unit tests and `AppShell.test.tsx` cover it, try it once on a device.
+- **Tabs keep their place.** The shell owns where Learn and Songs are:
+  `learnPlace` (section, open lesson id, step, answered steps; see
+  `learn/learnPlace.ts`) and `openSongId`. `Learn` and `Songs` are controlled by
+  them, and `LessonView` takes `initialStep`/`initialPassed` and reports changes
+  with `onStepChange`, so a tab switch (which unmounts the tab) comes back to the
+  same lesson and step. What is *inside* a step (a half-answered check, a
+  listen step's ticks) is not kept; and a song starts playing again from its top
+  when you come back, the same as opening it. The Songs search box is still local
+  and resets, and the Feed is a fresh feed every time.
+- **Background / locked screen** (`useAppLifecycle.ts`, `appState.ts`,
+  `audio/contextState.ts`). On `visibilitychange` to hidden and on Capacitor's
+  `pause`: `engine.stopAll()`, suspend the audio context, flush the progress
+  save. On visible / `resume`: resume the context. Suspending freezes Tone's
+  transport together with the context (its clock reads the context's time), so
+  a riff or song that was playing **carries on from the same spot** and its
+  Pause button, which still reads "playing", is telling the truth; one that was
+  paused stays paused. Checked in headless Chrome: context goes
+  running/suspended/running, the playhead freezes and resumes without a jump.
+  `useMicPitch` stops on hidden too. Beware that the Android microphone
+  permission dialog (and the share sheet) pauses the activity: the mic hook
+  ignores a `pause` while its start is waiting on that prompt and the page is
+  still visible, and the audio resumes on the matching `resume`.
+- **Start screen** (`StartScreen.tsx`, `startPlan.ts`, `useAudioEngine.ts`).
+  Two buttons, both the audio-unlock tap: "Start lesson 1" (or "Continue: <next
+  lesson title>", or "Open the course" when everything is done) lands in Learn,
+  straight inside that lesson; "Just scroll riffs" lands on the Feed. The
+  destination is set before the sounds finish loading, so no other tab mounts on
+  the way. Until progress has loaded the learning button reads "Start learning"
+  and is disabled rather than guessing. `useAudioEngine.start` is guarded by a ref set
+  before the first await (a double tap builds one engine and downloads the
+  sample set once), the tapped button reads "Loading sounds…", and a failed init
+  shows an error with "Try again". A shared link keeps its own target: the second
+  button reads "Open the shared link".
+- **Feed opening** (`feed/generator.ts`): the first `EASY_OPENING_CARDS` (6) cards
+  only draw riffs of level 2 or less and chords of difficulty 2 or less. It is
+  per fresh feed, so it applies every time the Feed tab is opened, including for
+  experienced players.
 
 ## Metronome, count-in, loop-a-section, more solos (built 2026-09-08)
 

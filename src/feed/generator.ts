@@ -18,6 +18,14 @@ export const QUIZ_MIN_GAP = 3;
 export const QUIZ_MAX_GAP = 5;
 /** Cap on how many cards in a row may share a kind. */
 const MAX_RUN = 2;
+/**
+ * A feed opens gently. For its first few cards only easy content is eligible:
+ * a first-time learner who lands on a level-3 riff at frets 7-9 has nothing to
+ * hold on to. After that the whole library is in play.
+ */
+export const EASY_OPENING_CARDS = 6;
+export const EASY_MAX_RIFF_LEVEL = 2;
+export const EASY_MAX_CHORD_DIFFICULTY = 2;
 
 export type FeedCursor = {
   /**
@@ -88,6 +96,13 @@ function pickKind(cursor: FeedCursor, random: () => number): FeedKind {
   return pool[pool.length - 1] ?? 'riff';
 }
 
+/** The pool a card at this position draws from: easy content only while the feed is still opening. */
+function poolAt<T>(sequence: number, all: readonly T[], isEasy: (item: T) => boolean): readonly T[] {
+  if (sequence >= EASY_OPENING_CARDS) return all;
+  const easy = all.filter(isEasy);
+  return easy.length > 0 ? easy : all;
+}
+
 /** Picks content the feed hasn't shown recently, falling back to the full pool. */
 function pickContent<T extends { id: string }>(
   pool: readonly T[],
@@ -136,7 +151,8 @@ export function generateFeedPage(
     const runLength = kind === next.lastKind ? next.runLength + 1 : 1;
 
     if (kind === 'riff') {
-      const riff = pickContent(RIFFS, next.recentRiffIds, random);
+      const pool = poolAt(next.sequence, RIFFS, (candidate) => candidate.level <= EASY_MAX_RIFF_LEVEL);
+      const riff = pickContent(pool, next.recentRiffIds, random);
       items.push({ kind, id: `feed-${sequence}-${riff.id}`, riff });
       next = {
         ...next,
@@ -150,7 +166,12 @@ export function generateFeedPage(
     }
 
     if (kind === 'chord') {
-      const chord = pickContent(CHORDS, next.recentChordIds, random);
+      const pool = poolAt(
+        next.sequence,
+        CHORDS,
+        (candidate) => candidate.difficulty <= EASY_MAX_CHORD_DIFFICULTY,
+      );
+      const chord = pickContent(pool, next.recentChordIds, random);
       items.push({ kind, id: `feed-${sequence}-${chord.id}`, chord });
       next = {
         ...next,

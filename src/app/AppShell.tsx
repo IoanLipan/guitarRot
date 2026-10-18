@@ -5,21 +5,31 @@ import { Style, StatusBar } from '@capacitor/status-bar';
 import { getToneProfile } from '@/audio';
 import { Feed } from '@/feed/Feed';
 import { Learn } from '@/learn/Learn';
+import { placeAtLesson, placeWithoutLesson, START_PLACE, type LearnPlace } from '@/learn/learnPlace';
 import { Quiz } from '@/quiz/Quiz';
 import { readShareTarget, resolveShareTarget, type SharedContent } from '@/share';
 import { Songs } from '@/songs';
-import { LogoMark, Wordmark } from './Logo';
 import { SettingsSheet } from './SettingsSheet';
+import { StartScreen, type StartChoice } from './StartScreen';
+import { planStart } from './startPlan';
 import { TabBar, type TabId } from './TabBar';
+import { useAppLifecycle } from './useAppLifecycle';
 import { useAudioEngine } from './useAudioEngine';
+import { backAction, minimizeApp, useBackButton } from './useBackButton';
 import { useProgress } from './useProgress';
 
 export function AppShell() {
-  const { ready, engine, start } = useAudioEngine();
+  const { ready, engine, loading, failed, start } = useAudioEngine();
   const progress = useProgress();
   const [tab, setTab] = useState<TabId>('feed');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shared, setShared] = useState<SharedContent | null>(null);
+  const [chosen, setChosen] = useState<StartChoice | null>(null);
+  // What each tab was showing. Tabs unmount when another is shown, so their
+  // place is kept here: coming back to Learn or Songs finds the same lesson,
+  // step and song, and Back knows what there is to close.
+  const [learnPlace, setLearnPlace] = useState<LearnPlace>(START_PLACE);
+  const [openSongId, setOpenSongId] = useState<string | null>(null);
 
   // A shared link (`/?p=riff:blues-shuffle-e`) opens on the card it names.
   // The parameter is stripped once read, so a later reload is an ordinary
@@ -31,6 +41,7 @@ export function AppShell() {
     if (resolved !== null) {
       setShared(resolved);
       setTab(resolved.tab);
+      if (resolved.tab === 'songs') setOpenSongId(resolved.song.id);
     }
     window.history.replaceState(null, '', window.location.pathname);
   }, []);
@@ -56,26 +67,71 @@ export function AppShell() {
     void SplashScreen.hide();
   }, []);
 
+  // Off screen: silence, suspend the audio clock, save. On screen: resume.
+  useAppLifecycle({ engine, flushProgress: progress.flush });
+
+  useBackButton(() => {
+    if (!ready) {
+      minimizeApp();
+      return;
+    }
+    switch (
+      backAction({
+        settingsOpen,
+        tab,
+        lessonOpen: learnPlace.lessonId !== null,
+        songOpen: openSongId !== null,
+      })
+    ) {
+      case 'close-settings':
+        setSettingsOpen(false);
+        break;
+      case 'close-lesson':
+        setLearnPlace(placeWithoutLesson);
+        break;
+      case 'close-song':
+        setOpenSongId(null);
+        break;
+      case 'go-to-feed':
+        setTab('feed');
+        break;
+      case 'minimize':
+        minimizeApp();
+        break;
+    }
+  });
+
+  const plan = planStart(progress.loaded, progress.state.lessonsDone);
+
+  /**
+   * The start screen's two buttons. Where to land is decided now, while the
+   * start screen is still up, so the first screen after the sounds load is
+   * already the right one and no other tab mounts (and starts a riff) on the way.
+   */
+  function begin(choice: StartChoice) {
+    setChosen(choice);
+    if (choice === 'learn') {
+      setTab('learn');
+      setLearnPlace(
+        plan.kind === 'first' || plan.kind === 'continue' ? placeAtLesson(plan.lesson.id) : START_PLACE,
+      );
+    } else {
+      // Opened from a shared link: that link already chose the tab.
+      setTab(shared?.tab ?? 'feed');
+    }
+    void start();
+  }
+
   if (!ready || engine === null) {
     return (
-      <main className="flex h-dvh flex-col items-center justify-center gap-6 bg-ground p-8 text-center">
-        <LogoMark className="h-32 w-auto drop-shadow-[0_0_48px_rgba(255,176,32,0.35)]" />
-        <div className="flex flex-col items-center gap-2">
-          <h1>
-            <Wordmark className="text-5xl" />
-          </h1>
-          <p className="text-base font-semibold text-ink-dim">Scroll less. Play more.</p>
-        </div>
-        {/* Web audio stays suspended until a real tap, so this button is also
-            what switches the sound on. */}
-        <button
-          type="button"
-          onClick={() => void start()}
-          className="mt-4 rounded-full bg-accent px-10 py-4 text-lg font-extrabold text-ground active:scale-95"
-        >
-          Tap to start
-        </button>
-      </main>
+      <StartScreen
+        plan={plan}
+        loading={loading}
+        failed={failed}
+        chosen={chosen}
+        sharedLink={shared !== null}
+        onChoose={begin}
+      />
     );
   }
 
@@ -92,9 +148,11 @@ export function AppShell() {
           />
         )}
         {tab === 'songs' && (
-          <Songs engine={engine} openSongId={shared?.tab === 'songs' ? shared.song.id : null} />
+          <Songs engine={engine} openSongId={openSongId} onOpenSongChange={setOpenSongId} />
         )}
-        {tab === 'learn' && <Learn engine={engine} progress={progress} />}
+        {tab === 'learn' && (
+          <Learn engine={engine} progress={progress} place={learnPlace} onPlaceChange={setLearnPlace} />
+        )}
         {tab === 'quiz' && <Quiz engine={engine} progress={progress} />}
 
         <button
@@ -120,16 +178,18 @@ export function AppShell() {
   );
 }
 
+/** A cog: eight teeth round a hole. (Rays round a circle read as a brightness toggle.) */
 function GearIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-      <circle cx="12" cy="12" r="3.2" fill="none" stroke="var(--color-ink)" strokeWidth="1.8" />
       <path
-        d="M12 3.4v2.2M12 18.4v2.2M20.6 12h-2.2M5.6 12H3.4M18.1 5.9l-1.6 1.6M7.5 16.5l-1.6 1.6M18.1 18.1l-1.6-1.6M7.5 7.5L5.9 5.9"
+        d="M10.51 5.06 L10.72 2.49 L13.28 2.49 L13.49 5.06 L15.85 6.04 L17.82 4.37 L19.63 6.18 L17.96 8.15 L18.94 10.51 L21.51 10.72 L21.51 13.28 L18.94 13.49 L17.96 15.85 L19.63 17.82 L17.82 19.63 L15.85 17.96 L13.49 18.94 L13.28 21.51 L10.72 21.51 L10.51 18.94 L8.15 17.96 L6.18 19.63 L4.37 17.82 L6.04 15.85 L5.06 13.49 L2.49 13.28 L2.49 10.72 L5.06 10.51 L6.04 8.15 L4.37 6.18 L6.18 4.37 L8.15 6.04 Z"
+        fill="none"
         stroke="var(--color-ink)"
-        strokeWidth="1.8"
-        strokeLinecap="round"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
       />
+      <circle cx="12" cy="12" r="3" fill="none" stroke="var(--color-ink)" strokeWidth="1.6" />
     </svg>
   );
 }

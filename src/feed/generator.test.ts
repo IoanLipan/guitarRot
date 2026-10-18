@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CHORDS, RIFFS } from '@/content';
 import {
+  EASY_MAX_CHORD_DIFFICULTY,
+  EASY_MAX_RIFF_LEVEL,
+  EASY_OPENING_CARDS,
   emptyCursor,
   generateFeedPage,
   mulberry32,
@@ -130,6 +133,50 @@ describe('the first card', () => {
       const first = run(1, seed)[0];
       expect(first?.kind).toBe('riff');
     }
+  });
+});
+
+describe('the opening cards', () => {
+  const SEEDS = Array.from({ length: 200 }, (_, i) => i + 1);
+
+  it('only ever draw on easy riffs and chords, for every seed', () => {
+    for (const seed of SEEDS) {
+      for (const item of run(EASY_OPENING_CARDS, seed)) {
+        if (item.kind === 'riff') expect(item.riff.level).toBeLessThanOrEqual(EASY_MAX_RIFF_LEVEL);
+        if (item.kind === 'chord') {
+          expect(item.chord.difficulty).toBeLessThanOrEqual(EASY_MAX_CHORD_DIFFICULTY);
+        }
+      }
+    }
+  });
+
+  it('hold even when the feed is fetched a few cards at a time', () => {
+    for (const seed of SEEDS) {
+      for (const item of run(EASY_OPENING_CARDS, seed, 2)) {
+        if (item.kind === 'riff') expect(item.riff.level).toBeLessThanOrEqual(EASY_MAX_RIFF_LEVEL);
+      }
+    }
+  });
+
+  it('are not all repeats of one riff: there is enough easy material to vary', () => {
+    for (const seed of SEEDS) {
+      const riffs = run(EASY_OPENING_CARDS, seed).flatMap((item) => (item.kind === 'riff' ? [item.riff.id] : []));
+      expect(new Set(riffs).size).toBe(riffs.length);
+    }
+  });
+
+  it('end after the opening: the harder riffs and chords come into the feed', () => {
+    const later = SEEDS.flatMap((seed) => run(EASY_OPENING_CARDS + 20, seed).slice(EASY_OPENING_CARDS));
+    expect(later.some((item) => item.kind === 'riff' && item.riff.level > EASY_MAX_RIFF_LEVEL)).toBe(true);
+    expect(later.some((item) => item.kind === 'chord' && item.chord.difficulty > EASY_MAX_CHORD_DIFFICULTY)).toBe(true);
+  });
+
+  it('really are a limit: the library has harder riffs and chords to keep out', () => {
+    expect(RIFFS.some((riff) => riff.level > EASY_MAX_RIFF_LEVEL)).toBe(true);
+    expect(CHORDS.some((chord) => chord.difficulty > EASY_MAX_CHORD_DIFFICULTY)).toBe(true);
+    expect(RIFFS.filter((riff) => riff.level <= EASY_MAX_RIFF_LEVEL).length).toBeGreaterThanOrEqual(
+      EASY_OPENING_CARDS,
+    );
   });
 });
 

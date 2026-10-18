@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
+import { Capacitor } from '@capacitor/core';
 
 const SAMPLE_RATE = 44100;
 
@@ -24,6 +25,16 @@ const fake = vi.hoisted(() => {
   };
   return state;
 });
+
+const nativeApp = vi.hoisted(() => ({ listeners: {} as Record<string, () => void> }));
+vi.mock('@capacitor/app', () => ({
+  App: {
+    addListener: vi.fn((name: string, callback: () => void) => {
+      nativeApp.listeners[name] = callback;
+      return Promise.resolve({ remove: vi.fn() });
+    }),
+  },
+}));
 
 vi.mock('tone', async (importOriginal) => {
   const actual = await importOriginal<typeof import('tone')>();
@@ -272,5 +283,99 @@ describe('useMicPitch', () => {
     });
 
     expect(fake.mics).toHaveLength(1);
+  });
+
+  describe('when the app leaves the screen', () => {
+    function setVisibility(state: 'hidden' | 'visible') {
+      Object.defineProperty(document, 'visibilityState', { value: state, configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    }
+
+    afterEach(() => {
+      setVisibility('visible');
+      vi.restoreAllMocks();
+    });
+
+    it('closes the microphone when the document becomes hidden', async () => {
+      const { result } = renderHook(() => useMicPitch());
+      await act(async () => {
+        await result.current.start();
+      });
+      expect(result.current.status).toBe('listening');
+
+      act(() => setVisibility('hidden'));
+
+      expect(result.current.status).toBe('idle');
+      expect(result.current.reading).toBeNull();
+      expect(fake.mics[0]?.close).toHaveBeenCalled();
+      expect(fake.mics[0]?.dispose).toHaveBeenCalled();
+    });
+
+    it('does not reopen it when the app comes back; the learner taps to listen again', async () => {
+      const { result } = renderHook(() => useMicPitch());
+      await act(async () => {
+        await result.current.start();
+      });
+
+      act(() => setVisibility('hidden'));
+      act(() => setVisibility('visible'));
+
+      expect(result.current.status).toBe('idle');
+      expect(fake.mics).toHaveLength(1);
+    });
+
+    it('hands the microphone back if the app is hidden while the permission prompt is up', async () => {
+      let allow: () => void = () => {};
+      fake.open = () => new Promise<void>((resolve) => (allow = resolve));
+      const { result } = renderHook(() => useMicPitch());
+      let started: Promise<void> = Promise.resolve();
+      await act(async () => {
+        started = result.current.start();
+        await Promise.resolve();
+      });
+      expect(result.current.status).toBe('starting');
+
+      act(() => setVisibility('hidden'));
+      await act(async () => {
+        allow();
+        await started;
+      });
+
+      expect(result.current.status).toBe('idle');
+      expect(fake.mics[0]?.close).toHaveBeenCalled();
+    });
+
+    it('stops listening when the native activity pauses with the screen gone', async () => {
+      vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+      const { result } = renderHook(() => useMicPitch());
+      await act(async () => {
+        await result.current.start();
+      });
+
+      act(() => nativeApp.listeners.pause?.());
+
+      expect(result.current.status).toBe('idle');
+    });
+
+    it('does not abandon a start just because the system permission prompt paused the app', async () => {
+      vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+      let allow: () => void = () => {};
+      fake.open = () => new Promise<void>((resolve) => (allow = resolve));
+      const { result } = renderHook(() => useMicPitch());
+      let started: Promise<void> = Promise.resolve();
+      await act(async () => {
+        started = result.current.start();
+        await Promise.resolve();
+      });
+
+      // Android pauses the activity under its own permission dialog; the page stays visible.
+      act(() => nativeApp.listeners.pause?.());
+      await act(async () => {
+        allow();
+        await started;
+      });
+
+      expect(result.current.status).toBe('listening');
+    });
   });
 });

@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { MicPitchHandle } from '@/app/useMicPitch';
 import type { ProgressHandle } from '@/app/useProgress';
 import type { Lesson } from '@/content';
 import { emptyProgressState } from '@/progress';
+import { START_PLACE, type LearnPlace } from './learnPlace';
 import { fakeEngine, FIXTURE_COURSE } from './testkit';
 
 vi.mock('@/app/useMicPitch', () => ({
@@ -21,9 +23,25 @@ function progressWith(lessonsDone: string[] = []): Pick<ProgressHandle, 'state' 
   return { state: { ...emptyProgressState(), lessonsDone }, completeLesson: vi.fn() };
 }
 
+/** Holds the place the way the app shell does. */
+function LearnHarness({
+  progress,
+  lessons,
+  initial = START_PLACE,
+}: {
+  progress: Pick<ProgressHandle, 'state' | 'completeLesson'>;
+  lessons: readonly Lesson[];
+  initial?: LearnPlace;
+}) {
+  const [place, setPlace] = useState<LearnPlace>(initial);
+  return (
+    <Learn engine={fakeEngine()} progress={progress} lessons={lessons} place={place} onPlaceChange={setPlace} />
+  );
+}
+
 function renderLearn(lessonsDone: string[] = [], lessons: readonly Lesson[] = FIXTURE_COURSE) {
   const progress = progressWith(lessonsDone);
-  render(<Learn engine={fakeEngine()} progress={progress} lessons={lessons} />);
+  render(<LearnHarness progress={progress} lessons={lessons} />);
   return progress;
 }
 
@@ -112,5 +130,61 @@ describe('Learn', () => {
     expect(screen.queryByTestId('lesson-next-lesson')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('lesson-back-to-course'));
     expect(screen.getByTestId('course')).toBeInTheDocument();
+  });
+});
+
+describe('Learn: keeping your place', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  /** Mounts Learn, then unmounts it and mounts it again with the same place, the way a tab switch does. */
+  function Shell({ showLearn }: { showLearn: boolean }) {
+    const [place, setPlace] = useState<LearnPlace>(START_PLACE);
+    return showLearn ? (
+      <Learn engine={fakeEngine()} progress={progressWith()} lessons={FIXTURE_COURSE} place={place} onPlaceChange={setPlace} />
+    ) : null;
+  }
+
+  it('comes back to the same lesson at the same step after being unmounted', () => {
+    const { rerender } = render(<Shell showLearn />);
+    fireEvent.click(screen.getByTestId('lesson-row-beta'));
+    fireEvent.click(screen.getByTestId('lesson-next'));
+    expect(screen.getByRole('progressbar', { name: 'Lesson progress' })).toHaveAttribute('aria-valuenow', '1');
+
+    rerender(<Shell showLearn={false} />);
+    expect(screen.queryByTestId('lesson-view')).not.toBeInTheDocument();
+    rerender(<Shell showLearn />);
+
+    expect(screen.getByTestId('lesson-view')).toHaveTextContent('Beta lesson');
+    expect(screen.getByRole('progressbar', { name: 'Lesson progress' })).toHaveAttribute('aria-valuenow', '1');
+    expect(screen.getByText('String 1')).toBeInTheDocument();
+  });
+
+  it('comes back to the section it was on', () => {
+    const { rerender } = render(<Shell showLearn />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Explore' }));
+
+    rerender(<Shell showLearn={false} />);
+    rerender(<Shell showLearn />);
+
+    expect(screen.getByRole('tab', { name: 'Explore' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('starts the next lesson from its first step, not from where the last one ended', () => {
+    render(<Shell showLearn />);
+    fireEvent.click(screen.getByTestId('lesson-row-alpha'));
+    finishLesson();
+    fireEvent.click(screen.getByTestId('lesson-next-lesson'));
+
+    expect(screen.getByRole('progressbar', { name: 'Lesson progress' })).toHaveAttribute('aria-valuenow', '0');
+  });
+
+  it('forgets the step once a lesson is closed', () => {
+    render(<Shell showLearn />);
+    fireEvent.click(screen.getByTestId('lesson-row-alpha'));
+    fireEvent.click(screen.getByTestId('lesson-next'));
+    fireEvent.click(screen.getByTestId('lesson-close'));
+    fireEvent.click(screen.getByTestId('lesson-row-alpha'));
+
+    expect(screen.getByRole('progressbar', { name: 'Lesson progress' })).toHaveAttribute('aria-valuenow', '0');
   });
 });

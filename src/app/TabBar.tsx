@@ -40,11 +40,20 @@ export function TabBar({ active, onChange }: { active: TabId; onChange: (id: Tab
 function TabIcon({ id, active }: { id: TabId; active: boolean }) {
   const color = active ? 'var(--color-accent)' : INACTIVE_COLOR;
   const fill = active ? color : 'none';
+  // Marks drawn on top of a filled shape take the tab bar's colour so they stay legible.
+  const knockout = active ? 'var(--color-surface)' : color;
   const common = { stroke: color, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 
   return (
     <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
-      {id === 'feed' && <rect x="4" y="4" width="16" height="16" rx="4" fill={fill} {...common} />}
+      {id === 'feed' && (
+        <>
+          {/* A card with a play mark on it, and the edge of the next card behind it. */}
+          <path d="M7 3.5h10" {...common} />
+          <rect x="3.5" y="7" width="17" height="13.5" rx="3.5" fill={fill} {...common} />
+          <path d="M10.5 10.6v6.3l5-3.15z" fill={knockout} stroke={knockout} strokeWidth={1.2} strokeLinejoin="round" />
+        </>
+      )}
       {id === 'songs' && (
         <>
           <path d="M9 18V6l10-2v12" fill={fill} {...common} />
@@ -55,7 +64,20 @@ function TabIcon({ id, active }: { id: TabId; active: boolean }) {
       {id === 'learn' && (
         <path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z" fill={fill} {...common} />
       )}
-      {id === 'quiz' && <circle cx="12" cy="12" r="8" fill={fill} {...common} />}
+      {id === 'quiz' && (
+        <>
+          <circle cx="12" cy="12" r="9" fill={fill} {...common} />
+          {/* A question mark. */}
+          <path
+            d="M9.4 9.6a2.6 2.6 0 1 1 3.9 2.25c-.8.45-1.3 1-1.3 1.9"
+            fill="none"
+            stroke={knockout}
+            strokeWidth={2}
+            strokeLinecap="round"
+          />
+          <circle cx="12" cy="16.6" r="1.1" fill={knockout} />
+        </>
+      )}
     </svg>
   );
 }
