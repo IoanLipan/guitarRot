@@ -1,4 +1,5 @@
 import type { Lesson } from '../lessons';
+import { gripNeck } from './visuals';
 
 const UNIT = 'Level up';
 
@@ -11,40 +12,36 @@ export const UNIT_6: readonly Lesson[] = [
     goal: 'Sound a second note with your fretting hand alone, going up with a hammer-on and down with a pull-off.',
     steps: [
       {
-        kind: 'text',
-        title: 'Notes without the pick',
-        body: [
-          'A hammer-on sounds a note without picking it. Pick one note, then bring another finger down hard on a higher fret: the impact makes the string ring. A pull-off is the reverse: pick a fretted note, then pull the finger away with a little flick, so the lower note, often the open string, sounds.',
-          'They make playing smoother, which guitarists call legato, and faster, because your fretting hand does the work and your picking hand gets a rest.',
+        kind: 'explain',
+        headline: 'Notes without the pick',
+        visual: { kind: 'illustration', name: 'hammer-pull' },
+        points: [
+          '**Hammer-on**: pick a note, then drop another finger on a higher fret. ==The impact rings it.==',
+          '**Pull-off**: pick a fretted note, then flick the finger away. The lower note rings.',
         ],
+        tip: 'Smoother (legato) and faster: your fretting hand does the work and your picking hand rests.',
       },
       {
-        kind: 'text',
-        title: 'How to do them well',
-        body: [
-          'Hammer-on: keep the finger curved and lifted just above the fret, then drop it quickly and firmly right behind the fret wire, like a small hammer.',
-          'Pull-off: put the finger down, pick the note, then pull the finger off sideways toward the floor so it plucks the string as it leaves. Do not just lift straight up.',
-          'The usual mistake is a second note much quieter than the first. Fix it with a faster, firmer hammer or a more decisive flick.',
+        kind: 'explain',
+        headline: 'Land right behind the wire',
+        visual: { kind: 'illustration', name: 'fret-finger' },
+        points: [
+          'Hammer-on: finger curved, just above the fret. Drop it ==fast and firm==, right behind the wire.',
+          'Pull-off: pull the finger **sideways, toward the floor**. It plucks the string as it leaves.',
         ],
+        warn: 'Second note too quiet? Hammer faster and firmer. Pull off sideways, not straight up.',
       },
       {
         kind: 'riff',
         riffId: 'legato-drill',
-        caption:
-          'Only the first note of each pair is picked; the second is hammered on or pulled off. Aim for the same volume on both notes. Bar 3 is a trill on the B (Si) string with a single pick.',
+        caption: 'Only the first note of each pair is picked. Aim for **the same volume on both**. Bar 3 is a trill on the B (Si) string.',
       },
       {
         kind: 'check',
         question: 'How many times do you pick the string for a hammer-on pair?',
-        options: [
-          'Once: the second note comes from your fretting finger',
-          'Twice',
-          'Never',
-          'Three times',
-        ],
+        options: ['Once: the second note comes from your fretting finger', 'Twice', 'Never', 'Three times'],
         answer: 'Once: the second note comes from your fretting finger',
-        explain:
-          'You pick the first note only. The second sounds because your finger lands hard enough on the higher fret to set the string ringing again.',
+        explain: 'You pick the first note only. The second sounds because your finger **lands hard** and sets the string ringing.',
       },
       {
         kind: 'check',
@@ -56,8 +53,7 @@ export const UNIT_6: readonly Lesson[] = [
           'The string vibrates by itself',
         ],
         answer: 'Your finger flicks the string as it leaves',
-        explain:
-          'Pulling the finger off with a small sideways flick plucks the string, so the note beneath your finger sounds on its own.',
+        explain: 'A small sideways flick **plucks the string**, so the note beneath your finger sounds on its own.',
       },
       {
         kind: 'check',
@@ -69,8 +65,7 @@ export const UNIT_6: readonly Lesson[] = [
           'Land farther behind the fret wire',
         ],
         answer: 'Bring the finger down faster and more firmly',
-        explain:
-          'The hammered note gets all its volume from the finger, so speed and firmness matter. Landing close behind the fret wire also helps.',
+        explain: 'The hammered note gets all its volume from the finger, so **speed and firmness** matter. Landing close behind the wire helps too.',
       },
     ],
   },
@@ -81,26 +76,40 @@ export const UNIT_6: readonly Lesson[] = [
     goal: 'Slide between notes, and bend a note up a whole step to match its target.',
     steps: [
       {
-        kind: 'text',
-        title: 'Slides',
-        body: [
-          'A slide moves a note up or down the neck without lifting your finger. Pick a note, keep pressing the string, and glide your finger along it to the new fret. The pitch rises or falls smoothly through the notes in between.',
-          'Press firmly enough to keep the note ringing, but lightly enough to glide. Keep the pressure on until you arrive: if you lift, the sound stops.',
+        kind: 'explain',
+        headline: 'Slide: keep pressing',
+        visual: { kind: 'illustration', name: 'slide-bend' },
+        points: [
+          'Pick a note, keep pressing, and ==glide== to the new fret.',
+          'The pitch moves smoothly through the notes in between.',
+        ],
+        tip: 'Press firmly enough to keep it ringing, lightly enough to glide.',
+        warn: 'Lift your finger and the sound stops. **Stay pressed until you arrive.**',
+      },
+      {
+        kind: 'explain',
+        headline: 'A bend raises the pitch',
+        visual: { kind: 'notes', notes: ['G', 'A'] },
+        points: [
+          'A bend pushes the string sideways to raise the note.',
+          'A **whole-step** bend sounds like the note ==two frets higher==.',
+          'Fret 8 of the B (Si) string is G (Sol). Bend it up to A (La).',
         ],
       },
       {
-        kind: 'text',
-        title: 'Bends',
-        body: [
-          'A bend raises a note by pushing the string sideways across the fretboard. A whole-step bend raises the pitch by two frets\' worth: fret a note, push until it sounds like the note two frets higher.',
-          'Use your ring finger for the push, with the middle and index fingers on the frets behind it to help. Turn your wrist, like turning a door handle, instead of just pushing with the finger. Bends are easier on the thin strings.',
-          'Always check yourself against the target. Play the target note first, then bend the lower note until it sounds the same.',
+        kind: 'explain',
+        headline: 'Ring finger bends, friends help',
+        visual: { kind: 'illustration', name: 'finger-numbers' },
+        points: [
+          'Push with your **ring finger**. Middle and index sit on the frets behind it.',
+          'Turn your wrist like a door handle. Don\'t just push with the finger.',
+          'Bends are easier on the thin strings.',
         ],
+        tip: 'Play the target first, then bend the lower note until ==it matches==.',
       },
       {
         kind: 'fretboard',
-        caption:
-          'A bend target on the B (Si) string. Tap fret 10 to hear where you are heading, then tap fret 8 to hear where you start.',
+        caption: 'A bend target on the B (Si) string. Tap **fret 10** to hear where you are heading, then **fret 8** for the start.',
         fretRange: [7, 11],
         positions: [
           { stringIndex: 4, fret: 8 },
@@ -111,23 +120,21 @@ export const UNIT_6: readonly Lesson[] = [
       {
         kind: 'riff',
         riffId: 'slide-and-bend',
-        caption:
-          'Bars 1 and 2: pick the first note, then slide up two frets without lifting. Bars 3 and 4: you hear the target first, then bend the lower note up to match it. Every note comes from E (Mi) minor pentatonic.',
+        caption: 'Bars 1-2: slide up two frets without lifting. Bars 3-4: hear the target, then **bend up to match it**. All E (Mi) minor pentatonic.',
       },
       {
         kind: 'check',
         question: 'A whole-step bend raises the pitch as much as moving up how many frets?',
         options: ['One fret', 'Two frets', 'Three frets', 'Four frets'],
         answer: 'Two frets',
-        explain: 'A whole step is two frets. A half-step bend would match the next fret up.',
+        explain: 'A whole step is **two frets**. A half-step bend would match the next fret up.',
       },
       {
         kind: 'check',
         question: 'You fret fret 8 of the B (Si) string, which is G (Sol), and bend it a whole step. Which note do you reach?',
         options: ['A (La)', 'G# (Sol#)', 'B (Si)', 'F# (Fa#)'],
         answer: 'A (La)',
-        explain:
-          'A whole step is two frets, so the bent note sounds like fret 10, which is A (La). G# (Sol#) would be only a half-step bend.',
+        explain: 'A whole step is **two frets**, so the bent note sounds like fret 10: A (La). G# (Sol#) would be a half-step bend.',
       },
       {
         kind: 'check',
@@ -139,7 +146,7 @@ export const UNIT_6: readonly Lesson[] = [
           'Bend and then check the tuner',
         ],
         answer: 'Play the target note first, then bend until it sounds the same',
-        explain: 'Your ear is the judge. Hearing the target first gives you the pitch to aim for.',
+        explain: 'Your ear is the judge. **Hearing the target first** gives you the pitch to aim for.',
       },
       {
         kind: 'check',
@@ -151,7 +158,7 @@ export const UNIT_6: readonly Lesson[] = [
           'Presses only at the end',
         ],
         answer: 'Stays pressed on the string all the way',
-        explain: 'Lifting would stop the note. The sound of a slide is the pitch moving while the string keeps ringing.',
+        explain: 'Lifting would stop the note. A slide is the pitch moving while the string **keeps ringing**.',
       },
     ],
   },
@@ -162,35 +169,48 @@ export const UNIT_6: readonly Lesson[] = [
     goal: 'Play Fmaj7 (Fa major seventh) and work up to the full F (Fa) barre chord.',
     steps: [
       {
-        kind: 'text',
-        title: 'The hard one',
-        body: [
-          'F (Fa) is the chord most beginners dread, because it needs a barre: your index finger lies flat across the strings at fret 1 and works like a movable nut. It takes weeks, not days. Everyone struggles with it, and that is normal.',
-          'Fmaj7 (Fa major seventh) is the stepping stone. On the D (Re), G (Sol) and B (Si) strings it plays the same notes as F (Fa), with no barre: ring on fret 3, middle on fret 2, index on fret 1. The open high E (Mi) string is the extra note.',
+        kind: 'explain',
+        headline: 'F (Fa) needs a barre',
+        visual: { kind: 'illustration', name: 'barre' },
+        points: [
+          'A **barre**: your index lies flat across the strings at fret 1, like a movable nut.',
+          'Roll it onto its ==bony edge==, close to the fret wire. Thumb low behind the neck.',
+          'It takes weeks, not days. Everyone struggles.',
+        ],
+      },
+      {
+        kind: 'explain',
+        headline: 'Warm up with Fmaj7 (Fa major seventh)',
+        visual: gripNeck('Fmaj7-open', [0, 4]),
+        points: [
+          'On the D (Re), G (Sol) and B (Si) strings it plays the same notes as F (Fa): no barre.',
+          'Ring on fret 3, middle on fret 2, index on fret 1.',
+          'The open high E (Mi) string is the ==extra note==.',
         ],
       },
       {
         kind: 'chord',
         chordId: 'Fmaj7-open',
-        caption: 'Four strings only. Index on fret 1 of the B (Si) string, middle on fret 2 of the G (Sol) string, ring on fret 3 of the D (Re) string.',
+        caption: 'Four strings only. Index **B (Si) string, fret 1**. Middle **G (Sol), fret 2**. Ring **D (Re), fret 3**.',
       },
       {
-        kind: 'text',
-        title: 'Then add the barre',
-        body: [
-          'Now lay your index finger flat across fret 1 so it also presses the high E (Mi) string. The open E (Mi) turns into F (Fa), and the four thin strings now make a full F (Fa) chord.',
-          'For the full six-string barre, roll your index finger slightly onto its bony edge, keep it close to the fret wire, and put your thumb low behind the neck. Squeezing with the whole hand will not help; use the finger, and let the weight of your arm do some of the work.',
-          'Check every string one at a time. Pluck, listen, and adjust until all six ring clearly.',
+        kind: 'explain',
+        headline: 'The barre turns E (Mi) into F (Fa)',
+        visual: { kind: 'notes', notes: ['E', 'F'] },
+        points: [
+          'Lay your index flat across fret 1: it also presses the high E (Mi) string.',
+          'The open E (Mi) turns into F (Fa), and the thin strings make a full F (Fa) chord.',
         ],
+        warn: 'Squeezing with the whole hand won\'t help. ==Use the finger==, and let your arm\'s weight help.',
       },
       {
         kind: 'chord',
         chordId: 'F-barre',
-        caption: 'Index across all six strings at fret 1, middle on fret 2 of the G (Sol) string, ring on fret 3 of the A (La) string, pinky on fret 3 of the D (Re) string.',
+        caption: 'Index across all six strings at fret 1. Middle **fret 2, G (Sol)**. Ring **fret 3, A (La)**. Pinky **fret 3, D (Re)**.',
       },
       {
         kind: 'listen',
-        caption: 'Hold the F (Fa) barre and pluck each string one at a time, thickest first. Each should ring clearly, with no buzz.',
+        caption: 'Hold the F (Fa) barre and pluck each string, thickest first. **Each should ring clearly**, with no buzz.',
         targets: [
           { stringIndex: 0, fret: 1 },
           { stringIndex: 1, fret: 3 },
@@ -201,10 +221,13 @@ export const UNIT_6: readonly Lesson[] = [
         ],
       },
       {
-        kind: 'text',
-        title: 'Practise it kindly',
-        body: [
-          'Work in short bursts: 30 seconds of barre, then shake your hand out. Move slowly between F (Fa) and C (Do), and between F (Fa) and Am (La minor), counting four beats on each.',
+        kind: 'explain',
+        headline: 'Practise it kindly',
+        visual: { kind: 'chords', chordIds: ['F-barre', 'C-open', 'Am-open'] },
+        points: [
+          'Short bursts: ==30 seconds of barre==, then shake your hand out.',
+          'Move slowly between F (Fa) and C (Do), and F (Fa) and Am (La minor).',
+          'Count four beats on each.',
         ],
       },
       {
@@ -212,8 +235,7 @@ export const UNIT_6: readonly Lesson[] = [
         question: 'What does Fmaj7 (Fa major seventh) add to F (Fa), A (La), C (Do)?',
         options: ['E (Mi)', 'Eb (Mib)', 'G (Sol)', 'D (Re)'],
         answer: 'E (Mi)',
-        explain:
-          'Fmaj7 (Fa major seventh) is F (Fa), A (La), C (Do) and E (Mi), the note one fret below F (Fa). Eb (Mib) would make it F7 (Fa dominant seventh) instead.',
+        explain: 'Fmaj7 (Fa major seventh) adds E (Mi), the note **one fret below** F (Fa). Eb (Mib) would make F7 (Fa dominant seventh).',
       },
       {
         kind: 'check',
@@ -225,7 +247,7 @@ export const UNIT_6: readonly Lesson[] = [
           'Across the two thinnest strings at fret 3',
         ],
         answer: 'Across all six strings at fret 1',
-        explain: 'The index finger presses every string at fret 1, while the other three fingers make the shape on frets 2 and 3.',
+        explain: 'The index presses **every string at fret 1**. The other three fingers make the shape on frets 2 and 3.',
       },
       {
         kind: 'check',
@@ -237,8 +259,7 @@ export const UNIT_6: readonly Lesson[] = [
           'Barre only the thickest string',
         ],
         answer: 'Roll the index finger slightly onto its bony edge and keep it close to the fret wire',
-        explain:
-          'Buzzing usually comes from the soft part of the finger, or a joint crease, lying over a string. The bony edge presses cleanly, and close to the wire it needs less force.',
+        explain: 'Buzz comes from the soft part of the finger lying over a string. The **bony edge** presses cleanly, with less force.',
       },
     ],
   },
@@ -249,33 +270,41 @@ export const UNIT_6: readonly Lesson[] = [
     goal: 'Set up a 15-minute daily routine that keeps you getting better.',
     steps: [
       {
-        kind: 'text',
-        title: 'Little and often',
-        body: [
-          'Fifteen minutes every day beats two hours on Sunday. Your fingers and your memory learn while you rest, and short sessions toughen your fingertips without hurting your hand.',
-          'Slow and clean is the whole secret. Play at a speed where you make no mistakes, with the metronome on. When it is easy several times in a row, raise the tempo by about 5 bpm. Speed arrives on its own.',
-          'When one bar keeps going wrong, do not replay the whole piece. Loop just that bar, or just that chord change, slowly, until it is clean. Then put it back.',
+        kind: 'explain',
+        headline: 'Your 15-minute session',
+        visual: { kind: 'illustration', name: 'practice-plan' },
+        points: [
+          '3 min warm-up. 5 min on your newest thing, slow and clean.',
+          '4 min on a song you half know.',
+          '3 min of ==whatever you like==. That is why you picked up the guitar.',
         ],
+        tip: '**Every day beats once a week.** Fingers and memory learn while you rest.',
       },
       {
-        kind: 'text',
-        title: 'A 15-minute session',
-        body: [
-          'Three minutes: warm-up, below. Five minutes: the newest thing you are learning, slow and clean. Four minutes: a song or tune you already half know. Three minutes: play whatever you like, because that is why you picked up the guitar.',
+        kind: 'explain',
+        headline: 'Slow and clean wins',
+        visual: { kind: 'illustration', name: 'slow-loop' },
+        points: [
+          'Play at a speed with **no mistakes**, metronome on.',
+          'Easy several times in a row? Add ==5 bpm==.',
+          'One bar keeps going wrong? Loop just that bar, slowly, until it is clean.',
         ],
       },
       {
         kind: 'riff',
         riffId: 'chromatic-warmup',
-        caption:
-          'Your warm-up: frets 1, 2, 3 and 4 with fingers 1, 2, 3 and 4, on the low E (Mi), A (La), D (Re) and G (Sol) strings in turn. Keep each finger close to the string, and start slow.',
+        caption: 'Your warm-up: frets 1-2-3-4, fingers 1-2-3-4, on the low E (Mi), A (La), D (Re), G (Sol) strings. **Stay close to the strings.**',
       },
       {
-        kind: 'text',
-        title: 'Where to go next',
-        body: [
-          'You have been through the whole course. The Songs tab has more chord songs and melodies to try, the Feed serves up riffs and chords to pick up, and the Quiz keeps your note names sharp. Come back to any lesson here whenever something feels shaky.',
+        kind: 'explain',
+        headline: 'Where to go next',
+        visual: { kind: 'notes', notes: ['A', 'B', 'C', 'D', 'E', 'F', 'G'] },
+        points: [
+          'The **Songs** tab has more chord songs and melodies.',
+          'The Feed serves up riffs and chords to pick up.',
+          'The Quiz keeps your ==note names== sharp.',
         ],
+        tip: 'You finished the course. Come back to any lesson when something feels shaky.',
       },
       {
         kind: 'check',
@@ -287,8 +316,7 @@ export const UNIT_6: readonly Lesson[] = [
           'Only when you learn a new song',
         ],
         answer: 'Fifteen minutes every day',
-        explain:
-          'Skills settle between sessions. Frequent short practice gives your hands and memory more nights to absorb it.',
+        explain: 'Skills settle between sessions. **Short and often** gives your hands and memory more nights to absorb it.',
       },
       {
         kind: 'check',
@@ -300,8 +328,7 @@ export const UNIT_6: readonly Lesson[] = [
           'Play from the beginning every time',
         ],
         answer: 'Loop just that change, slowly, until it is clean',
-        explain:
-          'Replaying the whole song spends most of your time on parts you already know. Looping the hard spot puts the practice where the problem is.',
+        explain: 'Replaying the whole song wastes time on parts you know. **Loop the hard spot** and practise where the problem is.',
       },
       {
         kind: 'check',
@@ -313,8 +340,7 @@ export const UNIT_6: readonly Lesson[] = [
           'Never: stay at one speed',
         ],
         answer: 'When it is clean and easy several times in a row, by about 5 bpm',
-        explain:
-          'Small steps keep you playing clean. Speeding up before it is solid just practises the mistakes faster.',
+        explain: 'Small steps keep you clean. Speeding up too soon just ==practises the mistakes faster==.',
       },
     ],
   },

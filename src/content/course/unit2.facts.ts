@@ -39,6 +39,9 @@ export const UNIT_2_FACTS: readonly LessonFacts[] = [
       fact.semitones('B', 'C', 1),
       // The A-string fretboard step: "two nearly everywhere, one from B to C and E to F".
       ...aStringLandmarks,
+      // The half-step card: A, A# and B on the A string, one fret then two.
+      fact.note(A_STRING, 1, 'A#'),
+      fact.semitones('A', 'A#', 1),
     ],
   },
   {
@@ -46,6 +49,9 @@ export const UNIT_2_FACTS: readonly LessonFacts[] = [
     facts: [
       fact.semitones('C', 'C#', 1),
       fact.semitones('Db', 'D', 1),
+      // "No sharp between E and F, or B and C": already one fret apart, at frets 0-1 and 7-8.
+      fact.semitones('E', 'F', 1),
+      fact.semitones('B', 'C', 1),
       fact.semitones('C#', 'Db', 0),
       // The whole low E string, fret by fret.
       ...fact.notesOn(LOW_E, {
@@ -104,7 +110,10 @@ export const UNIT_2_FACTS: readonly LessonFacts[] = [
     lesson: 'a-string-notes',
     facts: [
       ...aStringLandmarks,
-      // Frets 7 and 8 are a half step on both strings; so are 2-3 on the A string.
+      // Frets 7 and 8 are a half step on both strings: B-C on the low E, E-F on the A string.
+      fact.note(LOW_E, 7, 'B'),
+      fact.note(LOW_E, 8, 'C'),
+      // Frets 2 and 3 of the A string are B-C too.
       fact.semitones('B', 'C', 1),
       fact.semitones('E', 'F', 1),
       // "fret 5 of the low E string is A, the open string next door".
@@ -129,8 +138,9 @@ export const UNIT_2_FACTS: readonly LessonFacts[] = [
   {
     lesson: 'octaves',
     facts: [
-      // 12 frets up one string.
+      // 12 frets up one string (the card shows the A string; the low E works the same).
       fact.samePitch({ stringIndex: LOW_E, fret: 0 }, { stringIndex: LOW_E, fret: 12 }, 1),
+      fact.samePitch({ stringIndex: A_STRING, fret: 0 }, { stringIndex: A_STRING, fret: 12 }, 1),
       // From strings 6 and 5: two strings thinner, two frets higher.
       fact.samePitch({ stringIndex: 0, fret: 3 }, { stringIndex: 2, fret: 5 }, 1),
       fact.samePitch({ stringIndex: 1, fret: 3 }, { stringIndex: 3, fret: 5 }, 1),
@@ -146,6 +156,10 @@ export const UNIT_2_FACTS: readonly LessonFacts[] = [
       // Higher up the same octave needs three frets, not two (D string to B string, G string to high E).
       fact.samePitch({ stringIndex: 2, fret: 0 }, { stringIndex: 4, fret: 3 }, 1),
       fact.samePitch({ stringIndex: 3, fret: 0 }, { stringIndex: 5, fret: 3 }, 1),
+      // "The 2-fret shape from string 4 or 3 lands one fret too low": D open, two strings up, fret 2 is C#.
+      fact.note(2, 0, 'D'),
+      fact.note(4, 2, 'C#'),
+      fact.note(4, 3, 'D'),
       // The wrong answers to the octave check name different notes.
       fact.note(2, 5, 'G'),
       fact.note(1, 7, 'E'),

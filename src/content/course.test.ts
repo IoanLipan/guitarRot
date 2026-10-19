@@ -30,6 +30,7 @@ import { UNIT_6_FACTS } from './course/unit6.facts';
 import type { Fact, LessonFacts } from './course/facts';
 import { findRiff } from './drills';
 import { validateLesson, type Lesson, type LessonStep } from './lessons';
+import { parseRich, plainText, richProblems } from './rich';
 import { SONGS, getSong } from './songCatalog';
 import { chartBars, isUpstroke, patternBeats, songToRiff } from './songs';
 
@@ -89,6 +90,17 @@ function lessonById(id: string): Lesson {
   const lesson = COURSE.find((l) => l.id === id);
   if (lesson === undefined) throw new Error(`no lesson ${id}`);
   return lesson;
+}
+
+type ExplainStep = Extract<LessonStep, { kind: 'explain' }>;
+
+function explainCards(lesson: Lesson): ExplainStep[] {
+  return lesson.steps.filter((s): s is ExplainStep => s.kind === 'explain');
+}
+
+/** Everything an explain card says: headline, points, tip, warning. */
+function cardTexts(card: ExplainStep): string[] {
+  return [card.headline, ...card.points, ...(card.tip === undefined ? [] : [card.tip]), ...(card.warn === undefined ? [] : [card.warn])];
 }
 
 function chordById(id: string): ChordShape {
@@ -299,7 +311,7 @@ describe('the course', () => {
     expect(groups).toEqual(EXPECTED_UNITS.map(([unit, count]) => [unit, count]));
   });
 
-  it('validates every lesson', () => {
+  it('validates every lesson, including each explain card\'s limits, visuals and markup', () => {
     expect(COURSE.flatMap((l) => validateLesson(l))).toEqual([]);
   });
 
@@ -328,7 +340,7 @@ describe('the course', () => {
 
   it('follows explain, show, play, check in every lesson', () => {
     for (const lesson of COURSE) {
-      expect(lesson.steps[0]?.kind, `${lesson.id} opens with an explanation`).toBe('text');
+      expect(lesson.steps[0]?.kind, `${lesson.id} opens with an explanation`).toBe('explain');
       expect(
         lesson.steps.some((s) => ['riff', 'song', 'listen', 'tuner'].includes(s.kind)),
         `${lesson.id} has the learner play something`,
@@ -338,15 +350,72 @@ describe('the course', () => {
     }
   });
 
-  it('keeps text short: at most three paragraphs, each a few sentences', () => {
+  it('has no text-only screens: every explanation is a visual card', () => {
+    for (const lesson of COURSE) {
+      expect(
+        lesson.steps.filter((s) => s.kind === 'text').map((_, i) => `${lesson.id} text step ${i + 1}`),
+      ).toEqual([]);
+    }
+  });
+
+  it('opens every lesson with an explain card and gives it at least two', () => {
+    for (const lesson of COURSE) {
+      expect(lesson.steps[0]?.kind, `${lesson.id} first step`).toBe('explain');
+      expect(explainCards(lesson).length, `${lesson.id} cards`).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('highlights on purpose: every card marks something, and none is confetti', () => {
+    const marks = (text: string): number => parseRich(text).filter((t) => t.kind === 'strong' || t.kind === 'mark').length;
     for (const lesson of COURSE) {
       lesson.steps.forEach((step, i) => {
-        if (step.kind !== 'text') return;
-        expect(step.body.length, `${lesson.id} step ${i + 1}`).toBeLessThanOrEqual(3);
-        for (const paragraph of step.body) {
-          expect(paragraph.length, `${lesson.id} step ${i + 1}: ${paragraph.slice(0, 40)}`).toBeLessThanOrEqual(520);
-        }
+        if (step.kind !== 'explain') return;
+        const total = cardTexts(step).reduce((sum, text) => sum + marks(text), 0);
+        const where = `${lesson.id} card at step ${i + 1} ("${step.headline}")`;
+        expect(total, where).toBeGreaterThanOrEqual(1);
+        expect(total, where).toBeLessThanOrEqual(3);
       });
+    }
+  });
+
+  it('never puts two identical pictures back to back', () => {
+    for (const lesson of COURSE) {
+      lesson.steps.forEach((step, i) => {
+        const next = lesson.steps[i + 1];
+        if (step.kind !== 'explain' || next?.kind !== 'explain') return;
+        expect(JSON.stringify(next.visual), `${lesson.id}: "${step.headline}" then "${next.headline}"`).not.toBe(
+          JSON.stringify(step.visual),
+        );
+      });
+    }
+  });
+
+  it('keeps captions to 140 visible characters', () => {
+    for (const lesson of COURSE) {
+      lesson.steps.forEach((step, i) => {
+        if (step.kind !== 'fretboard' && step.kind !== 'listen' && step.kind !== 'riff' && step.kind !== 'song' && step.kind !== 'chord') return;
+        if (step.caption === undefined) return;
+        const where = `${lesson.id} step ${i + 1} (${step.kind})`;
+        expect(richProblems(step.caption), where).toEqual([]);
+        expect(plainText(step.caption).length, `${where}: ${step.caption}`).toBeLessThanOrEqual(140);
+      });
+    }
+  });
+
+  it('marks up the answer explanation of every check, in 160 visible characters or fewer', () => {
+    for (const lesson of COURSE) {
+      for (const step of lesson.steps) {
+        if (step.kind !== 'check') continue;
+        const where = `${lesson.id}: ${step.question}`;
+        expect(richProblems(step.explain), where).toEqual([]);
+        expect(plainText(step.explain).length, `${where}: ${step.explain}`).toBeLessThanOrEqual(160);
+        expect(
+          parseRich(step.explain).some((t) => t.kind === 'strong' || t.kind === 'mark'),
+          `${where} explain has no highlight`,
+        ).toBe(true);
+        // Questions and options stay plain: the answer is compared as written.
+        expect([step.question, ...step.options].filter((t) => /\*\*|==/.test(t)), where).toEqual([]);
+      }
     }
   });
 
@@ -374,7 +443,7 @@ describe('the course', () => {
       const at = COURSE.findIndex((l) => l.title === title);
       const here = COURSE.findIndex((l) => l.id === from);
       expect(at, `${from} points back to "${title}"`).toBeLessThan(here);
-      const mentioned = lessonById(from).steps.some((s) => s.kind === 'text' && s.body.some((p) => p.includes(`"${title}"`)));
+      const mentioned = explainCards(lessonById(from)).some((card) => cardTexts(card).some((p) => p.includes(`"${title}"`)));
       expect(mentioned, `${from} mentions "${title}"`).toBe(true);
     }
   });
@@ -423,7 +492,9 @@ describe('what the course teaches about chords', () => {
               ? songChords(step.songId)
               : step.kind === 'riff'
                 ? [...(DRILL_CHORDS[step.riffId] ?? [])]
-                : [];
+                : step.kind === 'explain' && step.visual.kind === 'chords'
+                  ? step.visual.chordIds.map((id) => chordById(id).name)
+                  : [];
         for (const name of used) expect(taught.has(name), `${lesson.id} uses ${name} before it is taught`).toBe(true);
       }
     }
@@ -479,6 +550,15 @@ describe('fretboard and listen steps agree with the drills beside them', () => {
     for (const p of positions.filter((q) => q.fret > 0)) {
       expect(open.has(fretToMidi(T, p.stringIndex, p.fret)), `s${p.stringIndex} f${p.fret}`).toBe(true);
     }
+  });
+
+  it('labels the scale fingers one per fret: fret 1 index, 2 middle, 3 ring, open is 0', () => {
+    const card = explainCards(lessonById('major-scale')).find((c) => c.visual.kind === 'neck');
+    if (card?.visual.kind !== 'neck') throw new Error('major-scale has no neck card');
+    const shown = card.visual.dots.map(keyOf).sort();
+    const played = [...new Set(riffById('c-major-scale').events.map((e) => keyOf(e)))].sort();
+    expect(shown).toEqual(played);
+    for (const dot of card.visual.dots) expect(dot.label, `s${dot.stringIndex} f${dot.fret}`).toBe(String(dot.fret));
   });
 
   it('shows the six open strings in the strings lesson', () => {
@@ -661,8 +741,9 @@ describe('answers derived from the theory core', () => {
 
 function allStrings(): { where: string; text: string }[] {
   const out: { where: string; text: string }[] = [];
+  // Markup (**strong**, ==mark==) is stripped first, so the rules below see what a reader sees.
   const add = (where: string, text: string | undefined): void => {
-    if (text !== undefined) out.push({ where, text });
+    if (text !== undefined) out.push({ where, text: plainText(text) });
   };
   for (const lesson of COURSE) {
     add(`${lesson.id} title`, lesson.title);
@@ -670,6 +751,12 @@ function allStrings(): { where: string; text: string }[] {
     lesson.steps.forEach((step, i) => {
       const where = `${lesson.id} step ${i + 1} (${step.kind})`;
       switch (step.kind) {
+        case 'explain':
+          add(`${where} headline`, step.headline);
+          step.points.forEach((p, n) => add(`${where} point ${n + 1}`, p));
+          add(`${where} tip`, step.tip);
+          add(`${where} warn`, step.warn);
+          break;
         case 'text':
           add(`${where} title`, step.title);
           step.body.forEach((p, n) => add(`${where} paragraph ${n + 1}`, p));
