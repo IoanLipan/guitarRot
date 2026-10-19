@@ -87,7 +87,7 @@ function IllustrationView({ name }: { name: Extract<Visual, { kind: 'illustratio
       data-illustration={name}
       // The drawings cap themselves at 260 high; on a phone that crowds out the
       // words below, so the card holds them a little shorter. They letterbox.
-      className="[&_svg]:mx-auto [&_svg]:max-h-[228px]! short:[&_svg]:max-h-[200px]!"
+      className="[&_svg]:mx-auto [&_svg]:max-h-[228px]! short:[&_svg]:max-h-[min(200px,22vh)]!"
     >
       <Drawing />
     </div>
