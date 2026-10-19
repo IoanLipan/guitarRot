@@ -390,9 +390,9 @@ export const UNIT_2: readonly Lesson[] = [
         },
         points: [
           'The gap between the G (Sol) and B (Si) strings is **one fret smaller**.',
-          'From the D (Re) or G (Sol) string, go two strings up and ==three frets== higher.',
+          'From the D (Re) or G (Sol) string: two strings up, ==three frets== higher.',
         ],
-        warn: 'The 2-fret shape from string 4 or 3 lands one fret too low.',
+        warn: 'The 2-fret shape here lands one fret too low.',
       },
       {
         kind: 'riff',

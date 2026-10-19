@@ -28,7 +28,7 @@ export const UNIT_4: readonly Lesson[] = [
           '==Whole, whole, half, whole, whole, whole, half.==',
           'The half steps are E (Mi)-F (Fa) and B (Si)-C (Do), as in "The musical alphabet".',
         ],
-        tip: 'Start on any other note and the recipe gives you **that note\'s major scale**.',
+        tip: 'Start on any note: you get **that note\'s major scale**.',
       },
       {
         kind: 'fretboard',
@@ -65,11 +65,10 @@ export const UNIT_4: readonly Lesson[] = [
           highlightStrings: [1, 2, 3, 4],
         },
         points: [
-          'C (Do) on the A (La) string is your ==ring finger==.',
-          'D (Re) string: open D (Re), middle on E (Mi), ring on F (Fa).',
-          'G (Sol) string: open G (Sol), middle on A (La). B (Si) string: open B (Si), index on C (Do).',
+          'Start with your ==ring finger== on C (Do): fret 3, A (La) string.',
+          'The numbers are fingers; **0** is an open string.',
+          'D (Re) string: 0, 2, 3 are D (Re), E (Mi), F (Fa).',
         ],
-        tip: 'The numbers are fingers. **0** means an open string.',
       },
       {
         kind: 'riff',
@@ -224,7 +223,7 @@ export const UNIT_4: readonly Lesson[] = [
           'A **leap** jumps over the notes in between.',
           'Twinkle, Twinkle opens with a leap: ==Do up to Sol==.',
         ],
-        tip: 'It is a French tune from 1761. The opening is Do Do Sol Sol La La Sol.',
+        tip: 'A French tune from 1761: Do Do Sol Sol La La Sol.',
       },
       {
         kind: 'explain',
@@ -257,9 +256,9 @@ export const UNIT_4: readonly Lesson[] = [
         visual: { kind: 'notes', notes: ['C', 'D', 'E', 'C'] },
         points: [
           'It is a **round**: people start one after another, so the parts overlap.',
-          'Every phrase is played ==twice==. Repeats make a tune easy to remember.',
+          'Every phrase is played ==twice==: easy to remember.',
         ],
-        tip: 'Once it is steady, ask a friend to start the same tune two bars behind you.',
+        tip: 'Ask a friend to start two bars behind you.',
       },
       {
         kind: 'song',
@@ -321,9 +320,9 @@ export const UNIT_4: readonly Lesson[] = [
         visual: { kind: 'illustration', name: 'note-lengths' },
         points: [
           'In 4/4: whole = **4 beats**, half = 2, quarter = 1, eighth = ½.',
-          'Each length is half the one before: 1 whole = 2 halves = 4 quarters = 8 eighths.',
+          'Each is half the last: 1 whole = 2 halves = 4 quarters = 8 eighths.',
         ],
-        tip: 'A ==dot== adds half again: dotted half = 3 beats, dotted quarter = 1½.',
+        tip: 'A ==dot== adds half again: dotted half = 3 beats.',
       },
       {
         kind: 'riff',
@@ -336,10 +335,10 @@ export const UNIT_4: readonly Lesson[] = [
         visual: { kind: 'notes', notes: ['E', 'G', 'C', 'D'] },
         points: [
           'Chorus bar 3: E (Mi) on beat 1, G (Sol) on beat 2.',
-          'Then a **dotted quarter** C (Do) on beat 3, held through 4.',
+          'Then a **dotted quarter** (1½ beats) C (Do) on beat 3.',
           'A quick eighth D (Re) lands on the "&" of 4.',
         ],
-        tip: 'Count ==1 2 3 4 &==: C (Do) on 3, D (Re) on the "&".',
+        tip: 'Count ==1 2 3 4 &==.',
       },
       {
         kind: 'song',

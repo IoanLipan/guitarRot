@@ -47,10 +47,9 @@ export const UNIT_1: readonly Lesson[] = [
         visual: { kind: 'illustration', name: 'posture' },
         points: [
           'Guitar on your thigh, neck tilted slightly **up**.',
-          'Right-handed? Rest it on your right leg and fret with your left hand.',
-          'Left-handed? Mirror everything.',
+          'Right-handed: guitar on your right leg, left hand frets. Left-handed: mirror it.',
         ],
-        warn: 'Shoulders up by your ears? Let them drop. ==Nothing about guitar should hurt.==',
+        warn: 'Shoulders up? Let them drop. ==Nothing about guitar should hurt.==',
       },
       {
         kind: 'fretboard',
@@ -101,7 +100,7 @@ export const UNIT_1: readonly Lesson[] = [
           'Strings drift out of tune, new ones most. ==Tune before you play.==',
           'Tighten the string and the note goes **up**. Loosen it and it goes down.',
         ],
-        tip: 'Pluck firmly once and let it ring while you turn the peg in small steps.',
+        tip: 'Pluck once, let it ring, turn in small steps.',
       },
       {
         kind: 'explain',
@@ -112,7 +111,7 @@ export const UNIT_1: readonly Lesson[] = [
           'Right of centre: too high. Loosen it.',
           'Dead centre, in green: ==in tune==.',
         ],
-        warn: 'Went too high? Drop **below** the note, then tighten back up to it. It stays in tune longer.',
+        warn: 'Went too high? Drop **below** the note, then tighten up to it.',
       },
       { kind: 'tuner' },
       {
@@ -154,10 +153,10 @@ export const UNIT_1: readonly Lesson[] = [
           tapToHear: true,
         },
         points: [
-          'The G (Sol) string is the odd one out: press it at ==fret 4== to match the open B (Si).',
-          'Then press B (Si) at fret 5 to match the open high E (Mi).',
+          'The G (Sol) string is the odd one: press ==fret 4== to match the open B (Si).',
+          'Then B (Si) at fret 5 matches the open high E (Mi).',
         ],
-        tip: 'Two strings almost in tune make a slow wobble. **Turn the peg until the wobble fades.**',
+        tip: 'A slow wobble means you are close. **Turn until it fades.**',
       },
       {
         kind: 'fretboard',
@@ -249,11 +248,10 @@ export const UNIT_1: readonly Lesson[] = [
         headline: 'Hold the pick',
         visual: { kind: 'illustration', name: 'pick-grip' },
         points: [
-          'Pick between your **thumb pad** and the side of your index finger.',
-          'Only the **tip** shows. Firm enough not to fall out, loose enough not to rattle.',
-          'Pick down, with a small move from the wrist.',
+          'Hold it between your **thumb pad** and the side of your index finger.',
+          'Only the tip shows. Pick down, with a small move from the wrist.',
         ],
-        tip: 'Aim for ==one clean note per pick==.',
+        tip: 'Firm, not tight. Aim for ==one clean note per pick==.',
       },
       {
         kind: 'riff',
@@ -314,11 +312,10 @@ export const UNIT_1: readonly Lesson[] = [
         headline: 'One finger per fret',
         visual: { kind: 'illustration', name: 'finger-numbers' },
         points: [
-          'Index = fret 1, middle = 2, ring = 3, pinky = 4.',
+          '==Index = fret 1, middle = 2, ring = 3, pinky = 4.==',
           'Curve your fingers so only the **tips** touch the strings.',
           'Thumb stays behind the neck. Don\'t squeeze.',
         ],
-        tip: '==One finger per fret== keeps your hand in one place.',
       },
       {
         kind: 'fretboard',
@@ -350,10 +347,10 @@ export const UNIT_1: readonly Lesson[] = [
         headline: 'Buzz or a dead note?',
         visual: { kind: 'illustration', name: 'fret-finger' },
         points: [
-          '**Buzz**: your finger is too far from the wire. Slide closer, press a bit firmer.',
-          '**Dull thud**: another finger is touching the string. Curve it more.',
+          '**Buzz**: finger too far from the wire. Slide closer, press a bit firmer.',
+          '**Dull thud**: another finger touches the string. Curve it more.',
         ],
-        tip: 'Sore fingertips are normal for 1–2 weeks. ==Short bursts== toughen the skin.',
+        tip: 'Sore tips are normal. ==Short bursts== toughen them.',
       },
       {
         kind: 'check',

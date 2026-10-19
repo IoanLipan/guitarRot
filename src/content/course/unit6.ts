@@ -16,20 +16,20 @@ export const UNIT_6: readonly Lesson[] = [
         headline: 'Notes without the pick',
         visual: { kind: 'illustration', name: 'hammer-pull' },
         points: [
-          '**Hammer-on**: pick a note, then drop another finger on a higher fret. ==The impact rings it.==',
-          '**Pull-off**: pick a fretted note, then flick the finger away. The lower note rings.',
+          '**Hammer-on**: pick once, then drop a finger on a higher fret.',
+          '**Pull-off**: pick, then flick the finger away. The lower note rings.',
         ],
-        tip: 'Smoother (legato) and faster: your fretting hand does the work and your picking hand rests.',
+        tip: 'Both are legato: ==smooth and fast==.',
       },
       {
         kind: 'explain',
         headline: 'Land right behind the wire',
         visual: { kind: 'illustration', name: 'fret-finger' },
         points: [
-          'Hammer-on: finger curved, just above the fret. Drop it ==fast and firm==, right behind the wire.',
-          'Pull-off: pull the finger **sideways, toward the floor**. It plucks the string as it leaves.',
+          'Hammer-on: drop the curved finger ==fast and firm==, right behind the wire.',
+          'Pull-off: pull **sideways, toward the floor**. It plucks the string.',
         ],
-        warn: 'Second note too quiet? Hammer faster and firmer. Pull off sideways, not straight up.',
+        warn: 'Second note too quiet? Hammer faster and firmer.',
       },
       {
         kind: 'riff',
@@ -81,9 +81,8 @@ export const UNIT_6: readonly Lesson[] = [
         visual: { kind: 'illustration', name: 'slide-bend' },
         points: [
           'Pick a note, keep pressing, and ==glide== to the new fret.',
-          'The pitch moves smoothly through the notes in between.',
         ],
-        tip: 'Press firmly enough to keep it ringing, lightly enough to glide.',
+        tip: 'Press firmly enough to ring, lightly enough to glide.',
         warn: 'Lift your finger and the sound stops. **Stay pressed until you arrive.**',
       },
       {
@@ -101,11 +100,10 @@ export const UNIT_6: readonly Lesson[] = [
         headline: 'Ring finger bends, friends help',
         visual: { kind: 'illustration', name: 'finger-numbers' },
         points: [
-          'Push with your **ring finger**. Middle and index sit on the frets behind it.',
-          'Turn your wrist like a door handle. Don\'t just push with the finger.',
-          'Bends are easier on the thin strings.',
+          'Push with your **ring finger**; middle and index help from behind.',
+          'Turn your wrist like a door handle, not just the finger.',
         ],
-        tip: 'Play the target first, then bend the lower note until ==it matches==.',
+        tip: 'Play the target first, then bend until ==it matches==.',
       },
       {
         kind: 'fretboard',
@@ -173,9 +171,9 @@ export const UNIT_6: readonly Lesson[] = [
         headline: 'F (Fa) needs a barre',
         visual: { kind: 'illustration', name: 'barre' },
         points: [
-          'A **barre**: your index lies flat across the strings at fret 1, like a movable nut.',
-          'Roll it onto its ==bony edge==, close to the fret wire. Thumb low behind the neck.',
-          'It takes weeks, not days. Everyone struggles.',
+          'A **barre**: your index lies flat across the strings, like a movable nut.',
+          'Roll it onto its ==bony edge==, close to the wire. Thumb low behind the neck.',
+          'It takes weeks, not days.',
         ],
       },
       {
@@ -198,10 +196,10 @@ export const UNIT_6: readonly Lesson[] = [
         headline: 'The barre turns E (Mi) into F (Fa)',
         visual: { kind: 'notes', notes: ['E', 'F'] },
         points: [
-          'Lay your index flat across fret 1: it also presses the high E (Mi) string.',
-          'The open E (Mi) turns into F (Fa), and the thin strings make a full F (Fa) chord.',
+          'Index flat across fret 1 also presses the high E (Mi) string.',
+          'Open E (Mi) becomes F (Fa): a full F (Fa) chord on the thin strings.',
         ],
-        warn: 'Squeezing with the whole hand won\'t help. ==Use the finger==, and let your arm\'s weight help.',
+        warn: 'Don\'t squeeze your whole hand. ==Use the finger.==',
       },
       {
         kind: 'chord',
@@ -276,9 +274,9 @@ export const UNIT_6: readonly Lesson[] = [
         points: [
           '3 min warm-up. 5 min on your newest thing, slow and clean.',
           '4 min on a song you half know.',
-          '3 min of ==whatever you like==. That is why you picked up the guitar.',
+          '3 min of ==whatever you like==.',
         ],
-        tip: '**Every day beats once a week.** Fingers and memory learn while you rest.',
+        tip: '**Every day beats once a week.** You learn while you rest.',
       },
       {
         kind: 'explain',
@@ -300,11 +298,11 @@ export const UNIT_6: readonly Lesson[] = [
         headline: 'Where to go next',
         visual: { kind: 'notes', notes: ['A', 'B', 'C', 'D', 'E', 'F', 'G'] },
         points: [
-          'The **Songs** tab has more chord songs and melodies.',
-          'The Feed serves up riffs and chords to pick up.',
+          'The **Songs** tab: more chord songs and melodies.',
+          'The Feed: riffs and chords to pick up.',
           'The Quiz keeps your ==note names== sharp.',
         ],
-        tip: 'You finished the course. Come back to any lesson when something feels shaky.',
+        tip: 'Course done. Come back to any lesson when it feels shaky.',
       },
       {
         kind: 'check',

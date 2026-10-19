@@ -17,10 +17,9 @@ export const UNIT_3: readonly Lesson[] = [
         visual: { kind: 'illustration', name: 'chord-notes' },
         points: [
           'A **chord** is several notes played at once.',
-          'Press the shape, then ==strum thickest to thinnest in one sweep==.',
-          'Em (Mi minor) is E (Mi) + G (Sol) + B (Si). Minor chords sound darker and sadder.',
+          'Strum ==thickest to thinnest in one sweep==.',
+          'Em (Mi minor) is E (Mi) + G (Sol) + B (Si): darker and sadder than major.',
         ],
-        tip: 'Em (Mi minor) is the friendliest chord: two fingers, all six strings ring.',
       },
       {
         kind: 'chord',
@@ -32,12 +31,10 @@ export const UNIT_3: readonly Lesson[] = [
         headline: 'Make it ring',
         visual: { kind: 'illustration', name: 'finger-numbers' },
         points: [
-          'Arch your fingers so only the **tips** touch the strings.',
-          'Thumb stays behind the neck.',
-          'Strum with a loose wrist. ==A clean sweep beats a hard hit.==',
+          'Arch your fingers: only the **tips** touch. Thumb behind the neck.',
+          'Strum with a loose wrist: ==a clean sweep beats a hard hit==.',
         ],
-        tip: 'Check it: pluck one string at a time, thickest first. All six should ring.',
-        warn: 'A dead or buzzing string? Find the finger touching it and fix the arch.',
+        warn: 'Dead string? Pluck one at a time to find the finger touching it.',
       },
       {
         kind: 'riff',
@@ -98,10 +95,9 @@ export const UNIT_3: readonly Lesson[] = [
         visual: { kind: 'illustration', name: 'chord-symbols' },
         points: [
           'The lowest note of Am (La minor) is the open A (La) string.',
-          '==Start your strum there.== Let the pick miss the low E (Mi).',
+          '==Start your strum there.== The low E (Mi) would make it muddy.',
           'On a diagram: X = skip it, O = ring it open, numbers = fingers.',
         ],
-        warn: 'Ringing the low E (Mi) makes the chord muddy.',
       },
       {
         kind: 'chord',
@@ -116,8 +112,7 @@ export const UNIT_3: readonly Lesson[] = [
           'Middle and ring fingers keep their shape and ==slide over together==.',
           'The index finger drops onto fret 1 of the B (Si) string.',
         ],
-        tip: 'Practise silently: make the shape, count to four, change, count to four.',
-        warn: 'Moving finger by finger is slow. **Move the whole shape at once.**',
+        tip: 'Practise silently: shape, count four, change, count four.',
       },
       {
         kind: 'riff',
@@ -169,7 +164,7 @@ export const UNIT_3: readonly Lesson[] = [
         visual: gripNeck('D-open', [0, 4]),
         points: [
           'Three fingers make a ==triangle== on the three thinnest strings.',
-          'Index: fret 2, G (Sol) string. Middle: fret 2, high E (Mi) string. Ring: fret 3, B (Si) string.',
+          'Index: fret 2, G (Sol). Middle: fret 2, high E (Mi). Ring: fret 3, B (Si).',
         ],
         tip: 'Major chords like this sound **bright and open**.',
       },
@@ -183,10 +178,10 @@ export const UNIT_3: readonly Lesson[] = [
         headline: 'A (La): three side by side',
         visual: gripNeck('A-open', [0, 3]),
         points: [
-          'Index, middle and ring all sit on **fret 2**, on the D (Re), G (Sol) and B (Si) strings.',
-          'The open A (La) string is the root. Start the strum there and skip the low E (Mi).',
+          'Three fingers side by side on **fret 2**: D (Re), G (Sol), B (Si) strings.',
+          'Start the strum on the open A (La) string. Skip the low E (Mi).',
         ],
-        warn: 'Ring finger leaning on the high E (Mi) string mutes it. ==Arch it== until the thin string rings.',
+        warn: 'Ring finger muting the high E (Mi) string? ==Arch it==.',
       },
       {
         kind: 'chord',
@@ -246,11 +241,11 @@ export const UNIT_3: readonly Lesson[] = [
         headline: 'G (Sol): the big stretch',
         visual: gripNeck('G-open', [0, 4]),
         points: [
-          'Ring finger on **fret 3** of the low E (Mi) string.',
-          'Middle finger on fret 2 of the A (La) string.',
-          'Pinky on fret 3 of the high E (Mi) string. The middle strings ring open.',
+          'Ring finger: **fret 3**, low E (Mi) string.',
+          'Middle finger: fret 2, A (La) string.',
+          'Pinky: fret 3, high E (Mi) string. The rest ring open.',
         ],
-        tip: 'Awkward at first? ==Normal.== Build it one finger at a time, thickest string first.',
+        tip: 'Awkward at first? ==Normal.== Add one finger at a time.',
       },
       {
         kind: 'chord',
@@ -263,10 +258,9 @@ export const UNIT_3: readonly Lesson[] = [
         visual: gripNeck('C-open', [0, 4]),
         points: [
           'Ring finger on **fret 3** of the A (La) string.',
-          'Middle on fret 2 of the D (Re) string. Index on fret 1 of the B (Si) string.',
+          'Middle: fret 2, D (Re) string. Index: fret 1, B (Si) string.',
           'Coming from Am (La minor)? ==Only the ring finger moves.==',
         ],
-        tip: 'Strum from the A (La) string. Skip the low E (Mi).',
       },
       {
         kind: 'chord',
@@ -278,9 +272,8 @@ export const UNIT_3: readonly Lesson[] = [
         headline: 'G (Sol) to C (Do): walk over',
         visual: { kind: 'chords', chordIds: ['G-open', 'C-open'] },
         points: [
-          'Ring and middle fingers each hop ==one string toward the floor== and keep their frets.',
-          'Ring: low E (Mi) to A (La) string, fret 3. Middle: A (La) to D (Re) string, fret 2.',
-          'The index lands on fret 1 of the B (Si) string. The pinky lifts away.',
+          'Ring and middle each hop ==one string toward the floor== and keep their frets.',
+          'Index lands on fret 1 of the B (Si) string. Pinky lifts away.',
         ],
         tip: 'Think of your fingers walking over together.',
       },
@@ -335,9 +328,9 @@ export const UNIT_3: readonly Lesson[] = [
         headline: 'Four beats to a bar',
         visual: { kind: 'illustration', name: 'beats-bar' },
         points: [
-          'Music has a pulse, like a tapping foot. Each tap is a **beat**.',
-          'Four beats make a bar: ==1 2 3 4==, 1 2 3 4. This is called 4/4.',
-          '**bpm** means beats per minute. At 60 bpm there is one beat every second.',
+          'Music has a pulse. Each tap is a **beat**.',
+          'Four beats make a bar: ==1 2 3 4==. That is 4/4.',
+          '**bpm** = beats per minute. At 60 bpm, one beat per second.',
         ],
         tip: 'One downstroke per beat = quarter notes.',
       },
@@ -346,10 +339,10 @@ export const UNIT_3: readonly Lesson[] = [
         headline: 'Play with the click',
         visual: { kind: 'chords', chordIds: ['G-open', 'C-open', 'D-open'] },
         points: [
-          'Switch on the **metronome** in the player below. It tells you honestly when you drift.',
-          'Count out loud: 1 2 3 4. Your voice keeps time when your hands are busy.',
+          'Switch on the **metronome** in the player. It shows when you drift.',
+          'Count out loud: 1 2 3 4.',
         ],
-        warn: 'Fumbled a chord? ==Never stop.== Keep your hand moving and land the next chord on time.',
+        warn: 'Fumbled a chord? ==Never stop.== Keep moving and land the next one on time.',
       },
       {
         kind: 'riff',
@@ -405,11 +398,10 @@ export const UNIT_3: readonly Lesson[] = [
         headline: 'The folk strum',
         visual: { kind: 'illustration', name: 'strum-pattern' },
         points: [
-          'Down, Down-Up, Up, Down-Up: the most useful pattern in folk and pop.',
-          'Your hand swings on every "&". On a miss, ==it touches nothing==.',
+          'Down, Down-Up, Up, Down-Up: the go-to pattern in folk and pop.',
+          'The hand swings on every "&". On a miss, ==it touches nothing==.',
           'Six strums per bar: **three down, three up**.',
         ],
-        tip: 'Step 1: swing down-up on a muted chord. Step 2: touch the strings only on the pattern\'s counts.',
       },
       {
         kind: 'riff',

@@ -18,9 +18,8 @@ export const UNIT_5: readonly Lesson[] = [
         points: [
           'A power chord has two notes: the **root** and the **fifth** above it.',
           'For E (Mi), the fifth is B (Si).',
-          'No third, so it is ==neither major nor minor==: strong and open.',
+          'No third, so ==neither major nor minor==: strong, and clear with distortion.',
         ],
-        tip: 'Rock guitarists love them: with distortion, fewer notes sound clearer.',
       },
       {
         kind: 'chord',
@@ -43,11 +42,10 @@ export const UNIT_5: readonly Lesson[] = [
           tapToHear: true,
         },
         points: [
-          'The lowest note ==names the chord==.',
-          'Shape on the low E (Mi) string: fret 3 is G5 (Sol power chord), fret 5 is A5 (La power chord).',
+          'Low E (Mi) string: **fret 3** is G5 (Sol power chord), fret 5 is A5 (La power chord).',
           'Root on the A (La) string: fret 3 is C5 (Do power chord).',
         ],
-        tip: 'The landmarks from "The low E (Mi) string" name your power chords.',
+        tip: 'Use the landmarks from "The low E (Mi) string".',
       },
       {
         kind: 'explain',
@@ -56,7 +54,7 @@ export const UNIT_5: readonly Lesson[] = [
         points: [
           'Rest the **edge of your picking hand** lightly on the strings.',
           'Right beside the ==bridge==.',
-          'Pick as usual: the notes sound tight and chunky.',
+          'Pick as usual: tight and chunky.',
         ],
         tip: 'The tab shows only the two lowest notes of each power chord.',
       },
@@ -110,8 +108,8 @@ export const UNIT_5: readonly Lesson[] = [
         headline: 'A key is a home note',
         visual: { kind: 'illustration', name: 'key-family' },
         points: [
-          'A **key** is a home note plus its scale. In the key of G (Sol), home is G (Sol).',
-          'The major chords on the ==1st, 4th and 5th== notes are called I, IV and V.',
+          'A **key** is a home note plus its scale. In G (Sol), home is G (Sol).',
+          'The major chords on the ==1st, 4th and 5th== notes are I, IV and V.',
           'In G (Sol) they are G (Sol), C (Do) and D (Re).',
         ],
       },
@@ -149,9 +147,8 @@ export const UNIT_5: readonly Lesson[] = [
         headline: 'A fourth friend: the vi',
         visual: { kind: 'chords', chordIds: ['Em-open', 'Am-open'] },
         points: [
-          '**vi** is the minor chord on the 6th note of the scale.',
+          '**vi** is the ==minor chord== on the 6th note of the scale.',
           'In G (Sol) it is Em (Mi minor). In C (Do) it is Am (La minor).',
-          'Same family, ==darker mood==.',
         ],
         tip: 'Know a song\'s key? Guess its chords: try the I, IV and V first.',
       },
@@ -260,9 +257,9 @@ export const UNIT_5: readonly Lesson[] = [
         points: [
           'Leave **gaps**: silence counts.',
           '**Repeat** a short idea.',
-          'End on the root, E (Mi), so it sounds ==finished==. The dots show where it lives.',
+          'End on the root, E (Mi), so it sounds ==finished==.',
         ],
-        tip: 'Strum Em (Mi minor) with a friend, or record it on your phone, and play along.',
+        tip: 'Record yourself strumming Em (Mi minor), then play along.',
       },
       {
         kind: 'check',
@@ -354,9 +351,9 @@ export const UNIT_5: readonly Lesson[] = [
           tapToHear: true,
         },
         points: [
-          'A (La) bar: open A (La) string, plus E (Mi) and F# (Fa#) on the D (Re) string at frets 2 and 4.',
-          'B (Si) bar: ==slide the pattern up two frets==.',
-          'Root B (Si) is fret 2 of the A (La) string. Partners: F# (Fa#) at fret 4, G# (Sol#) at fret 6.',
+          'A (La) bar: open A (La) string + frets 2 and 4 of the D (Re) string.',
+          'B (Si) bar: ==slide the whole pattern up two frets==.',
+          'Root B (Si) is fret 2 of the A (La) string.',
         ],
       },
       {

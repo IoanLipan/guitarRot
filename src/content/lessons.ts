@@ -33,7 +33,7 @@ export type Visual =
   | { kind: 'notes'; notes: readonly string[] };
 
 /** Length limits, in characters a reader sees (markup excluded). */
-export const EXPLAIN_LIMITS = { headline: 48, point: 110, callout: 110, points: 3 } as const;
+export const EXPLAIN_LIMITS = { headline: 48, point: 110, callout: 110, points: 3, total: 200 } as const;
 
 /**
  * One screen of a lesson. A lesson is a short run of these: explain, show,
@@ -278,6 +278,15 @@ function explainProblems(where: string, step: ExplainStep): string[] {
     problems.push(`${where} has ${step.points.length} points; give it 1 to ${EXPLAIN_LIMITS.points}`);
   }
   step.points.forEach((point, i) => problems.push(...textProblems(where, `point ${i + 1}`, point, EXPLAIN_LIMITS.point)));
+  // The whole card has to fit a phone screen under its picture, and be
+  // skimmable in a few seconds: about 35 words across points and callouts.
+  const total = [...step.points, step.tip ?? '', step.warn ?? ''].map((t) => plainText(t).length).reduce((a, b) => a + b, 0);
+  if (total > EXPLAIN_LIMITS.total) {
+    problems.push(`${where} carries ${total} characters of text; keep a card to ${EXPLAIN_LIMITS.total} (split it in two)`);
+  }
+  if (step.tip !== undefined && step.warn !== undefined && step.points.length > 2) {
+    problems.push(`${where} has 3 points plus a tip and a warning: too much for one screen`);
+  }
   if (step.tip !== undefined) problems.push(...textProblems(where, 'tip', step.tip, EXPLAIN_LIMITS.callout));
   if (step.warn !== undefined) problems.push(...textProblems(where, 'warn', step.warn, EXPLAIN_LIMITS.callout));
   problems.push(...visualProblems(where, step.visual));

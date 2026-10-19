@@ -10,6 +10,15 @@ const check: LessonStep = {
   explain: 'Counting from the thinnest: string 1 is E, 2 is B, 3 is G.',
 };
 
+/** A sound explain card; override pieces to break it. */
+const card = (over: Partial<Extract<LessonStep, { kind: 'explain' }>> = {}): LessonStep => ({
+  kind: 'explain',
+  headline: 'Six strings, **six names**',
+  visual: { kind: 'illustration', name: 'string-order' },
+  points: ['Thickest to thinnest: E (Mi), A (La), D (Re), G (Sol), B (Si), E (Mi).'],
+  ...over,
+});
+
 function lesson(steps: readonly LessonStep[], overrides: Partial<Lesson> = {}): Lesson {
   return { id: 'sample', unit: 'Start here', title: 'Sample', goal: 'Test the validator.', steps, ...overrides };
 }
@@ -17,7 +26,7 @@ function lesson(steps: readonly LessonStep[], overrides: Partial<Lesson> = {}): 
 describe('validateLesson', () => {
   it('accepts a sound lesson using every step kind', () => {
     const steps: LessonStep[] = [
-      { kind: 'text', body: ['One.', 'Two.'] },
+      card(),
       { kind: 'fretboard', caption: 'Open strings', fretRange: [0, 3], positions: [{ stringIndex: 0, fret: 0 }] },
       { kind: 'chord', chordId: 'Em-open' },
       { kind: 'riff', riffId: 'chromatic-warmup' },
@@ -68,7 +77,7 @@ describe('validateLesson', () => {
   });
 
   it('rejects a lesson that never tests the learner', () => {
-    expect(validateLesson(lesson([{ kind: 'text', body: ['Just reading.'] }])).join('\n')).toMatch(
+    expect(validateLesson(lesson([card()])).join('\n')).toMatch(
       /never tests/,
     );
   });
@@ -90,14 +99,6 @@ describe('validateLesson', () => {
 });
 
 describe('explain cards', () => {
-  const card = (over: Partial<Extract<LessonStep, { kind: 'explain' }>> = {}): LessonStep => ({
-    kind: 'explain',
-    headline: 'Six strings, **six names**',
-    visual: { kind: 'illustration', name: 'string-order' },
-    points: ['Thickest to thinnest: E (Mi), A (La), D (Re), G (Sol), B (Si), E (Mi).'],
-    ...over,
-  });
-
   it('accepts a sound card with each kind of visual', () => {
     const steps: LessonStep[] = [
       card(),
@@ -131,6 +132,19 @@ describe('explain cards', () => {
     expect(problems).toMatch(/headline is 49 characters/);
     expect(problems).toMatch(/has 4 points/);
     expect(problems).toMatch(/point 1 is 111 characters/);
+  });
+
+  it('keeps the whole card skimmable: a total text budget, and no 3 points with both callouts', () => {
+    const point = 'p'.repeat(70);
+    const problems = validateLesson(
+      lesson([
+        card({ points: [point, point, point] }),
+        card({ points: ['a', 'b', 'c'], tip: 'tip', warn: 'warn' }),
+        check,
+      ]),
+    ).join('\n');
+    expect(problems).toMatch(/carries 210 characters/);
+    expect(problems).toMatch(/3 points plus a tip and a warning/);
   });
 
   it('measures what the reader sees, not the markup', () => {

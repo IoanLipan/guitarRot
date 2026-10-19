@@ -15,11 +15,11 @@ export const SAMPLES: readonly { label: string; step: Explain }[] = [
       headline: 'Six strings, ==thick to thin==',
       visual: { kind: 'illustration', name: 'string-order' },
       points: [
-        'String **6** is the thickest and sounds the lowest.',
-        'String **1** is the thinnest and sounds the highest.',
-        'From the top down: E (Mi), A (La), D (Re), G (Sol), B (Si), E (Mi).',
+        'String **6** is the thickest and lowest.',
+        'String **1** is the thinnest and highest.',
+        'Top down: E (Mi), A (La), D (Re), G (Sol), B (Si), E (Mi).',
       ],
-      tip: 'Say **E**ddie **A**te **D**ynamite **G**ood **B**ye **E**ddie to remember the order.',
+      tip: 'Remember: **E**ddie **A**te **D**ynamite **G**ood **B**ye **E**ddie.',
     },
   },
   {
@@ -133,18 +133,17 @@ export const SAMPLES: readonly { label: string; step: Explain }[] = [
     },
   },
   {
-    label: 'Densest case: 3 long points, tip and mistake',
+    label: 'Densest case: 3 points and a tip',
     step: {
       kind: 'explain',
       headline: 'Press ==just behind== the fret',
       visual: { kind: 'illustration', name: 'fret-finger' },
       points: [
-        'Put your fingertip on the string, right **behind** the fret wire, on the side of the headstock.',
-        'Press firmly, and keep your thumb behind the neck for support.',
-        'Pick the string and listen: it should ring **clearly** with no buzz.',
+        'Fingertip on the string, right **behind** the fret wire, on the headstock side.',
+        'Press firmly, with your thumb behind the neck.',
+        'Pick it and listen: it should ring **clearly**.',
       ],
-      tip: 'Short nails help. Long ones make it hard to press with the fingertip.',
-      warn: 'Pressing in the middle of the gap works, but you need a lot more force.',
+      tip: 'Short nails help.',
     },
   },
   {
