@@ -129,4 +129,109 @@ describe('Fretboard', () => {
       'G2 (Sol), string 6, fret 3',
     );
   });
+
+  describe('per-marker colour', () => {
+    function dot(testId: string) {
+      return screen.getByTestId(testId).previousElementSibling as SVGElement;
+    }
+
+    it('fills a fretted dot with the colour it is given, and writes its label dark', () => {
+      render(
+        <Fretboard
+          orientation="horizontal"
+          fretRange={[0, 5]}
+          labelMode="note"
+          markers={[{ stringIndex: 0, fret: 3, color: '#2ec4d6' }]}
+        />,
+      );
+      expect(dot('marker-s0f3')).toHaveAttribute('fill', '#2ec4d6');
+      expect(screen.getByTestId('marker-s0f3')).toHaveAttribute('fill', 'var(--color-ground)');
+    });
+
+    it('rings an open string in that colour, and writes its label in it too', () => {
+      render(
+        <Fretboard
+          orientation="horizontal"
+          fretRange={[0, 5]}
+          labelMode="note"
+          markers={[{ stringIndex: 0, fret: 0, color: '#ffd84d' }]}
+        />,
+      );
+      expect(dot('marker-s0f0')).toHaveAttribute('fill', 'none');
+      expect(dot('marker-s0f0')).toHaveAttribute('stroke', '#ffd84d');
+      expect(screen.getByTestId('marker-s0f0')).toHaveAttribute('fill', '#ffd84d');
+    });
+
+    it('keeps the tone colours when no colour is given', () => {
+      render(
+        <Fretboard
+          orientation="horizontal"
+          fretRange={[0, 5]}
+          markers={[{ stringIndex: 0, fret: 3, tone: 'correct' }]}
+        />,
+      );
+      expect(dot('marker-s0f3')).toHaveAttribute('fill', 'var(--color-good)');
+    });
+  });
+
+  describe('highlightStrings', () => {
+    it('draws the named strings bright with a glow and fades the others', () => {
+      render(
+        <Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} highlightStrings={[0, 2]} />,
+      );
+      for (const i of [0, 2]) {
+        expect(screen.getByTestId(`string-${i}`)).toHaveAttribute('data-state', 'highlighted');
+        expect(screen.getByTestId(`string-glow-${i}`)).toBeInTheDocument();
+      }
+      for (const i of [1, 3, 4, 5]) {
+        expect(screen.getByTestId(`string-${i}`)).toHaveAttribute('data-state', 'dimmed');
+        expect(screen.queryByTestId(`string-glow-${i}`)).toBeNull();
+      }
+    });
+
+    it('treats an empty list like no list: every string is the same', () => {
+      render(<Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} highlightStrings={[]} />);
+      expect(screen.getByTestId('string-3')).not.toHaveAttribute('data-state');
+    });
+  });
+
+  describe('markerScale', () => {
+    function radius() {
+      const dot = screen.getByTestId('marker-s0f3').previousElementSibling;
+      return Number(dot?.getAttribute('r'));
+    }
+
+    it('grows the dots, and leaves them alone at the default', () => {
+      const { unmount } = render(
+        <Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[{ stringIndex: 0, fret: 3 }]} />,
+      );
+      const normal = radius();
+      unmount();
+      render(
+        <Fretboard
+          orientation="horizontal"
+          fretRange={[0, 5]}
+          markers={[{ stringIndex: 0, fret: 3 }]}
+          markerScale={1.5}
+        />,
+      );
+      expect(radius()).toBeCloseTo(normal * 1.5);
+    });
+  });
+
+  it('shrinks a long label so "Sol" still fits inside its dot', () => {
+    render(
+      <Fretboard
+        orientation="horizontal"
+        fretRange={[0, 5]}
+        labelMode="custom"
+        markers={[
+          { stringIndex: 0, fret: 3, label: 'G' },
+          { stringIndex: 1, fret: 3, label: 'Sol' },
+        ]}
+      />,
+    );
+    const size = (id: string) => Number(screen.getByTestId(id).getAttribute('font-size'));
+    expect(size('marker-s1f3')).toBeLessThan(size('marker-s0f3'));
+  });
 });

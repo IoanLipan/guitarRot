@@ -1,5 +1,6 @@
 import { tapHaptic } from '@/app/haptics';
 import type { Lesson } from '@/content';
+import { RichText } from './steps/RichText';
 
 export type CourseProps = {
   lessons: readonly Lesson[];
@@ -95,7 +96,9 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
           </span>
           <span className="flex flex-col gap-1">
             <span className="text-2xl leading-tight font-black">{next.title}</span>
-            <span className="text-[15px] leading-snug font-medium opacity-80">{next.goal}</span>
+            <span className="text-[15px] leading-snug font-medium opacity-80">
+              <RichText onAccent>{next.goal}</RichText>
+            </span>
           </span>
           <span className="mt-1 flex h-12 items-center justify-center self-start rounded-full bg-ground px-6 text-base font-extrabold text-accent">
             {doneCount === 0 ? 'Start' : 'Continue'} →
@@ -154,7 +157,7 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="text-base leading-tight font-bold">{lesson.title}</span>
                         <span className="line-clamp-2 text-[13px] leading-snug text-ink-dim">
-                          {lesson.goal}
+                          <RichText>{lesson.goal}</RichText>
                         </span>
                       </span>
                       <span className="sr-only">

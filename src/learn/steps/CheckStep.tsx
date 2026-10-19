@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { errorHaptic, successHaptic } from '@/app/haptics';
 import type { LessonStep } from '@/content';
 import { Reveal } from './Reveal';
-import { glueSolfege, StepKicker } from './StepHeading';
+import { RichText } from './RichText';
+import { StepKicker } from './StepHeading';
 
 /**
  * One hand-written multiple-choice question. A wrong tap turns that option red
@@ -37,7 +38,9 @@ export function CheckStep({
     <div className="flex flex-col gap-5" data-testid="step-check">
       <div className="flex flex-col gap-1.5">
         <StepKicker>Quick check</StepKicker>
-        <h2 className="text-2xl leading-snug font-black">{glueSolfege(step.question)}</h2>
+        <h2 className="text-[26px] leading-[1.15] font-black tracking-tight text-balance">
+          <RichText>{step.question}</RichText>
+        </h2>
       </div>
 
       <div className="flex flex-col gap-3" role="group" aria-label="Answers">
@@ -45,7 +48,7 @@ export function CheckStep({
           const isRight = solved && option === step.answer;
           const isWrong = wrong.includes(option);
           const classes = [
-            'min-h-14 w-full rounded-2xl border-2 px-4 py-3.5 text-left text-lg leading-snug font-bold transition-opacity active:scale-[0.99]',
+            'min-h-14 w-full rounded-2xl border-2 px-4 py-3.5 text-left text-[18px] leading-snug font-bold transition-opacity active:scale-[0.99] [&_[data-note-chip]]:text-[1em]',
           ];
           if (isRight) {
             classes.push('border-[var(--color-good)] bg-[var(--color-good)] text-[var(--color-ground)]');
@@ -65,7 +68,7 @@ export function CheckStep({
               onClick={() => handlePick(option)}
               className={classes.join(' ')}
             >
-              {glueSolfege(option)}
+              <RichText onAccent={isRight || isWrong}>{option}</RichText>
             </button>
           );
         })}
@@ -80,7 +83,9 @@ export function CheckStep({
             <p className={`text-lg font-black ${solved ? 'text-good' : 'text-bad'}`}>
               {solved ? 'Correct' : 'Not quite'}
             </p>
-            <p className="mt-1 text-[15px] leading-relaxed text-ink">{glueSolfege(step.explain)}</p>
+            <p className="mt-1 text-[16px] leading-[1.5] text-ink">
+              <RichText>{step.explain}</RichText>
+            </p>
             {!solved && <p className="mt-2 text-sm text-ink-dim">Have another go.</p>}
           </Reveal>
         )}

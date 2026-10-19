@@ -542,7 +542,12 @@ describe('LessonView: chord and fretboard steps', () => {
 
     expect(screen.getByText('Em')).toBeInTheDocument();
     expect(screen.getByText('Mi minor')).toBeInTheDocument();
-    expect(screen.getByTestId('chord-tones')).toHaveTextContent('E (Mi) · G (Sol) · B (Si)');
+    // One coloured chip per tone, in string order.
+    expect(within(screen.getByTestId('chord-tones')).getAllByRole('listitem').map((tone) => tone.textContent)).toEqual([
+      'E (Mi)',
+      'G (Sol)',
+      'B (Si)',
+    ]);
     expect(screen.getByText('Two fingers.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('chord-strum'));
@@ -686,5 +691,104 @@ describe('LessonView: drill steps', () => {
       expect(Number(fret)).toBeLessThanOrEqual(4);
       answerRight();
     }
+  });
+});
+
+describe('LessonView: explain steps and marked-up text', () => {
+  const EXPLAIN: LessonStep = {
+    kind: 'explain',
+    headline: 'Meet the ==low E== string',
+    visual: { kind: 'notes', notes: ['E', 'A', 'D'] },
+    points: ['It is **string 6**: E (Mi).', 'Thick, and the lowest sound.'],
+    tip: 'Pluck it and feel it hum.',
+  };
+
+  it('shows an explain card as an open step: Next is ready at once', () => {
+    view(lesson('x', [EXPLAIN, CHECK]));
+    expect(screen.getByTestId('step-explain')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Meet the low E string');
+    expect(next()).toBeEnabled();
+
+    clickNext();
+    expect(screen.getByTestId('step-check')).toBeInTheDocument();
+  });
+
+  it('plays a note bubble through the lesson\'s engine', () => {
+    const { engine } = view(lesson('x', [EXPLAIN, CHECK]));
+    fireEvent.click(screen.getByTestId('note-bubble-1'));
+    expect(engine.playNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('compares the plain answer, however the option is marked up', () => {
+    view(
+      lesson('x', [
+        {
+          kind: 'check',
+          question: 'Which is the **thickest** string?',
+          options: ['String **6**', 'String 1'],
+          answer: 'String **6**',
+          explain: 'String 6 is E (Mi), the thick one.',
+        },
+      ]),
+    );
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Which is the thickest string?');
+
+    const wrong = screen.getByText('String 1');
+    fireEvent.click(wrong);
+    expect(wrong).toHaveAttribute('data-state', 'wrong');
+    expect(next()).toBeDisabled();
+    expect(screen.getByTestId('check-feedback').querySelector('[data-note-chip="E"]')).toBeInTheDocument();
+
+    // Click the bold part of the option: the click still lands on its button.
+    fireEvent.click(screen.getByText('6'));
+    expect(screen.getByRole('button', { name: 'String 6' })).toHaveAttribute('data-state', 'right');
+    expect(next()).toBeEnabled();
+  });
+
+  it('answers by a note chip and keeps the chip legible on the right-answer colour', () => {
+    view(
+      lesson('x', [
+        {
+          kind: 'check',
+          question: 'The open low string is?',
+          options: ['E (Mi)', 'A (La)'],
+          answer: 'E (Mi)',
+          explain: 'Low E.',
+        },
+      ]),
+    );
+    const options = within(screen.getByRole('group', { name: 'Answers' })).getAllByRole('button');
+    expect(options.map((option) => option.textContent)).toEqual(['E (Mi)', 'A (La)']);
+
+    fireEvent.click(options[0] as HTMLElement);
+    expect(options[0]).toHaveAttribute('data-state', 'right');
+    // On the solid green the chip goes dark instead of yellow-on-green.
+    expect(options[0]?.querySelector('[data-note-chip]')).toHaveStyle({ color: '#0b0b0f' });
+    expect(options[1]?.querySelector('[data-note-chip]')).toHaveStyle({ color: '#5b8cff' });
+  });
+
+  it('renders marked-up captions on the other step kinds', () => {
+    view(
+      lesson('x', [
+        { kind: 'chord', chordId: 'Em-open', caption: 'Use **two** fingers on E (Mi) and A (La).' },
+        CHECK,
+      ]),
+    );
+    const step = screen.getByTestId('step-chord');
+    expect(step.querySelector('strong')).toHaveTextContent('two');
+    expect(step.querySelectorAll('[data-note-chip]').length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('renders marked-up text steps, until the course has moved off them', () => {
+    view(lesson('x', [{ kind: 'text', body: ['Hold the neck ==lightly==.'] }, CHECK]));
+    expect(screen.getByTestId('step-text').querySelector('mark')).toHaveTextContent('lightly');
+  });
+
+  it('shows the goal with its markup on the end screen', () => {
+    view(lesson('x', [EXPLAIN], { goal: 'Name **string 6**, the low E (Mi).' }));
+    clickNext();
+    const end = screen.getByTestId('lesson-complete');
+    expect(end.querySelector('strong')).toHaveTextContent('string 6');
+    expect(end.querySelector('[data-note-chip="E"]')).toBeInTheDocument();
   });
 });

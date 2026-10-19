@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { FretPosition } from '@/music';
-import { createFretboardGeometry, Fretboard, type FretMarker } from '@/render';
+import { createFretboardGeometry, Fretboard, type FretMarker, type LabelMode } from '@/render';
 
 /**
  * Widest board, in pixels, that is drawn scaled to the screen. A phone gives a
@@ -26,6 +26,19 @@ export type NeckProps = {
   focus?: FretPosition | null;
   /** Tallest the board may be drawn, in pixels. A step with more to show beside it asks for less. */
   maxHeight?: number;
+  /** What the dots say. Defaults to the note letter; "custom" uses each marker's own label. */
+  labelMode?: LabelMode;
+  /** Strings the picture is about: drawn bright, the rest faded. */
+  highlightStrings?: readonly number[];
+  /** Grows the dots; a lesson picture has room for them a little bigger. */
+  markerScale?: number;
+  /** Widest board, in pixels, still scaled to fit; wider ones scroll. Defaults to what a lesson screen holds. */
+  fitLimit?: number;
+  /**
+   * Whether the board may reach the screen's edges when it has to scroll
+   * sideways (the default). Inside a padded card, pass false so it stays in it.
+   */
+  bleed?: boolean;
   ariaLabel: string;
 };
 
@@ -36,6 +49,11 @@ export function Neck({
   onFretTap,
   focus = null,
   maxHeight = DEFAULT_MAX_HEIGHT,
+  labelMode = 'note',
+  highlightStrings,
+  markerScale,
+  fitLimit = FIT_LIMIT,
+  bleed = true,
   ariaLabel,
 }: NeckProps) {
   const interactive = onFretTap !== undefined;
@@ -43,7 +61,7 @@ export function Neck({
     () => createFretboardGeometry({ orientation: 'horizontal', fretRange, interactive }),
     [fretRange, interactive],
   );
-  const scrolls = natural.width > FIT_LIMIT;
+  const scrolls = natural.width > fitLimit;
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   // A wide board opens on the part that matters: centre the focused dot.
@@ -62,7 +80,11 @@ export function Neck({
   }, [scrolls, focusString, focusFret]);
 
   return (
-    <div ref={scrollerRef} className="-mx-5 overflow-x-auto px-5" data-testid="neck">
+    <div
+      ref={scrollerRef}
+      className={bleed ? '-mx-5 overflow-x-auto px-5' : 'overflow-x-auto'}
+      data-testid="neck"
+    >
       <div
         className="mx-auto w-full"
         style={{
@@ -75,7 +97,9 @@ export function Neck({
           orientation="horizontal"
           fretRange={fretRange}
           markers={markers}
-          labelMode="note"
+          labelMode={labelMode}
+          highlightStrings={highlightStrings}
+          markerScale={markerScale}
           onFretTap={onFretTap}
           fit
           className="h-full w-full"

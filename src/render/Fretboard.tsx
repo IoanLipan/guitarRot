@@ -23,6 +23,12 @@ export type FretMarker = {
   fret: number;
   label?: string;
   tone?: MarkerTone;
+  /**
+   * Fills the dot (or rings an open string) in this colour instead of the
+   * tone's: a lesson colours each dot by its note. The label inside turns dark
+   * so it reads on any bright fill.
+   */
+  color?: string;
 };
 
 export type LabelMode = 'note' | 'interval' | 'custom' | 'none';
@@ -38,6 +44,14 @@ export type FretboardProps = {
   mutedStrings?: number[];
   openStrings?: number[];
   barre?: { fret: number; fromStringIndex: number; toStringIndex: number };
+  /**
+   * Strings the picture is about. They are drawn bright with a soft glow and
+   * the other strings fade back, so the eye lands on the right one. Leave it
+   * out (or empty) and every string looks the same.
+   */
+  highlightStrings?: readonly number[];
+  /** Grows or shrinks the dots (1 is the default). A lesson picture draws them a little bigger. */
+  markerScale?: number;
   showInlays?: boolean;
   showFretNumbers?: boolean;
   /** Passing this makes the board interactive: bigger cells and tap targets. */
@@ -98,6 +112,8 @@ export function Fretboard({
   mutedStrings = [],
   openStrings = [],
   barre,
+  highlightStrings = [],
+  markerScale = 1,
   showInlays = true,
   showFretNumbers = true,
   onFretTap,
@@ -112,7 +128,7 @@ export function Fretboard({
     [orientation, fretRange, interactive],
   );
 
-  const markerRadius = Math.min(geometry.stringSpacing, geometry.fretSpacing) * 0.34;
+  const markerRadius = Math.min(geometry.stringSpacing, geometry.fretSpacing) * 0.34 * markerScale;
   const tappableFrets = geometry.hasNut ? [0, ...geometry.cellFrets] : geometry.cellFrets;
   const woodId = `wood-${useId()}`;
 
@@ -183,17 +199,35 @@ export function Fretboard({
 
       {STRING_WIDTHS.map((strokeWidth, stringIndex) => {
         const line = geometry.stringLine(stringIndex);
+        const focused = highlightStrings.includes(stringIndex);
+        const dimmed = highlightStrings.length > 0 && !focused;
         return (
-          <line
-            key={`string-${stringIndex}`}
-            x1={line.x1}
-            y1={line.y1}
-            x2={line.x2}
-            y2={line.y2}
-            stroke="var(--color-ink-dim)"
-            strokeWidth={strokeWidth}
-            data-testid={`string-${stringIndex}`}
-          />
+          <g key={`string-${stringIndex}`}>
+            {focused && (
+              <line
+                data-testid={`string-glow-${stringIndex}`}
+                x1={line.x1}
+                y1={line.y1}
+                x2={line.x2}
+                y2={line.y2}
+                stroke="var(--color-accent)"
+                strokeWidth={strokeWidth + 6}
+                strokeLinecap="round"
+                opacity={0.28}
+              />
+            )}
+            <line
+              x1={line.x1}
+              y1={line.y1}
+              x2={line.x2}
+              y2={line.y2}
+              stroke={focused ? 'var(--color-ink)' : 'var(--color-ink-dim)'}
+              strokeWidth={focused ? strokeWidth + 0.8 : strokeWidth}
+              opacity={dimmed ? 0.4 : 1}
+              data-testid={`string-${stringIndex}`}
+              data-state={focused ? 'highlighted' : dimmed ? 'dimmed' : undefined}
+            />
+          </g>
         );
       })}
 
@@ -257,17 +291,21 @@ export function Fretboard({
         const point = geometry.markerPoint(marker);
         const tone = marker.tone ?? 'accent';
         const text = markerText(marker, labelMode, tuning, intervalRootMidi);
+        const fill = marker.color ?? TONE_FILL[tone];
+        const textFill = marker.color !== undefined ? 'var(--color-ground)' : TONE_TEXT[tone];
         // An open string is played, not fretted: notation draws it as a ring
         // at the nut, and a solid dot there reads as a fretted note.
         const isOpen = marker.fret === 0;
+        // "G" fills a dot; "Sol" or "Fa#" has to shrink to stay inside it.
+        const textScale = text.length <= 1 ? 0.95 : text.length === 2 ? 0.8 : 0.62;
         return (
           <g key={`marker-s${marker.stringIndex}f${marker.fret}`}>
             <circle
               cx={point.x}
               cy={point.y}
               r={isOpen ? markerRadius * 0.82 : markerRadius}
-              fill={isOpen ? 'none' : TONE_FILL[tone]}
-              stroke={isOpen ? TONE_FILL[tone] : tone === 'ghost' ? 'var(--color-ink-dim)' : 'none'}
+              fill={isOpen ? 'none' : fill}
+              stroke={isOpen ? fill : tone === 'ghost' ? 'var(--color-ink-dim)' : 'none'}
               strokeWidth={isOpen ? 3 : 1.2}
             />
             <text
@@ -276,9 +314,9 @@ export function Fretboard({
               y={point.y}
               textAnchor="middle"
               dominantBaseline="central"
-              fontSize={markerRadius * 0.95}
+              fontSize={markerRadius * textScale}
               fontWeight={700}
-              fill={isOpen ? TONE_FILL[tone] : TONE_TEXT[tone]}
+              fill={isOpen ? fill : textFill}
             >
               {text}
             </text>

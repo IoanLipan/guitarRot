@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { Lesson } from '@/content';
+import { RichText } from './steps/RichText';
 import { StepView, stepGate } from './steps/StepView';
 
 export type LessonViewProps = {
@@ -142,7 +143,9 @@ export function LessonView({
             <p className="text-[11px] font-extrabold tracking-widest text-accent uppercase">
               Goal reached
             </p>
-            <p className="mt-1.5 text-base leading-relaxed">{lesson.goal}</p>
+            <p className="mt-1.5 text-[17px] leading-relaxed">
+              <RichText>{lesson.goal}</RichText>
+            </p>
           </div>
 
           <div className="flex w-full max-w-sm flex-col gap-3">
@@ -182,7 +185,7 @@ export function LessonView({
             // Keyed by step so every step starts fresh at the top of its own scroll.
             key={index}
             data-testid="lesson-scroll"
-            className="lesson-step-in min-h-0 flex-1 overflow-y-auto px-5 pt-6 pb-4"
+            className="lesson-step-in min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-4 short:pt-3 short:pb-3"
           >
             <div className="mx-auto w-full max-w-md">
               {step !== undefined && (

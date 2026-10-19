@@ -3,6 +3,7 @@ import type { LessonStep } from '@/content';
 import { CheckStep } from './CheckStep';
 import { ChordStep } from './ChordStep';
 import { DrillStep } from './DrillStep';
+import { ExplainStep } from './ExplainStep';
 import { FretboardStep } from './FretboardStep';
 import { ListenStep } from './ListenStep';
 import { RiffStep } from './RiffStep';
@@ -43,6 +44,8 @@ export function StepView({
   onDone: () => void;
 }) {
   switch (step.kind) {
+    case 'explain':
+      return <ExplainStep step={step} engine={engine} />;
     case 'text':
       return <TextStep step={step} />;
     case 'fretboard':

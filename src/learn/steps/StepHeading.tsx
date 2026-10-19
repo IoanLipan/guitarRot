@@ -1,3 +1,5 @@
+import { RichText } from './RichText';
+
 /** The small amber label that tells the learner what kind of screen this is. */
 export function StepKicker({ children }: { children: React.ReactNode }) {
   return (
@@ -5,13 +7,7 @@ export function StepKicker({ children }: { children: React.ReactNode }) {
   );
 }
 
-/**
- * Keeps a note and its solfège on one line: "E (Mi)" must never wrap into
- * "E" at the end of one line and "(Mi)" at the start of the next.
- */
-export function glueSolfege(text: string): string {
-  return text.replace(/ \((Do|Re|Mi|Fa|Sol|La|Si)\b/g, ' ($1');
-}
+export { glueSolfege } from './glue';
 
 /**
  * A step's instruction. Captions are whole sentences, often two, so they read
@@ -19,7 +15,11 @@ export function glueSolfege(text: string): string {
  * fold on a phone.
  */
 export function StepCaption({ children }: { children: string }) {
-  return <p className="text-[17px] leading-relaxed font-semibold text-ink">{glueSolfege(children)}</p>;
+  return (
+    <p className="text-[17px] leading-[1.6] font-medium text-ink">
+      <RichText>{children}</RichText>
+    </p>
+  );
 }
 
 /** Shown if a step names content that no longer exists; the course tests should make this unreachable. */

@@ -12,6 +12,7 @@ import {
 } from '@/music';
 import type { FretMarker } from '@/render';
 import { Neck } from './Neck';
+import { RichText } from './RichText';
 import { StepCaption, StepKicker } from './StepHeading';
 
 /** How long the right pitch has to be held before it counts: a pluck passing through is not a played note. */
@@ -171,7 +172,7 @@ export function ListenStep({
             Note {ticked + 1} of {total}
           </p>
           <p className="text-3xl leading-tight font-black" data-testid="listen-target">
-            Play {noteLabel(targetMidi)}
+            <RichText>{`Play ${noteLabel(targetMidi)}`}</RichText>
           </p>
           <p className="text-base text-ink-dim" data-testid="listen-where">
             {whereToPlay(target)}

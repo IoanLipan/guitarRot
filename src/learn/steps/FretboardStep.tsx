@@ -5,11 +5,14 @@ import type { LessonStep } from '@/content';
 import {
   fretToMidi,
   noteLabel,
+  noteName,
   STANDARD_TUNING,
   stringNumber,
   type FretPosition,
 } from '@/music';
+import { noteColor } from '@/render';
 import { Neck } from './Neck';
+import { RichText } from './RichText';
 import { StepCaption, StepKicker } from './StepHeading';
 
 function where(position: FretPosition, withString: boolean): string {
@@ -46,7 +49,11 @@ export function FretboardStep({
 
       <Neck
         fretRange={step.fretRange}
-        markers={step.positions.map((position) => ({ ...position, tone: 'root' as const }))}
+        markers={step.positions.map((position) => ({
+          ...position,
+          tone: 'root' as const,
+          color: noteColor(noteName(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret))),
+        }))}
         onFretTap={interactive ? handleTap : undefined}
         ariaLabel={step.caption}
       />
@@ -57,8 +64,8 @@ export function FretboardStep({
             'Tap any fret to hear it.'
           ) : (
             <>
-              <strong className="text-accent">
-                {noteLabel(fretToMidi(STANDARD_TUNING, tapped.stringIndex, tapped.fret))}
+              <strong className="text-base">
+                <RichText>{noteLabel(fretToMidi(STANDARD_TUNING, tapped.stringIndex, tapped.fret))}</RichText>
               </strong>{' '}
               — {where(tapped, true)}
             </>
@@ -70,12 +77,12 @@ export function FretboardStep({
         {step.positions.map((position) => (
           <li
             key={`${position.stringIndex}-${position.fret}`}
-            className="flex flex-col rounded-2xl bg-surface px-3 py-2"
+            className="flex flex-col items-start rounded-2xl bg-surface px-3 py-2.5"
           >
-            <span className="text-base font-extrabold">
-              {noteLabel(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret))}
+            <span className="text-base">
+              <RichText>{noteLabel(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret))}</RichText>
             </span>
-            <span className="text-xs text-ink-dim">{where(position, manyStrings)}</span>
+            <span className="mt-1 text-xs text-ink-dim">{where(position, manyStrings)}</span>
           </li>
         ))}
       </ul>

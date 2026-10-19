@@ -82,3 +82,25 @@ describe('Course', () => {
     expect(screen.queryByTestId('course-progress')).not.toBeInTheDocument();
   });
 });
+
+describe('Course: marked-up goals', () => {
+  const goal = 'Name **every** string, from E (Mi) up.';
+  const lessons = [
+    { ...FIXTURE_COURSE[0]!, goal },
+    { ...FIXTURE_COURSE[1]!, goal: 'Tune the ==low== string to E (Mi).' },
+  ];
+
+  it('renders the markup in the continue card with chips that stay readable on amber', () => {
+    render(<Course lessons={lessons} done={[]} onOpen={vi.fn()} />);
+    const card = screen.getByTestId('course-continue');
+    expect(card).toHaveTextContent('Name every string, from E (Mi) up.');
+    expect(card.querySelector('[data-note-chip="E"]')).toHaveStyle({ color: '#0b0b0f' });
+  });
+
+  it('renders the markup in each row of the list, in note colours', () => {
+    render(<Course lessons={lessons} done={[]} onOpen={vi.fn()} />);
+    const row = screen.getByTestId('lesson-row-beta');
+    expect(row.querySelector('mark')).toHaveTextContent('low');
+    expect(row.querySelector('[data-note-chip="E"]')).toHaveStyle({ color: '#ffd84d' });
+  });
+});

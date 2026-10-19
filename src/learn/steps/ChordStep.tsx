@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import { CHORDS, type LessonStep } from '@/content';
@@ -7,12 +7,15 @@ import {
   chordStrings,
   chordToneNames,
   chordVoicing,
+  fretToMidi,
+  noteName,
   STANDARD_TUNING,
   stringNumber,
   withSolfege,
 } from '@/music';
-import { chordShapeToFretboard, Fretboard } from '@/render';
-import { glueSolfege, MissingContent, StepKicker } from './StepHeading';
+import { chordShapeToFretboard, Fretboard, noteColor } from '@/render';
+import { RichText } from './RichText';
+import { MissingContent, StepKicker } from './StepHeading';
 
 /** How long the "just strummed" highlight holds after a tap. */
 const STRUM_FLASH_MS = 700;
@@ -72,7 +75,10 @@ export function ChordStep({
         <Fretboard
           orientation="vertical"
           fretRange={diagram.fretRange}
-          markers={diagram.markers}
+          markers={diagram.markers.map((marker) => ({
+            ...marker,
+            color: noteColor(noteName(fretToMidi(STANDARD_TUNING, marker.stringIndex, marker.fret))),
+          }))}
           mutedStrings={diagram.mutedStrings}
           openStrings={diagram.openStrings}
           barre={diagram.barre}
@@ -84,14 +90,13 @@ export function ChordStep({
         />
       </div>
 
-      <div className="text-base font-bold tracking-wide tabular-nums" data-testid="chord-tones">
-        {tones.map((tone, index) => (
-          <Fragment key={tone}>
-            {index > 0 && ' · '}
-            <span className="whitespace-nowrap">{tone}</span>
-          </Fragment>
+      <ul className="flex flex-wrap justify-center gap-2 text-[17px]" aria-label="Notes in the chord" data-testid="chord-tones">
+        {tones.map((tone) => (
+          <li key={tone}>
+            <RichText>{tone}</RichText>
+          </li>
         ))}
-      </div>
+      </ul>
 
       <button
         type="button"
@@ -105,7 +110,9 @@ export function ChordStep({
 
       <p className="text-sm leading-relaxed text-ink-dim">{strumAdvice}</p>
       {step.caption !== undefined && (
-        <p className="text-[17px] leading-[1.7] text-ink">{glueSolfege(step.caption)}</p>
+        <p className="text-[17px] leading-[1.6] font-medium text-ink">
+          <RichText>{step.caption}</RichText>
+        </p>
       )}
     </div>
   );
