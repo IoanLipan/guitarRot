@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import type { MicPitchHandle, MicReading, MicStatus } from '@/app/useMicPitch';
 import type { Lesson, LessonStep } from '@/content';
 import { fretToMidi, noteName, STANDARD_TUNING, withSolfege } from '@/music';
-import { CHECK, fakeEngine, lesson } from './testkit';
+import { card, CHECK, fakeEngine, lesson } from './testkit';
 
 /** Scripted microphone; the hook has its own tests. */
 const mic = vi.hoisted(() => ({ current: null as unknown as MicPitchHandle }));
@@ -100,7 +100,7 @@ beforeEach(() => {
 
 describe('LessonView: moving through a lesson', () => {
   it('shows one step at a time with a progress bar', () => {
-    view(lesson('x', [{ kind: 'text', body: ['First.'] }, { kind: 'text', body: ['Second.'] }, CHECK]));
+    view(lesson('x', [card(['First.']), card(['Second.']), CHECK]));
 
     expect(screen.getByText('First.')).toBeInTheDocument();
     expect(screen.queryByText('Second.')).not.toBeInTheDocument();
@@ -113,7 +113,7 @@ describe('LessonView: moving through a lesson', () => {
   });
 
   it('goes back to the step before, and not before the first', () => {
-    view(lesson('x', [{ kind: 'text', body: ['First.'] }, { kind: 'text', body: ['Second.'] }, CHECK]));
+    view(lesson('x', [card(['First.']), card(['Second.']), CHECK]));
     expect(screen.queryByTestId('lesson-back')).not.toBeInTheDocument();
 
     clickNext();
@@ -122,7 +122,7 @@ describe('LessonView: moving through a lesson', () => {
   });
 
   it('closes from the ×', () => {
-    const { props } = view(lesson('x', [{ kind: 'text', body: ['Hi.'] }, CHECK]));
+    const { props } = view(lesson('x', [card(['Hi.']), CHECK]));
     fireEvent.click(screen.getByTestId('lesson-close'));
     expect(props.onClose).toHaveBeenCalledTimes(1);
   });
@@ -132,8 +132,8 @@ describe('LessonView: moving through a lesson', () => {
     expect(next()).toHaveTextContent('Finish');
   });
 
-  it('shows a text step with its title and every paragraph', () => {
-    view(lesson('x', [{ kind: 'text', title: 'Why tune', body: ['Para one.', 'Para two.'] }, CHECK]));
+  it('shows an explain card with its headline and every point', () => {
+    view(lesson('x', [card(['Para one.', 'Para two.'], 'Why tune'), CHECK]));
     expect(screen.getByRole('heading', { name: 'Why tune' })).toBeInTheDocument();
     expect(screen.getByText('Para one.')).toBeInTheDocument();
     expect(screen.getByText('Para two.')).toBeInTheDocument();
@@ -142,8 +142,8 @@ describe('LessonView: moving through a lesson', () => {
 
 describe('LessonView: picking up where you left off', () => {
   const steps = [
-    { kind: 'text', body: ['First.'] },
-    { kind: 'text', body: ['Second.'] },
+    card(['First.']),
+    card(['Second.']),
     CHECK,
   ] as const satisfies readonly LessonStep[];
 
@@ -200,7 +200,7 @@ describe('LessonView: picking up where you left off', () => {
 
 describe('LessonView: finishing', () => {
   it('marks the lesson complete when the last step is passed, and shows the end screen', () => {
-    const { props } = view(lesson('strings', [{ kind: 'text', body: ['Hi.'] }, CHECK], { goal: 'Name the strings.' }));
+    const { props } = view(lesson('strings', [card(['Hi.']), CHECK], { goal: 'Name the strings.' }));
 
     clickNext();
     expect(props.onComplete).not.toHaveBeenCalled();
@@ -215,7 +215,7 @@ describe('LessonView: finishing', () => {
   });
 
   it('does not complete a lesson that was merely closed halfway', () => {
-    const { props } = view(lesson('x', [{ kind: 'text', body: ['Hi.'] }, CHECK]));
+    const { props } = view(lesson('x', [card(['Hi.']), CHECK]));
     clickNext();
     fireEvent.click(screen.getByTestId('lesson-close'));
     expect(props.onComplete).not.toHaveBeenCalled();
@@ -274,7 +274,7 @@ describe('LessonView: check steps', () => {
   });
 
   it('stays unlocked when you come back to a question you already got right', () => {
-    view(lesson('x', [CHECK, { kind: 'text', body: ['After.'] }, CHECK]));
+    view(lesson('x', [CHECK, card(['After.']), CHECK]));
     fireEvent.click(screen.getByText('String 1'));
     clickNext();
     expect(screen.getByText('After.')).toBeInTheDocument();
@@ -314,7 +314,7 @@ describe('LessonView: listen steps', () => {
   });
 
   it('can be skipped, and Skip is there from the start', () => {
-    view(lesson('x', [LISTEN, { kind: 'text', body: ['After the listen step.'] }, CHECK]));
+    view(lesson('x', [LISTEN, card(['After the listen step.']), CHECK]));
 
     expect(screen.queryByTestId('lesson-next')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('lesson-skip'));
@@ -461,7 +461,7 @@ describe('LessonView: riff and song steps', () => {
   });
 
   it('stops and disposes the player and the metronome on leaving the step', () => {
-    view(lesson('x', [{ kind: 'riff', riffId: 'open-strings-walk' }, { kind: 'text', body: ['Next.'] }, CHECK]));
+    view(lesson('x', [{ kind: 'riff', riffId: 'open-strings-walk' }, card(['Next.']), CHECK]));
     const player = audio.players[0] as FakePlayer;
     const metronome = audio.metronomes[0] as FakeMetronome;
 
@@ -777,11 +777,6 @@ describe('LessonView: explain steps and marked-up text', () => {
     const step = screen.getByTestId('step-chord');
     expect(step.querySelector('strong')).toHaveTextContent('two');
     expect(step.querySelectorAll('[data-note-chip]').length).toBeGreaterThanOrEqual(5);
-  });
-
-  it('renders marked-up text steps, until the course has moved off them', () => {
-    view(lesson('x', [{ kind: 'text', body: ['Hold the neck ==lightly==.'] }, CHECK]));
-    expect(screen.getByTestId('step-text').querySelector('mark')).toHaveTextContent('lightly');
   });
 
   it('shows the goal with its markup on the end screen', () => {

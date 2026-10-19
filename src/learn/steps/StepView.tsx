@@ -8,7 +8,6 @@ import { FretboardStep } from './FretboardStep';
 import { ListenStep } from './ListenStep';
 import { RiffStep } from './RiffStep';
 import { SongStep } from './SongStep';
-import { TextStep } from './TextStep';
 import { TunerStep } from './TunerStep';
 
 /**
@@ -46,8 +45,6 @@ export function StepView({
   switch (step.kind) {
     case 'explain':
       return <ExplainStep step={step} engine={engine} />;
-    case 'text':
-      return <TextStep step={step} />;
     case 'fretboard':
       return <FretboardStep step={step} engine={engine} />;
     case 'chord':

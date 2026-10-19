@@ -58,8 +58,6 @@ export type LessonStep =
       /** ⚠️ The mistake almost everyone makes here, and its fix. */
       warn?: string;
     }
-  /** @deprecated Being replaced by `explain`; the course must not use it. */
-  | { kind: 'text'; title?: string; body: readonly string[] }
   /** Dots on the neck, labelled with their notes; the caption lists them with solfège. */
   | {
       kind: 'fretboard';
@@ -162,11 +160,6 @@ export function validateLesson(lesson: Lesson): string[] {
     switch (step.kind) {
       case 'explain':
         problems.push(...explainProblems(where, step));
-        break;
-      case 'text':
-        if (step.body.length === 0 || step.body.some((paragraph) => blank(paragraph))) {
-          problems.push(`${where} has an empty paragraph`);
-        }
         break;
       case 'fretboard': {
         if (blank(step.caption)) problems.push(`${where} needs a caption`);

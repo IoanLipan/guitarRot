@@ -26,6 +26,11 @@ export const CHECK: LessonStep = {
   explain: 'String 1 is the thin, high E. String 6 is the thick, low E.',
 };
 
+/** A minimal explain card for fixtures: the given points under a headline, with a note-row visual. */
+export function card(points: readonly string[], headline = 'Card'): LessonStep {
+  return { kind: 'explain', headline, visual: { kind: 'notes', notes: ['E'] }, points };
+}
+
 export function lesson(id: string, steps: readonly LessonStep[], overrides: Partial<Lesson> = {}): Lesson {
   return {
     id,
@@ -39,9 +44,9 @@ export function lesson(id: string, steps: readonly LessonStep[], overrides: Part
 
 /** Two short lessons in one unit and one in another, enough to see grouping and "next". */
 export const FIXTURE_COURSE: readonly Lesson[] = [
-  lesson('alpha', [{ kind: 'text', body: ['Hello.'] }, CHECK], { title: 'Alpha lesson', goal: 'Name the strings.' }),
-  lesson('beta', [{ kind: 'text', body: ['Second.'] }, CHECK], { title: 'Beta lesson', goal: 'Tune up.' }),
-  lesson('gamma', [{ kind: 'text', body: ['Third.'] }, CHECK], {
+  lesson('alpha', [card(['Hello.']), CHECK], { title: 'Alpha lesson', goal: 'Name the strings.' }),
+  lesson('beta', [card(['Second.']), CHECK], { title: 'Beta lesson', goal: 'Tune up.' }),
+  lesson('gamma', [card(['Third.']), CHECK], {
     unit: 'Chords',
     title: 'Gamma lesson',
     goal: 'Play a chord.',

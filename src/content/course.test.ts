@@ -350,13 +350,8 @@ describe('the course', () => {
     }
   });
 
-  it('has no text-only screens: every explanation is a visual card', () => {
-    for (const lesson of COURSE) {
-      expect(
-        lesson.steps.filter((s) => s.kind === 'text').map((_, i) => `${lesson.id} text step ${i + 1}`),
-      ).toEqual([]);
-    }
-  });
+  // No text-only screens: the plain `text` step kind no longer exists, so the
+  // type checker refuses one, and every explain card must carry a visual.
 
   it('opens every lesson with an explain card and gives it at least two', () => {
     for (const lesson of COURSE) {
@@ -756,10 +751,6 @@ function allStrings(): { where: string; text: string }[] {
           step.points.forEach((p, n) => add(`${where} point ${n + 1}`, p));
           add(`${where} tip`, step.tip);
           add(`${where} warn`, step.warn);
-          break;
-        case 'text':
-          add(`${where} title`, step.title);
-          step.body.forEach((p, n) => add(`${where} paragraph ${n + 1}`, p));
           break;
         case 'fretboard':
         case 'listen':
