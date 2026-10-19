@@ -1,10 +1,7 @@
 import type { Lesson } from '../lessons';
+import { onString } from './visuals';
 
 const UNIT = 'Notes and the musical alphabet';
-
-/** Positions on one string, as a list of frets. */
-const onString = (stringIndex: number, frets: readonly number[]) =>
-  frets.map((fret) => ({ stringIndex, fret }));
 
 /** Lessons 5-9: the notes of the neck, learned by landmarks rather than by counting. */
 export const UNIT_2: readonly Lesson[] = [
@@ -15,62 +12,80 @@ export const UNIT_2: readonly Lesson[] = [
     goal: 'Recite the seven note names and know where the half steps hide.',
     steps: [
       {
-        kind: 'text',
-        title: 'Seven letters, seven syllables',
-        body: [
-          'Music uses seven note names: A (La), B (Si), C (Do), D (Re), E (Mi), F (Fa), G (Sol). After G (Sol) the alphabet starts over at A (La), an octave higher.',
-          'Each letter keeps its syllable in every key. This is called fixed-do: C (Do) is always Do, D (Re) is always Re. Starting from C (Do), the same seven notes read Do Re Mi Fa Sol La Si, the ladder behind most melodies.',
+        kind: 'explain',
+        headline: 'Seven letters, then repeat',
+        visual: { kind: 'illustration', name: 'alphabet-loop' },
+        points: [
+          'Music has ==seven note names==: A (La) to G (Sol).',
+          'After G (Sol), the alphabet **starts over** at A (La), one octave higher.',
         ],
       },
       {
-        kind: 'text',
-        title: 'Half steps and whole steps',
-        body: [
-          'The smallest step on the guitar is one fret. It is called a half step, or semitone. Two frets make a whole step.',
-          'Most neighbouring letters are a whole step apart: two frets. Two pairs are only a half step apart, one fret: E (Mi) to F (Fa), and B (Si) to C (Do). There is no note in between.',
-          'On a piano these are the pairs with no black key between them.',
+        kind: 'explain',
+        headline: 'One letter, one syllable',
+        visual: { kind: 'notes', notes: ['C', 'D', 'E', 'F', 'G', 'A', 'B'] },
+        points: [
+          'This is **fixed-do**: C (Do) is always Do, D (Re) is always Re.',
+          'Start on C (Do) and read ==Do Re Mi Fa Sol La Si==, the ladder behind most melodies.',
+        ],
+      },
+      {
+        kind: 'explain',
+        headline: '1 fret = half, 2 frets = whole',
+        visual: {
+          kind: 'neck',
+          fretRange: [0, 3],
+          dots: onString(1, [0, 1, 2]),
+          highlightStrings: [1],
+          tapToHear: true,
+        },
+        points: [
+          'The smallest step is **one fret**: a half step (semitone).',
+          'Two frets make a ==whole step==.',
+          'Most neighbouring letters are a whole step apart.',
+        ],
+      },
+      {
+        kind: 'explain',
+        headline: 'Two spots are only 1 fret',
+        visual: { kind: 'illustration', name: 'piano-half-steps' },
+        points: [
+          'Two pairs of neighbours are only **one fret** apart: E (Mi) to F (Fa), and B (Si) to C (Do).',
+          '==No note fits between them.== On a piano, no black key sits there.',
         ],
       },
       {
         kind: 'fretboard',
-        caption:
-          'Every natural note on the A (La) string. Count the frets between neighbours: two nearly everywhere, but only one from B (Si) to C (Do) and from E (Mi) to F (Fa).',
+        caption: 'Natural notes on the A (La) string. **Two frets** between neighbours, but only **one** for B (Si)-C (Do) and E (Mi)-F (Fa).',
         fretRange: [0, 12],
         positions: onString(1, [0, 2, 3, 5, 7, 8, 10, 12]),
         tapToHear: true,
       },
       {
         kind: 'listen',
-        caption:
-          'Climb from the open A (La) string: two frets to the next note, then one more fret. Listen to the size of each step.',
+        caption: 'Climb from the open A (La) string: **two frets** to the next note, then **one more**. Hear the size of each step.',
         targets: onString(1, [0, 2, 3]),
       },
       {
         kind: 'check',
         question: 'Which pair of notes is only one fret apart?',
-        options: [
-          'E (Mi) and F (Fa)',
-          'C (Do) and D (Re)',
-          'F (Fa) and G (Sol)',
-          'A (La) and B (Si)',
-        ],
+        options: ['E (Mi) and F (Fa)', 'C (Do) and D (Re)', 'F (Fa) and G (Sol)', 'A (La) and B (Si)'],
         answer: 'E (Mi) and F (Fa)',
-        explain:
-          'E (Mi) to F (Fa) and B (Si) to C (Do) are the only natural neighbours one fret apart. Every other pair of neighbours is two frets apart.',
+        explain: 'E (Mi)-F (Fa) and B (Si)-C (Do) are the **only** natural neighbours one fret apart. All others are two.',
       },
       {
         kind: 'check',
         question: 'How many frets up is it from C (Do) to D (Re)?',
         options: ['1 fret', '2 frets', '3 frets', '4 frets'],
         answer: '2 frets',
-        explain: 'C (Do) to D (Re) is a whole step, which is two frets. The C# (Do#) sits between them.',
+        explain: 'C (Do) to D (Re) is a **whole step**: two frets. C# (Do#) sits between them.',
       },
       {
         kind: 'check',
         question: 'What comes after G (Sol) in the musical alphabet?',
         options: ['A (La)', 'B (Si)', 'F (Fa)', 'C (Do)'],
         answer: 'A (La)',
-        explain: 'The alphabet only runs from A (La) to G (Sol), then loops back to A (La), one octave higher.',
+        explain: 'The alphabet runs A (La) to G (Sol), then ==loops back== to A (La), one octave higher.',
       },
     ],
   },
@@ -81,32 +96,58 @@ export const UNIT_2: readonly Lesson[] = [
     goal: 'Name any fret on the low E (Mi) string, including sharps and flats.',
     steps: [
       {
-        kind: 'text',
-        title: 'The notes in between',
-        body: [
-          'Most neighbouring letters have one more note between them. A sharp (#) raises a note by one fret. A flat (b) lowers a note by one fret.',
-          'The fret between C (Do) and D (Re) is C# (Do#), one fret above C (Do). It is also Db (Reb), one fret below D (Re). Same fret, two names. Which name a song uses depends on its key; for now just know both.',
+        kind: 'explain',
+        headline: 'Sharp = up, flat = down',
+        visual: { kind: 'illustration', name: 'sharp-flat' },
+        points: [
+          'A **sharp (#)** raises a note one fret. A flat (b) lowers it one fret.',
+          'C# (Do#) and Db (Reb) are ==the same fret==: one fret, two names.',
+        ],
+        tip: 'Which name a song uses depends on its key. For now, know both.',
+      },
+      {
+        kind: 'explain',
+        headline: '12 frets later, same note',
+        visual: {
+          kind: 'neck',
+          fretRange: [0, 12],
+          dots: [
+            { stringIndex: 0, fret: 0 },
+            { stringIndex: 0, fret: 12 },
+          ],
+          highlightStrings: [0],
+          tapToHear: true,
+        },
+        points: [
+          'Count up **12 frets** and the note name repeats, one octave higher.',
+          'There are only ==12 different notes==. The whole neck repeats them.',
         ],
       },
       {
         kind: 'fretboard',
-        caption: 'Every fret of the low E (Mi) string from open to the 12th. Tap along and listen to each half step.',
+        caption: 'Every fret of the low E (Mi) string, open to 12. **Tap along** and hear each half step.',
         fretRange: [0, 12],
         positions: onString(0, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
         tapToHear: true,
       },
       {
-        kind: 'text',
-        title: 'Twelve notes, then it repeats',
-        body: [
-          'Count up from any note and after 12 frets you reach the same note name again, one octave higher. There are only twelve different notes; the whole neck is those twelve repeating.',
-          'E (Mi) and F (Fa) have no sharp between them, and neither have B (Si) and C (Do): they are already one fret apart.',
+        kind: 'explain',
+        headline: 'No sharp: E (Mi)-F (Fa), B (Si)-C (Do)',
+        visual: {
+          kind: 'neck',
+          fretRange: [0, 8],
+          dots: onString(0, [0, 1, 7, 8]),
+          highlightStrings: [0],
+          tapToHear: true,
+        },
+        points: [
+          'E (Mi) and F (Fa) are already **one fret** apart. Nothing fits between.',
+          'Same for B (Si) and C (Do): ==frets 7 and 8==.',
         ],
       },
       {
         kind: 'listen',
-        caption:
-          'Climb the low E (Mi) string one fret at a time: open, then frets 1, 2 and 3. Each step is a half step.',
+        caption: 'Climb the low E (Mi) string one fret at a time: open, then frets 1, 2, 3. **Every step is a half step.**',
         targets: onString(0, [0, 1, 2, 3]),
       },
       {
@@ -114,14 +155,14 @@ export const UNIT_2: readonly Lesson[] = [
         question: 'You play C (Do), then move up one fret. Which note do you land on?',
         options: ['C# (Do#)', 'D (Re)', 'B (Si)', 'E (Mi)'],
         answer: 'C# (Do#)',
-        explain: 'A sharp is one fret up, so C# (Do#) is the very next fret. D (Re) is two frets up from C (Do).',
+        explain: 'A sharp is **one fret up**, so C# (Do#) is the very next fret. D (Re) is two frets up.',
       },
       {
         kind: 'check',
         question: 'Which note is one fret below B (Si)?',
         options: ['Bb (Sib)', 'A (La)', 'C (Do)', 'G# (Sol#)'],
         answer: 'Bb (Sib)',
-        explain: 'A flat is one fret down. A (La) is two frets below B (Si), with Bb (Sib) in between.',
+        explain: 'A flat is **one fret down**. A (La) is two frets below B (Si), with Bb (Sib) in between.',
       },
       {
         kind: 'check',
@@ -133,8 +174,7 @@ export const UNIT_2: readonly Lesson[] = [
           'Ab (Lab) and A# (La#)',
         ],
         answer: 'G# (Sol#) and Ab (Lab)',
-        explain:
-          'G# (Sol#) is one fret above G (Sol) and Ab (Lab) is one fret below A (La), and those are the same fret. The other pairs are one or two frets apart.',
+        explain: 'G# (Sol#) is one fret above G (Sol). Ab (Lab) is one below A (La). Same fret, **two names**.',
       },
     ],
   },
@@ -145,17 +185,49 @@ export const UNIT_2: readonly Lesson[] = [
     goal: 'Find the natural notes on the thickest string using landmarks, without counting up from the nut.',
     steps: [
       {
-        kind: 'text',
-        title: 'Learn landmarks, not twelve frets',
-        body: [
-          'On the thickest string the natural notes sit at frets 0, 1, 3, 5, 7, 8, 10 and 12. Fret 0 is E (Mi) and fret 1 is F (Fa). Then frets 3, 5 and 7 are G (Sol), A (La), B (Si), and frets 8, 10 and 12 are C (Do), D (Re), E (Mi).',
-          'The one-fret gaps are the ones you already know: E (Mi) to F (Fa) at the start, and B (Si) to C (Do) at frets 7 and 8.',
-          'Use the dots on the side of the neck as signposts. Most guitars mark frets 3, 5, 7, 9 and 12, with a double dot at 12.',
+        kind: 'explain',
+        headline: 'Use the dots as signposts',
+        visual: {
+          kind: 'neck',
+          fretRange: [0, 12],
+          dots: [3, 5, 7, 9, 12].map((fret) => ({ stringIndex: 0, fret, label: String(fret) })),
+          highlightStrings: [0],
+        },
+        points: [
+          'Most guitars mark **frets 3, 5, 7, 9 and 12** with dots on the neck.',
+          'Fret 12 gets a double dot.',
+          '==Look for the dots== instead of counting frets.',
+        ],
+      },
+      {
+        kind: 'explain',
+        headline: 'Eight landmarks, eight notes',
+        visual: { kind: 'notes', notes: ['E', 'F', 'G', 'A', 'B', 'C', 'D', 'E'] },
+        points: [
+          'Fret 0 is E (Mi). Fret 1 is F (Fa).',
+          'Frets 3, 5, 7 are G (Sol), A (La), B (Si).',
+          'Frets 8, 10, 12 are C (Do), D (Re), E (Mi).',
+        ],
+        tip: 'Learn these eight frets: ==0, 1, 3, 5, 7, 8, 10, 12==.',
+      },
+      {
+        kind: 'explain',
+        headline: 'B (Si) to C (Do): frets 7 and 8',
+        visual: {
+          kind: 'neck',
+          fretRange: [5, 10],
+          dots: onString(0, [7, 8]),
+          highlightStrings: [0],
+          tapToHear: true,
+        },
+        points: [
+          'Frets 7 and 8 sit side by side: **one fret**, a half step.',
+          'The other one-fret gap is at the start: E (Mi) to F (Fa), frets 0 and 1.',
         ],
       },
       {
         kind: 'fretboard',
-        caption: 'The landmarks on the thickest string. Tap each one and say its name.',
+        caption: 'The landmarks on the thickest string. **Tap each one and say its name.**',
         fretRange: [0, 12],
         positions: onString(0, [0, 1, 3, 5, 7, 8, 10, 12]),
         tapToHear: true,
@@ -163,12 +235,11 @@ export const UNIT_2: readonly Lesson[] = [
       {
         kind: 'riff',
         riffId: 'low-e-landmarks',
-        caption:
-          'All on the thickest string. Say the names as you play: Mi Sol La Si, Do Re Mi. Use the dots on the neck instead of counting.',
+        caption: 'All on the thickest string. Say it: Mi Sol La Si, Do Re Mi. **Use the dots**, don\'t count.',
       },
       {
         kind: 'listen',
-        caption: 'Find each note from the landmarks, without counting up from the nut.',
+        caption: 'Find each note from the landmarks, **without counting up from the nut**.',
         targets: onString(0, [3, 5, 8]),
       },
       { kind: 'drill', strings: [0], fretRange: [0, 12], count: 6 },
@@ -177,14 +248,14 @@ export const UNIT_2: readonly Lesson[] = [
         question: 'Which fret of the low E (Mi) string is C (Do)?',
         options: ['Fret 8', 'Fret 7', 'Fret 10', 'Fret 5'],
         answer: 'Fret 8',
-        explain: 'B (Si) is fret 7 and C (Do) comes one fret later, at fret 8. D (Re) is fret 10.',
+        explain: 'B (Si) is fret 7, and C (Do) is **one fret later**: fret 8. D (Re) is fret 10.',
       },
       {
         kind: 'check',
         question: 'Which note sits at fret 10 of the low E (Mi) string?',
         options: ['D (Re)', 'C (Do)', 'E (Mi)', 'B (Si)'],
         answer: 'D (Re)',
-        explain: 'Fret 8 is C (Do), fret 10 is D (Re) and fret 12 is E (Mi) again.',
+        explain: 'Fret 8 is C (Do), **fret 10** is D (Re), and fret 12 is E (Mi) again.',
       },
     ],
   },
@@ -195,17 +266,34 @@ export const UNIT_2: readonly Lesson[] = [
     goal: 'Find the natural notes on the A (La) string and see that the same alphabet sits in a new place.',
     steps: [
       {
-        kind: 'text',
-        title: 'Same alphabet, new places',
-        body: [
-          'The A (La) string holds the same notes in different spots. Its landmarks: fret 0 is A (La), 2 is B (Si), 3 is C (Do), 5 is D (Re), 7 is E (Mi), 8 is F (Fa), 10 is G (Sol), and 12 is A (La) again.',
-          'The half steps fall in new places: B (Si) to C (Do) at frets 2 and 3, and E (Mi) to F (Fa) at frets 7 and 8. Frets 7 and 8 are a half step on both strings, which is a handy thing to remember.',
-          'Remember the tuning trick too: fret 5 of the low E (Mi) string is A (La), the open string next door.',
+        kind: 'explain',
+        headline: 'Same notes, new places',
+        visual: { kind: 'notes', notes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'A'] },
+        points: [
+          'Frets 0, 2, 3, 5 are A (La), B (Si), C (Do), D (Re).',
+          'Frets 7, 8, 10, 12 are E (Mi), F (Fa), G (Sol), A (La).',
+        ],
+        tip: 'Handy: ==fret 5== of the low E (Mi) string is the open A (La) string next door.',
+      },
+      {
+        kind: 'explain',
+        headline: 'Half steps in new spots',
+        visual: {
+          kind: 'neck',
+          fretRange: [5, 10],
+          dots: [...onString(0, [7, 8]), ...onString(1, [7, 8])],
+          highlightStrings: [0, 1],
+          tapToHear: true,
+        },
+        points: [
+          'Frets 7 and 8 are ==a half step== on both strings.',
+          'Low E (Mi) string: B (Si) to C (Do). A (La) string: E (Mi) to F (Fa).',
+          'The A (La) string also has B (Si) to C (Do) at frets 2 and 3.',
         ],
       },
       {
         kind: 'fretboard',
-        caption: 'The same alphabet on two strings. Compare where the half steps fall on each.',
+        caption: 'The same alphabet on two strings. **Compare where the half steps fall** on each.',
         fretRange: [0, 12],
         positions: [...onString(0, [0, 1, 3, 5, 7, 8, 10, 12]), ...onString(1, [0, 2, 3, 5, 7, 8, 10, 12])],
         tapToHear: true,
@@ -213,8 +301,7 @@ export const UNIT_2: readonly Lesson[] = [
       {
         kind: 'riff',
         riffId: 'a-string-landmarks',
-        caption:
-          'The same job as last time, one string over. Say the names: La Si Do Re, Mi Fa Sol La. Use the dots to find 5, 7, 10 and 12.',
+        caption: 'The same job, one string over: La Si Do Re, Mi Fa Sol La. **Use the dots** to find 5, 7, 10 and 12.',
       },
       { kind: 'drill', strings: [1], fretRange: [0, 12], count: 6 },
       {
@@ -222,27 +309,21 @@ export const UNIT_2: readonly Lesson[] = [
         question: 'Which fret of the A (La) string is D (Re)?',
         options: ['Fret 5', 'Fret 3', 'Fret 7', 'Fret 10'],
         answer: 'Fret 5',
-        explain: 'A (La) is open, B (Si) is fret 2, C (Do) is fret 3, and D (Re) is fret 5.',
+        explain: 'Open A (La), B (Si) at fret 2, C (Do) at fret 3, then D (Re) at **fret 5**.',
       },
       {
         kind: 'check',
         question: 'Which note sits at fret 7 of the A (La) string?',
         options: ['E (Mi)', 'D (Re)', 'F (Fa)', 'B (Si)'],
         answer: 'E (Mi)',
-        explain: 'D (Re) is fret 5, E (Mi) is fret 7 and F (Fa) is fret 8, right after it.',
+        explain: 'D (Re) is fret 5. Then **fret 7** is E (Mi) and fret 8 is F (Fa), right after it.',
       },
       {
         kind: 'check',
         question: 'Which pair of notes on the A (La) string is only a half step apart?',
-        options: [
-          'B (Si) and C (Do)',
-          'C (Do) and D (Re)',
-          'D (Re) and E (Mi)',
-          'F (Fa) and G (Sol)',
-        ],
+        options: ['B (Si) and C (Do)', 'C (Do) and D (Re)', 'D (Re) and E (Mi)', 'F (Fa) and G (Sol)'],
         answer: 'B (Si) and C (Do)',
-        explain:
-          'B (Si) at fret 2 and C (Do) at fret 3 are neighbouring frets. The other pairs are two frets apart.',
+        explain: 'B (Si) at fret 2 and C (Do) at fret 3 are **neighbouring frets**. The other pairs are two frets apart.',
       },
     ],
   },
@@ -253,24 +334,36 @@ export const UNIT_2: readonly Lesson[] = [
     goal: 'Find the same note an octave higher with the two-strings-up, two-frets-up shape.',
     steps: [
       {
-        kind: 'text',
-        title: 'The same note, higher',
-        body: [
-          'An octave is the distance from a note to the next note with the same name. The two sound like one note at two heights: sing one and the other blends in.',
-          'Along one string, 12 frets up is always an octave. The open low E (Mi) string and fret 12 of the same string are octave twins.',
+        kind: 'explain',
+        headline: 'Octave: same name, higher',
+        visual: {
+          kind: 'neck',
+          fretRange: [0, 12],
+          dots: [
+            { stringIndex: 1, fret: 0 },
+            { stringIndex: 1, fret: 12 },
+          ],
+          highlightStrings: [1],
+          tapToHear: true,
+        },
+        points: [
+          'An **octave** is the next note with the same name.',
+          'Play both: they blend like one note at two heights.',
+          'On one string, ==12 frets up== is always an octave.',
         ],
       },
       {
-        kind: 'text',
-        title: 'A shortcut across strings',
-        body: [
-          'Start on a note on string 6 or string 5. Go two strings thinner and two frets higher: that is the same note, one octave up. G (Sol) at fret 3 of the low E (Mi) string has its twin at fret 5 of the D (Re) string.',
-          'The shape works from the two thickest strings only. Higher up, the gap between the G (Sol) and B (Si) strings is a fret smaller, so the shape needs three frets instead of two.',
+        kind: 'explain',
+        headline: 'A shortcut across strings',
+        visual: { kind: 'illustration', name: 'octave-shape' },
+        points: [
+          '==Two strings up, two frets up== gives the same note, one octave higher.',
+          'Start on string 6 or 5. Example: G (Sol), fret 3 of string 6 → fret 5 of string 4.',
         ],
       },
       {
         kind: 'fretboard',
-        caption: 'Two octave pairs. The higher note is always two strings thinner and two frets higher.',
+        caption: 'Two octave pairs. The higher note is always **two strings thinner** and **two frets higher**.',
         fretRange: [0, 6],
         positions: [
           { stringIndex: 0, fret: 3 },
@@ -281,14 +374,34 @@ export const UNIT_2: readonly Lesson[] = [
         tapToHear: true,
       },
       {
+        kind: 'explain',
+        headline: 'Higher up, it takes 3 frets',
+        visual: {
+          kind: 'neck',
+          fretRange: [0, 3],
+          dots: [
+            { stringIndex: 2, fret: 0 },
+            { stringIndex: 4, fret: 3 },
+            { stringIndex: 3, fret: 0 },
+            { stringIndex: 5, fret: 3 },
+          ],
+          highlightStrings: [2, 3, 4, 5],
+          tapToHear: true,
+        },
+        points: [
+          'The gap between the G (Sol) and B (Si) strings is **one fret smaller**.',
+          'From the D (Re) or G (Sol) string, go two strings up and ==three frets== higher.',
+        ],
+        warn: 'The 2-fret shape from string 4 or 3 lands one fret too low.',
+      },
+      {
         kind: 'riff',
         riffId: 'octave-hop',
-        caption:
-          'G (Sol) and its octave, C (Do) and its octave, then A (La) and D (Re) the same way. Each note lasts two beats, so listen for the same name sounding higher.',
+        caption: 'G (Sol) and its octave, C (Do) and its octave, then A (La) and D (Re). **Two beats each**: hear the same name, higher.',
       },
       {
         kind: 'listen',
-        caption: 'Play G (Sol) low, then find its octave using the shape.',
+        caption: 'Play G (Sol) low, then **find its octave** with the shape.',
         targets: [
           { stringIndex: 0, fret: 3 },
           { stringIndex: 2, fret: 5 },
@@ -296,8 +409,7 @@ export const UNIT_2: readonly Lesson[] = [
       },
       {
         kind: 'check',
-        question:
-          'You are on fret 5 of the low E (Mi) string: A (La). Where is A (La) one octave higher, using the shape?',
+        question: 'You are on fret 5 of the low E (Mi) string: A (La). Where is A (La) one octave higher, using the shape?',
         options: [
           'Fret 7 of the D (Re) string',
           'Fret 5 of the D (Re) string',
@@ -305,28 +417,21 @@ export const UNIT_2: readonly Lesson[] = [
           'Fret 7 of the G (Sol) string',
         ],
         answer: 'Fret 7 of the D (Re) string',
-        explain:
-          'Two strings thinner is the D (Re) string, and two frets higher is fret 7. Fret 5 of the D (Re) string is G (Sol).',
+        explain: 'Two strings thinner is the D (Re) string, two frets higher is **fret 7**. Fret 5 there is G (Sol).',
       },
       {
         kind: 'check',
         question: 'How many frets up the same string is an octave?',
         options: ['7 frets', '10 frets', '12 frets', '24 frets'],
         answer: '12 frets',
-        explain: 'Twelve frets up the same string gives the same note name an octave higher.',
+        explain: 'Twelve frets up the same string gives the **same name**, one octave higher.',
       },
       {
         kind: 'check',
         question: 'The two-strings-up, two-frets-up shape works when you start on…',
-        options: [
-          'The low E (Mi) or A (La) string',
-          'The G (Sol) or B (Si) string',
-          'Any string',
-          'Open strings only',
-        ],
+        options: ['The low E (Mi) or A (La) string', 'The G (Sol) or B (Si) string', 'Any string', 'Open strings only'],
         answer: 'The low E (Mi) or A (La) string',
-        explain:
-          'From the D (Re) and G (Sol) strings the same octave needs three frets, because the gap between the G (Sol) and B (Si) strings is smaller.',
+        explain: 'From the D (Re) and G (Sol) strings the octave needs **three frets**: the G (Sol)-B (Si) gap is smaller.',
       },
     ],
   },

@@ -46,6 +46,26 @@ export const UNIT_5_FACTS: readonly LessonFacts[] = [
       fact.scale('G', 'major', ['G', 'A', 'B', 'C', 'D', 'E', 'F#']),
       // The song uses only the key's I, IV and V.
       fact.songChords('aura-lee', ['G', 'C', 'D']),
+      // The shortcut card: the IV is five frets above the I, the V two frets above the IV.
+      fact.semitones('E', 'A', 5),
+      fact.semitones('A', 'B', 2),
+      fact.semitones('D', 'G', 5),
+      fact.semitones('G', 'A', 2),
+      fact.semitones('C', 'F', 5),
+      fact.semitones('F', 'G', 2),
+      fact.semitones('A', 'D', 5),
+      fact.semitones('D', 'E', 2),
+      // ... and on the low E string that is fret 0, 5 and 7.
+      fact.note(0, 0, 'E'),
+      fact.note(0, 5, 'A'),
+      fact.note(0, 7, 'B'),
+      // The vi chords named in the card: Em in G, Am in C (the chords' own tones).
+      fact.chordTones('Em-open', ['E', 'G', 'B']),
+      fact.chordTones('Am-open', ['A', 'C', 'E']),
+      // The key-of-D picture shows D, G and A.
+      fact.chordTones('D-open', ['D', 'F#', 'A']),
+      fact.chordTones('G-open', ['G', 'B', 'D']),
+      fact.chordTones('A-open', ['A', 'C#', 'E']),
     ],
   },
   {
@@ -54,6 +74,10 @@ export const UNIT_5_FACTS: readonly LessonFacts[] = [
       fact.scale('E', 'minorPentatonic', ['E', 'G', 'A', 'B', 'D']),
       // The distractor is E major pentatonic.
       fact.scale('E', 'majorPentatonic', ['E', 'F#', 'G#', 'B', 'C#']),
+      // The root E sits at the open low E, the D string's fret 2 and the open high E string.
+      fact.note(0, 0, 'E'),
+      fact.note(2, 2, 'E'),
+      fact.note(5, 0, 'E'),
       // F is outside the scale: box 1 skips fret 1 of the low E string.
       fact.note(0, 1, 'F'),
       fact.note(0, 3, 'G'),
@@ -82,6 +106,7 @@ export const UNIT_5_FACTS: readonly LessonFacts[] = [
       fact.riffEvent('blues-shuffle-e', 8.5, 2, 4),
       // The B bar: slid up two frets: B at fret 2 of the A string, partners at fret 4 (F#) and fret 6 (G#) on the D string.
       fact.note(2, 6, 'G#'),
+      fact.note(1, 0, 'A'),
     ],
   },
 ];
