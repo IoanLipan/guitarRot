@@ -28,6 +28,7 @@ describe('icon set', () => {
       'GearIcon',
       'MicIcon',
       'SpeakerIcon',
+      'SearchIcon',
     ]) {
       expect(names).toContain(expected);
     }
@@ -70,13 +71,12 @@ describe('icon set', () => {
  * falls back to, which is how they came out too small or weird on Android.
  * This keeps them from creeping back into the app's buttons.
  *
- * Not scanned: `songs/` (its own screens, moving over to the icon set),
- * `dev/`, and the lesson illustrations and chord diagrams, where an arrow or a
+ * Not scanned: `dev/`, and the lesson illustrations and chord diagrams, where an arrow or a
  * cross is notation inside a drawing rather than a button's icon.
  */
 describe('no text glyphs as icons', () => {
   const GLYPHS = /[←→↑↓×▶▸▾▴♪♩♫↻↺✓✔✕✗✖⏸⏹↗⚙]/;
-  const SKIPPED = ['songs', 'dev', 'content', 'music', 'ui', join('learn', 'illustrations'), join('render', 'Fretboard.tsx')];
+  const SKIPPED = ['dev', 'content', 'music', 'ui', join('learn', 'illustrations'), join('render', 'Fretboard.tsx')];
 
   function sources(dir: string): string[] {
     return readdirSync(dir).flatMap((entry) => {

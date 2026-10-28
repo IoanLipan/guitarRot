@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import {
   createMetronome,
@@ -10,14 +10,31 @@ import {
 } from '@/audio';
 import { beatsPerBar, chartBars, chordByName, songToRiff, type Song } from '@/content';
 import { STANDARD_TUNING } from '@/music';
-import { chordShapeToFretboard, createTabGeometry, Fretboard, TabStaff } from '@/render';
+import { chordShapeToFretboard, createTabGeometry, Fretboard, TabStaff, useFollowPlayhead } from '@/render';
 import { ShareButton } from '@/share';
+import { ArrowLeftIcon, CloseIcon, MetronomeIcon, PauseIcon, PlayIcon } from '@/ui/icons';
 import { DifficultyPill } from './DifficultyPill';
 import { ChordChart } from './ChordChart';
 import { keyLabel } from './keyLabel';
+import { hasShapes, songShapes } from './shapes';
+import { ShapesView } from './ShapesView';
 
 /** A tapped-out practice loop: the bar you tapped first, and the resulting range. */
 type LoopRange = { anchor: number; start: number; end: number };
+
+/**
+ * What the song area shows. A strummed chart is only ever its chart; a riff is
+ * its tab or its shapes; an arpeggio chart is its chart, the tab that chart
+ * plays, or its shapes.
+ */
+type SongView = 'chart' | 'tab' | 'shapes';
+
+const VIEW_LABELS: Record<SongView, string> = { chart: 'Chart', tab: 'Tab', shapes: 'Shapes' };
+
+function viewsFor(song: Song): readonly SongView[] {
+  if (!hasShapes(song)) return song.chart !== undefined ? ['chart'] : ['tab'];
+  return song.chart !== undefined ? ['chart', 'tab', 'shapes'] : ['tab', 'shapes'];
+}
 
 export function SongPlayer({
   song,
@@ -38,7 +55,8 @@ export function SongPlayer({
   const playerRef = useRef<RiffPlayer | null>(null);
   const metronomeRef = useRef<Metronome | null>(null);
   const playheadRef = useRef<SVGGElement>(null);
-  const staffScrollRef = useRef<HTMLDivElement>(null);
+  /** Scrolls the tab along with the playhead, and stands down while the player's hands are on it. */
+  const { scrollerRef: tabScrollerRef, follow: followTab, scrollToStart: tabToStart } = useFollowPlayhead();
   /** Blocks a second tap of Play from overlapping a count-in already in flight. */
   const startingRef = useRef(false);
 
@@ -47,8 +65,16 @@ export function SongPlayer({
   const [speed, setSpeed] = useState(1);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [loopRange, setLoopRange] = useState<LoopRange | null>(null);
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
   const speedRef = useRef(speed);
   speedRef.current = speed;
+
+  const views = useMemo(() => viewsFor(song), [song]);
+  const [chosenView, setChosenView] = useState<SongView | null>(null);
+  const view = chosenView !== null && views.includes(chosenView) ? chosenView : (views[0] ?? 'tab');
+  const shapes = useMemo(() => songShapes(song), [song]);
+  const getBeat = useCallback(() => playerRef.current?.currentBeat() ?? null, []);
 
   // Opening a song starts it, the same way opening a feed card does.
   // The cleanup is what guarantees leaving the screen leaves no audio behind.
@@ -103,20 +129,21 @@ export function SongPlayer({
         if (head !== null) {
           const x = beat * geometry.beatWidth;
           head.style.transform = `translateX(${x}px)`;
-          const scroller = staffScrollRef.current;
-          if (scroller !== null) {
-            scroller.scrollLeft = Math.max(
-              0,
-              geometry.xForBeat(0) + x - scroller.clientWidth * 0.35,
-            );
-          }
+          // Keep the playhead in view while the song plays, unless the player
+          // has hold of the tab; a paused tab is theirs to browse.
+          if (playingRef.current) followTab(geometry.xForBeat(0) + x);
         }
       }
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [geometry, riff.bars, barLength]);
+  }, [geometry, riff.bars, barLength, followTab]);
+
+  // Pausing puts the song back at its start, so the tab goes back with it.
+  useEffect(() => {
+    if (!playing) tabToStart();
+  }, [playing, tabToStart]);
 
   async function handleToggle() {
     if (startingRef.current) return;
@@ -188,11 +215,11 @@ export function SongPlayer({
           onClick={onBack}
           aria-label="Back to songs"
           data-testid="song-back"
-          className="flex h-9 items-center gap-1.5 rounded-full bg-surface-2 pr-4 pl-3 text-xs font-bold tracking-wider text-ink-dim uppercase active:scale-95"
+          className="flex h-11 items-center gap-1.5 rounded-full bg-surface-2 pr-4 pl-3 text-xs font-bold tracking-wider text-ink-dim uppercase active:scale-95"
         >
-          <span aria-hidden="true">←</span> Songs
+          <ArrowLeftIcon size={18} /> Songs
         </button>
-        <ShareButton target={{ kind: 'song', id: song.id }} title={song.title} />
+        <ShareButton target={{ kind: 'song', id: song.id }} title={song.title} className="min-h-11" />
       </div>
 
       <div className="shrink-0">
@@ -200,16 +227,27 @@ export function SongPlayer({
         <p className="mt-0.5 text-sm text-ink-dim">{song.artist}</p>
       </div>
 
-      <div className="flex shrink-0 flex-wrap gap-1.5">
+      <div
+        className={`flex shrink-0 flex-wrap gap-1.5 ${
+          view === 'shapes' ? '[@media(max-height:700px)]:hidden' : ''
+        }`}
+      >
         <DifficultyPill difficulty={song.difficulty} />
         <Chip>{song.style}</Chip>
         <Chip>Key {keyLabel(song.key)}</Chip>
         <Chip>{song.bpm} BPM</Chip>
       </div>
 
-      <p className="shrink-0 text-[13px] leading-relaxed text-ink-dim">{song.about}</p>
+      {/* On a short phone the shapes need the room more than the chips and the blurb do. */}
+      <p
+        className={`shrink-0 text-[13px] leading-relaxed text-ink-dim ${
+          view === 'shapes' ? '[@media(max-height:700px)]:hidden' : ''
+        }`}
+      >
+        {song.about}
+      </p>
 
-      {song.chart !== undefined && loopRange !== null && (
+      {loopRange !== null && (
         <div className="flex shrink-0 items-center gap-2 text-xs font-bold text-ink-dim">
           <span data-testid="loop-range-label">
             Looping bars {loopRange.start + 1}–{loopRange.end + 1}
@@ -219,25 +257,65 @@ export function SongPlayer({
             onClick={() => setLoopRange(null)}
             aria-label="Clear loop"
             data-testid="loop-clear"
-            className="rounded-full bg-surface-2 px-2 py-0.5 text-ink-dim active:scale-95"
+            className="-my-2.5 flex h-11 w-11 items-center justify-center rounded-full text-ink-dim active:scale-90"
           >
-            ✕
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-2">
+              <CloseIcon size={16} />
+            </span>
           </button>
         </div>
       )}
 
+      {views.length > 1 && (
+        <div
+          role="group"
+          aria-label="Song view"
+          data-testid="view-toggle"
+          className="flex shrink-0 gap-1 self-start rounded-full bg-surface-2 p-1"
+        >
+          {views.map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={view === option}
+              data-testid={`view-${option}`}
+              onClick={() => {
+                tapHaptic();
+                setChosenView(option);
+              }}
+              className={`min-h-11 rounded-full px-4 text-xs font-extrabold tracking-wider uppercase active:scale-95 ${
+                view === option ? 'bg-accent text-ground' : 'text-ink-dim'
+              }`}
+            >
+              {VIEW_LABELS[option]}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {song.chart !== undefined ? (
+        {view === 'chart' && song.chart !== undefined ? (
           <ChordChart
             chart={song.chart}
             activeBar={activeBar}
             loopRange={loopRange}
             onBarTap={handleBarTap}
           />
+        ) : view === 'shapes' ? (
+          <ShapesView
+            shapes={shapes}
+            events={riff.events}
+            engine={engine}
+            playing={playing}
+            getBeat={getBeat}
+            loopRange={loopRange}
+            onLoopTap={handleBarTap}
+          />
         ) : (
           <div className="flex h-full items-center">
             <div
-              ref={staffScrollRef}
+              ref={tabScrollerRef}
+              data-testid="tab-scroller"
               className="max-h-full w-full overflow-x-auto rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8"
             >
               <TabStaff riff={riff} geometry={geometry} showPlayhead playheadRef={playheadRef} />
@@ -254,12 +332,9 @@ export function SongPlayer({
           className="flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent shadow-[0_6px_18px_rgba(255,176,32,0.35)] active:scale-95"
         >
           {playing ? (
-            <span className="flex gap-1">
-              <span className="h-4 w-1.5 rounded-xs bg-ground" />
-              <span className="h-4 w-1.5 rounded-xs bg-ground" />
-            </span>
+            <PauseIcon size={26} className="text-ground" />
           ) : (
-            <span className="ml-0.5 h-0 w-0 border-y-10 border-l-16 border-y-transparent border-l-ground" />
+            <PlayIcon size={26} className="text-ground" />
           )}
         </button>
 
@@ -269,13 +344,13 @@ export function SongPlayer({
           aria-label="Metronome"
           aria-pressed={metronomeOn}
           data-testid="metronome-toggle"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg active:scale-95"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full active:scale-95"
           style={{
             background: metronomeOn ? 'var(--color-accent)' : 'var(--color-surface-2)',
             color: metronomeOn ? 'var(--color-ground)' : 'var(--color-ink-dim)',
           }}
         >
-          ♩
+          <MetronomeIcon size={22} />
         </button>
 
         <label className="min-w-0 flex-1">
@@ -295,7 +370,8 @@ export function SongPlayer({
           />
         </label>
 
-        {currentChord !== undefined && (
+        {/* The shapes view already enlarges the current chord. */}
+        {currentChord !== undefined && view !== 'shapes' && (
           <div className="w-16 shrink-0" data-testid="current-chord">
             <Fretboard
               orientation="vertical"

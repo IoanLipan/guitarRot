@@ -904,6 +904,81 @@ cross-device progress sync ("if you uninstall the app, bad luck for now" —
 left alone (not asked about, and unlike `leftHanded` it's at least
 plausible future work rather than confirmed dead).
 
+## Hard songs and the Shapes view (built 2026-10-28)
+
+**Eight hard songs** (`src/content/hardSongs.ts`, appended to `SONGS` by
+`songCatalog.ts`; 40 songs in all):
+
+- *Five public-domain classical pieces*, read note for note from the MIDI of
+  their Mutopia Project editions (mutopiaproject.org; each piece's own page
+  was checked and every one is **Public Domain**, never ShareAlike or
+  NonCommercial): Bach, Prelude in D minor BWV 999 (id 60, Jakob Bagterp);
+  Carcassi, Études Op. 60 No. 7 (id 300) and No. 3 (id 14) (Jeff Covey);
+  Mertz, Étude in A minor (id 111, Emre Akbas, the whole piece); Sor,
+  Étude Op. 35 No. 14 (id 64, Jakob Bagterp). Each is a 16-bar excerpt with
+  the edition's own time signature and tempo. The attribution names composer,
+  dates, "Mutopia Project edition by <typesetter>, Public Domain" and the
+  piece URL, and `hardSongs.test.ts` checks all of it.
+- *Three original studies*: Alternate Picking Ladder (A minor, 140 bpm),
+  Sweep Cascade (Am–F–C–G, five up and three back, open position then up the
+  neck) and Travis Blues in E (twelve bars, alternating thumb).
+
+The classical tab is *generated data* in `src/content/classicalTabs.ts`
+(`[start, string, fret, length]` rows in 1/24 beat). The notes are the
+edition's; the string and fret of each is ours: a small search over the MIDI
+notes that keeps every fretted note sounding together inside a 5-fret reach,
+prefers open strings and low positions, uses nothing above the 15th fret, and
+never puts two notes on one string at once. The MIDI parser and the search
+were throwaway dev scripts kept outside the repo (nothing downloaded was ever
+executed), so the file says "do not edit by hand". `hardSongs.test.ts` pins the
+first three bars' pitches of each piece, read from the MIDI rather than from the
+fingering, so a fingering bug cannot change the music. Not used: Tárrega's
+*Lágrima* and *Adelita* (Mutopia has them only as two-guitar arrangements), his
+*Claro de Luna* (needs a drop-D tuning), and everything by Aguado and Sor's
+Op. 2 (CC BY-SA).
+
+**Shapes view** (`src/songs/shapes.ts`, `chordNaming.ts`, `ShapesView.tsx`,
+`ShapeCard.tsx`). A riff song gets a `Tab | Shapes` toggle; an arpeggio
+chart gets `Chart | Tab | Shapes` (its tab is the one `songToRiff` already
+builds); a strummed chart gets no toggle. Shapes are derived from the tab, not
+authored: `deriveRiffShapes` takes the fretted positions in each bar and names
+the chord they spell from theory, not from the nine-shape library
+(`chordNaming.ts`: every root × every `ChordQuality` through
+`expectedPitchClasses`; exact tones first, then a chord of three or more tones
+plus one extra note → "+ melody", then a bare root-and-fifth → "G5"; the
+chord built on the bass note wins ties, so A, C, E over an A bass with a
+walking F is "Am + melody", not Fmaj7). The symbol is the one the rest of the
+app writes (Gm, Bb, A7, Dm7, Cmaj7, Asus2, Bdim, Caug, E5) with its solfège
+beside it ("Sol minor"); a bar that fits nothing shows a small muted dash.
+Across the five classical pieces, 71% of the shapes (and 61% of the bars) were
+named by the library alone and 77% (71%) by theory; what is left is mostly
+walking-bass bars, where the chord changes on every beat. A bar is split into
+halves only when it reaches more than four frets, or when the whole bar fits
+nothing but its two halves are two different chords. Arpeggio charts use the
+chart's own chord (with its finger numbers).
+
+During playback a rAF loop reads `currentBeat()`: which card is current is
+React state (it grows and rings), set only on the frames where the bar
+changes; the plucked string and fret are lit by flipping a `data-lit`
+attribute on an SVG overlay, so a run of sixteenths causes no re-render. A tap
+on a card strums its shape; a ⟲ badge on each card loops that bar with the same
+two-tap range as the chart, which makes loop-a-section available to riff songs
+for the first time (the chord-chart restriction in the section above no longer
+holds). The tab and the shapes strip both follow the song through the shared
+`useFollowPlayhead` (`src/render/`): it stands down while a finger or wheel is
+on the scroller and eases back about three seconds later. The strip follows a
+`stripPosition`: the playhead glides from each card's centre to the next between
+the middles of their bars, so it scrolls steadily rather than jumping a card at
+every bar line. Only a playing song carries either scroller along; pausing
+returns the tab to the start with the song. The song player draws its buttons
+with `src/ui/icons.tsx` (no text glyphs; `songs/` is now in the glyph-scan
+test) and every tap target is at least 44px; on a phone under 700px tall the
+Shapes view hides the chips and the blurb to make room.
+
+Not done: the shape diagrams carry no finger numbers when derived from a tab
+(the tab does not say which finger plays what); consecutive identical bars are
+not merged; no per-note labels on the dots.
+
 ## Deployment
 
 The `guitar-rot` Vercel project (org `lipanovskis-projects`) auto-deploys
