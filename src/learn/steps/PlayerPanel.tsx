@@ -9,8 +9,9 @@ import {
   type RiffPlayer,
 } from '@/audio';
 import { beatsPerBar, type Riff, type SongChart } from '@/content';
-import { createTabGeometry, TabStaff } from '@/render';
+import { createTabGeometry, TabStaff, useFollowPlayhead } from '@/render';
 import { ChordChart } from '@/songs/ChordChart';
+import { MetronomeIcon, PlayIcon, StopIcon } from '@/ui/icons';
 
 /**
  * A compact player for the riff or song a lesson step points at: the tab (or,
@@ -44,7 +45,8 @@ export function PlayerPanel({
   const playerRef = useRef<RiffPlayer | null>(null);
   const metronomeRef = useRef<Metronome | null>(null);
   const playheadRef = useRef<SVGGElement>(null);
-  const staffScrollRef = useRef<HTMLDivElement>(null);
+  // Following the playhead gives way to a finger on the staff; see the hook.
+  const { scrollerRef: staffScrollRef, follow, scrollToStart } = useFollowPlayhead();
   /** Blocks a second tap of Play from overlapping a count-in already in flight. */
   const startingRef = useRef(false);
 
@@ -98,10 +100,7 @@ export function PlayerPanel({
         if (head !== null) {
           const x = beat * geometry.beatWidth;
           head.style.transform = `translateX(${x}px)`;
-          const scroller = staffScrollRef.current;
-          if (scroller !== null) {
-            scroller.scrollLeft = Math.max(0, geometry.xForBeat(0) + x - scroller.clientWidth * 0.35);
-          }
+          follow(geometry.xForBeat(0) + x);
         }
       }
       frame = requestAnimationFrame(tick);
@@ -111,9 +110,9 @@ export function PlayerPanel({
       cancelAnimationFrame(frame);
       setActiveBar(null);
       if (playheadRef.current !== null) playheadRef.current.style.transform = 'translateX(0px)';
-      if (staffScrollRef.current !== null) staffScrollRef.current.scrollLeft = 0;
+      scrollToStart();
     };
-  }, [playing, geometry, riff.bars, barLength]);
+  }, [playing, geometry, riff.bars, barLength, follow, scrollToStart]);
 
   async function handleToggle() {
     if (startingRef.current) return;
@@ -167,7 +166,8 @@ export function PlayerPanel({
       ) : (
         <div
           ref={staffScrollRef}
-          className="w-full overflow-x-auto rounded-2xl bg-ground/60 py-3 ring-1 ring-white/8"
+          data-testid="tab-scroller"
+          className="w-full overflow-x-auto overscroll-x-contain rounded-2xl bg-ground/60 py-3 ring-1 ring-white/8"
         >
           <TabStaff riff={riff} geometry={geometry} showPlayhead playheadRef={playheadRef} />
         </div>
@@ -179,13 +179,9 @@ export function PlayerPanel({
           onClick={() => void handleToggle()}
           aria-label={playing ? 'Stop' : 'Play'}
           data-testid="player-toggle"
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent shadow-[0_6px_18px_rgba(255,176,32,0.35)] active:scale-95"
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-ground shadow-[0_6px_18px_rgba(255,176,32,0.35)] active:scale-95"
         >
-          {playing ? (
-            <span className="h-4 w-4 rounded-xs bg-ground" />
-          ) : (
-            <span className="ml-0.5 h-0 w-0 border-y-10 border-l-16 border-y-transparent border-l-ground" />
-          )}
+          {playing ? <StopIcon size={24} /> : <PlayIcon size={24} />}
         </button>
 
         <button
@@ -194,13 +190,13 @@ export function PlayerPanel({
           aria-label="Metronome"
           aria-pressed={metronomeOn}
           data-testid="metronome-toggle"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg active:scale-95"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full active:scale-95"
           style={{
             background: metronomeOn ? 'var(--color-accent)' : 'var(--color-surface-2)',
             color: metronomeOn ? 'var(--color-ground)' : 'var(--color-ink-dim)',
           }}
         >
-          ♩
+          <MetronomeIcon size={22} />
         </button>
 
         <label className="min-w-0 flex-1">

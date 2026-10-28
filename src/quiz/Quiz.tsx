@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ArrowRightIcon } from '@/ui/icons';
 import { errorHaptic, successHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { ProgressHandle } from '@/app/useProgress';
@@ -127,9 +128,10 @@ export function Quiz({ engine, progress }: { engine: AudioEngine; progress: Prog
               <button
                 type="button"
                 onClick={nextQuestion}
-                className="rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink active:scale-95"
+                className="flex items-center justify-center gap-2 rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink active:scale-95"
               >
-                Next question →
+                Next question
+                <ArrowRightIcon size={18} />
               </button>
             </>
           )}

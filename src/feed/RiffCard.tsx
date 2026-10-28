@@ -2,7 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRiffPlayer, type AudioEngine, type RiffPlayer } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
 import type { Riff } from '@/content';
-import { createTabGeometry, TabStaff } from '@/render';
+import { createTabGeometry, TabStaff, useFollowPlayhead } from '@/render';
+import { PauseIcon, PlayIcon } from '@/ui/icons';
+
+/**
+ * A card that believes it is playing but hears nothing (the transport is not
+ * running, or the audio context is suspended) first starts itself again, which
+ * is what leaving the card and coming back used to do by hand. If it is still
+ * silent after the grace period, its button stops claiming otherwise.
+ */
+export const SILENT_RETRY_MS = 200;
+export const SILENT_GRACE_MS = 700;
 
 export function RiffCard({
   riff,
@@ -15,9 +25,18 @@ export function RiffCard({
 }) {
   const playerRef = useRef<RiffPlayer | null>(null);
   const playheadRef = useRef<SVGGElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const { scrollerRef, follow } = useFollowPlayhead();
 
   const [playing, setPlaying] = useState(false);
+  // The rAF loop reads this and must not wait for a render to see a tap.
+  const playingRef = useRef(false);
+  function showPlaying(next: boolean) {
+    playingRef.current = next;
+    setPlaying(next);
+  }
+  const showPlayingRef = useRef(showPlaying);
+  showPlayingRef.current = showPlaying;
+
   const [speed, setSpeed] = useState(1);
   // Read inside the activation effect without making speed changes restart
   // playback — the slider drives setSpeed on the live player instead.
@@ -39,14 +58,15 @@ export function RiffCard({
 
     const player = createRiffPlayer(riff, engine, { speed: speedRef.current });
     playerRef.current = player;
-    player.start();
-    setPlaying(true);
+    // start() checks itself and answers false if the transport would not run;
+    // the button must not claim otherwise.
+    showPlayingRef.current(player.start() !== false);
 
     return () => {
       player.stop();
       player.dispose();
       playerRef.current = null;
-      setPlaying(false);
+      showPlayingRef.current(false);
     };
   }, [isActive, riff, engine]);
 
@@ -58,25 +78,49 @@ export function RiffCard({
   // setState would re-render the whole staff every frame. Only the active
   // card runs a loop: this used to run on every card ever mounted, so a long
   // scroll left dozens of them ticking forever.
+  //
+  // The same loop keeps the button honest. What the transport and the audio
+  // context actually say wins over what the card last asked for.
   useEffect(() => {
     if (!isActive) return;
     let frame = 0;
+    let silentSince: number | null = null;
+    let retried = false;
+
     const tick = () => {
       const player = playerRef.current;
-      const head = playheadRef.current;
-      if (player !== null && head !== null) {
-        const x = player.progress() * geometry.totalBeats * geometry.beatWidth;
-        head.style.transform = `translateX(${x}px)`;
-        const scroller = scrollRef.current;
-        if (scroller !== null) {
-          scroller.scrollLeft = Math.max(0, geometry.xForBeat(0) + x - scroller.clientWidth * 0.35);
+      if (player !== null) {
+        const audible = player.isPlaying();
+        if (audible) {
+          silentSince = null;
+          retried = false;
+          if (!playingRef.current) showPlayingRef.current(true);
+        } else if (playingRef.current) {
+          const now = Date.now();
+          silentSince ??= now;
+          const silentFor = now - silentSince;
+          if (silentFor >= SILENT_GRACE_MS) {
+            showPlayingRef.current(false);
+          } else if (!retried && silentFor >= SILENT_RETRY_MS) {
+            retried = true;
+            player.start();
+          }
+        }
+
+        const head = playheadRef.current;
+        if (head !== null) {
+          const x = player.progress() * geometry.totalBeats * geometry.beatWidth;
+          head.style.transform = `translateX(${x}px)`;
+          // Only a playing riff drags the staff along, and only while the
+          // user is not holding it: a paused staff is theirs to browse.
+          if (audible) follow(geometry.xForBeat(0) + x);
         }
       }
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [geometry, isActive]);
+  }, [geometry, isActive, follow]);
 
   function handleToggle() {
     tapHaptic();
@@ -84,10 +128,9 @@ export function RiffCard({
     if (player === null) return;
     if (playing) {
       player.stop();
-      setPlaying(false);
+      showPlaying(false);
     } else {
-      player.start();
-      setPlaying(true);
+      showPlaying(player.start() !== false);
     }
   }
 
@@ -102,9 +145,12 @@ export function RiffCard({
       <h2 className="text-3xl leading-tight font-black">{riff.title}</h2>
 
       <div className="flex min-h-0 flex-1 items-center">
+        {/* overscroll-x-contain: a sideways swipe that runs out of staff must
+            stop here, not chain on into the vertical feed. */}
         <div
-          ref={scrollRef}
-          className="max-h-full w-full overflow-x-auto rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8"
+          ref={scrollerRef}
+          data-testid="tab-scroller"
+          className="max-h-full w-full overflow-x-auto overscroll-x-contain rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8"
         >
           <TabStaff riff={riff} geometry={geometry} showPlayhead playheadRef={playheadRef} />
         </div>
@@ -115,16 +161,9 @@ export function RiffCard({
           type="button"
           onClick={handleToggle}
           aria-label={playing ? 'Pause' : 'Play'}
-          className="flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent shadow-[0_6px_18px_rgba(255,176,32,0.35)] active:scale-95"
+          className="flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent text-ground shadow-[0_6px_18px_rgba(255,176,32,0.35)] active:scale-95"
         >
-          {playing ? (
-            <span className="flex gap-1">
-              <span className="h-4 w-1.5 rounded-xs bg-ground" />
-              <span className="h-4 w-1.5 rounded-xs bg-ground" />
-            </span>
-          ) : (
-            <span className="ml-0.5 h-0 w-0 border-y-10 border-l-16 border-y-transparent border-l-ground" />
-          )}
+          {playing ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
         </button>
 
         <label className="flex-1">

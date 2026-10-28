@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { Lesson } from '@/content';
+import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, CloseIcon } from '@/ui/icons';
 import { RichText } from './steps/RichText';
 import { StepView, stepGate } from './steps/StepView';
 
@@ -97,9 +98,9 @@ export function LessonView({
             onClick={handleClose}
             aria-label="Close lesson"
             data-testid="lesson-close"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xl leading-none text-ink-dim active:scale-95"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-dim active:scale-95"
           >
-            <span aria-hidden="true">×</span>
+            <CloseIcon size={22} />
           </button>
           <div
             role="progressbar"
@@ -129,11 +130,11 @@ export function LessonView({
           data-testid="lesson-complete"
         >
           <div
-            className="flex h-20 w-20 items-center justify-center rounded-full bg-good text-4xl font-black text-ground"
+            className="flex h-20 w-20 items-center justify-center rounded-full bg-good text-ground"
             style={{ boxShadow: '0 0 40px rgba(53,208,127,0.45)' }}
             aria-hidden="true"
           >
-            ✓
+            <CheckIcon size={44} strokeWidth={3} />
           </div>
           <div className="flex flex-col gap-2">
             <h2 className="text-3xl font-black">Lesson complete</h2>
@@ -203,9 +204,9 @@ export function LessonView({
                 onClick={handleBack}
                 aria-label="Previous step"
                 data-testid="lesson-back"
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xl text-ink-dim active:scale-95"
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-dim active:scale-95"
               >
-                <span aria-hidden="true">←</span>
+                <ArrowLeftIcon size={24} />
               </button>
             )}
             {gate === 'skippable' && !isPassed ? (
@@ -213,9 +214,10 @@ export function LessonView({
                 type="button"
                 onClick={handleNext}
                 data-testid="lesson-skip"
-                className="h-14 flex-1 rounded-full bg-surface-2 text-base font-extrabold text-ink active:scale-[0.98]"
+                className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-surface-2 text-base font-extrabold text-ink active:scale-[0.98]"
               >
                 Skip
+                <ArrowRightIcon size={20} />
               </button>
             ) : (
               <button
@@ -223,9 +225,10 @@ export function LessonView({
                 onClick={handleNext}
                 disabled={gate === 'required' && !isPassed}
                 data-testid="lesson-next"
-                className="h-14 flex-1 rounded-full bg-accent text-base font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.25)] transition-colors active:scale-[0.98] disabled:bg-surface-2 disabled:text-ink-dim disabled:shadow-none"
+                className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-accent text-base font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.25)] transition-colors active:scale-[0.98] disabled:bg-surface-2 disabled:text-ink-dim disabled:shadow-none"
               >
                 {isLast ? 'Finish' : 'Next'}
+                {isLast ? <CheckIcon size={20} /> : <ArrowRightIcon size={20} />}
               </button>
             )}
           </footer>

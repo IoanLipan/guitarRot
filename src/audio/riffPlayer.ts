@@ -11,9 +11,21 @@ import {
 import type { AudioEngine } from './types';
 
 export type RiffPlayer = {
-  start(): void;
+  /**
+   * Starts the loop from the top. Checks that the transport really is running
+   * afterwards and tries once more if it is not; returns whether it is. A
+   * `false` has already been reported with `console.warn`.
+   */
+  start(): boolean;
   stop(): void;
   dispose(): void;
+  /**
+   * True only while sound is really being made: the transport is started
+   * *and* the audio context is running. A suspended context freezes the
+   * transport's clock yet leaves its state reading "started", which is how a
+   * play button used to say Pause over silence.
+   */
+  isPlaying(): boolean;
   setSpeed(speed: number): void;
   /** 0 to 1 through the loop. Read this from requestAnimationFrame. */
   progress(): number;
@@ -80,29 +92,46 @@ export function createRiffPlayer(
    * are contained: the worst case of a swallowed error here is a voice that
    * rings a moment longer than it should.
    */
-  function quietly(what: string, run: () => void): void {
+  function quietly(what: string, run: () => void): boolean {
     try {
       run();
+      return true;
     } catch (error) {
       console.warn(`riffPlayer: ${what} failed`, error);
+      return false;
     }
+  }
+
+  function begin(): void {
+    transport.stop();
+    transport.cancel();
+    transport.position = 0;
+    transport.bpm.value = speedToBpm(riff.bpm, speed);
+    transport.loop = true;
+    transport.loopStart = 0;
+    transport.loopEnd = part.loopEnd;
+    part.start(0);
+    transport.start();
   }
 
   return {
     totalBeats: riffTotalBeats(riff),
 
     start() {
-      quietly('start', () => {
-        transport.stop();
-        transport.cancel();
-        transport.position = 0;
-        transport.bpm.value = speedToBpm(riff.bpm, speed);
-        transport.loop = true;
-        transport.loopStart = 0;
-        transport.loopEnd = part.loopEnd;
-        part.start(0);
-        transport.start();
-      });
+      // Swallowing a failure here once left a card reading "Pause" over a
+      // transport that never ran, so the outcome is checked, not assumed:
+      // one retry from a clean slate, and a loud warning if that fails too.
+      if (quietly('start', begin) && transport.state === 'started') return true;
+
+      quietly('start/reset', () => part.stop());
+      if (quietly('start (retry)', begin) && transport.state === 'started') return true;
+
+      console.warn(`riffPlayer: the transport did not start for "${riff.id}" (state: ${transport.state})`);
+      return false;
+    },
+
+    isPlaying() {
+      return transport.state === 'started' && Tone.getContext().state === 'running';
     },
 
     stop() {

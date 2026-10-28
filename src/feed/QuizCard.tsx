@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ArrowRightIcon } from '@/ui/icons';
 import { errorHaptic, successHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import { withSolfege } from '@/music';
@@ -94,9 +95,10 @@ export function QuizCard({
             <button
               type="button"
               onClick={onAdvance}
-              className="rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink active:scale-95"
+              className="flex items-center justify-center gap-2 rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink active:scale-95"
             >
-              Got it →
+              Got it
+              <ArrowRightIcon size={18} />
             </button>
           </>
         )}

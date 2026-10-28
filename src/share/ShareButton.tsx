@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ShareIcon } from '@/ui/icons';
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { tapHaptic } from '@/app/haptics';
@@ -93,24 +94,9 @@ export function ShareButton({ target, title, className }: ShareButtonProps) {
       data-testid="share-button"
       className={`flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1.5 text-xs font-bold tracking-wider text-ink-dim uppercase active:scale-95 ${className ?? ''}`}
     >
-      <ShareIcon />
+      <ShareIcon size={14} />
       {copied ? 'Link copied' : 'Share'}
     </button>
-  );
-}
-
-function ShareIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden="true">
-      <path
-        d="M12 3v12M12 3 8 7M12 3l4 4M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CloseIcon } from '@/ui/icons';
 import { Capacitor } from '@capacitor/core';
 import { tapHaptic } from './haptics';
 import { ANDROID_APP_URL } from './links';
@@ -76,9 +77,9 @@ export function AndroidAppBanner({ floating = false }: { floating?: boolean }) {
         type="button"
         onClick={dismiss}
         aria-label="Dismiss"
-        className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg text-ink-dim active:scale-90"
+        className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-dim active:scale-90"
       >
-        ×
+        <CloseIcon size={20} />
       </button>
     </aside>
   );

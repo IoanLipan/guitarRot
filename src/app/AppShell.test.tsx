@@ -15,6 +15,13 @@ const world = vi.hoisted(() => ({
   /** The native back-button callback, once registered. */
   backButton: null as null | (() => void),
   minimizeApp: vi.fn(() => Promise.resolve()),
+  /** Stands in for waking a suspended audio context. */
+  wakeAudio: vi.fn(),
+}));
+
+vi.mock('@/audio', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/audio')>()),
+  wakeAudio: world.wakeAudio,
 }));
 
 vi.mock('./useProgress', () => ({ useProgress: () => world.progress }));
@@ -149,6 +156,32 @@ describe('AppShell', () => {
     cleanup();
     vi.restoreAllMocks();
     setVisibility('visible');
+  });
+
+  describe('the audio context', () => {
+    it('is woken by a touch once the app is running, and left alone on the start screen', async () => {
+      render(<AppShell />);
+      fireEvent.pointerDown(document.body);
+      expect(world.wakeAudio).not.toHaveBeenCalled();
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('start-feed'));
+      });
+      fireEvent.touchEnd(document.body);
+      fireEvent.pointerDown(document.body);
+
+      expect(world.wakeAudio).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('the settings button', () => {
+    it('is a named icon button big enough to hit', async () => {
+      await openOnFeed();
+      const gear = screen.getByRole('button', { name: 'Settings' });
+      expect(gear.querySelector('svg')).not.toBeNull();
+      expect(gear.className).toContain('h-11');
+      expect(gear.className).toContain('w-11');
+    });
   });
 
   describe('the start screen', () => {

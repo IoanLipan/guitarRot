@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { NoteIcon } from '@/ui/icons';
 import { tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import { CHORDS, type NeckDot, type Visual } from '@/content';
@@ -158,9 +159,7 @@ function NeckView({
         >
           {heard === null ? (
             <>
-              <span aria-hidden="true" className="text-accent">
-                ♪
-              </span>{' '}
+              <NoteIcon size={16} className="text-accent" />
               Tap the neck to hear it
             </>
           ) : (
@@ -273,7 +272,7 @@ function ChordsView({
 function TapHint({ children }: { children: React.ReactNode }) {
   return (
     <p className="flex min-h-5 items-center justify-center gap-1.5 text-[13px] font-semibold text-ink-dim" aria-hidden="true">
-      <span className="text-accent">♪</span> {children}
+      <NoteIcon size={16} className="text-accent" /> {children}
     </p>
   );
 }
