@@ -103,8 +103,10 @@ describe('the view toggle', () => {
     expect(screen.getByTestId('shapes-view')).toBeInTheDocument();
     expect(screen.queryByTestId('tab-staff')).toBeNull();
     expect(screen.getByTestId('view-shapes')).toHaveAttribute('aria-pressed', 'true');
-    // One card per bar of the 16-bar excerpt; this piece never splits a bar.
-    expect(screen.getAllByTestId(/^shape-card-/)).toHaveLength(16);
+    // Every bar of the 16-bar excerpt has a card; two bars whose halves are different chords have two each.
+    const cards = screen.getAllByTestId(/^shape-card-/);
+    expect(new Set(cards.map((card) => card.dataset.bar)).size).toBe(16);
+    expect(cards).toHaveLength(18);
 
     await userEvent.click(screen.getByTestId('view-tab'));
     expect(screen.getByTestId('tab-staff')).toBeInTheDocument();
@@ -139,12 +141,25 @@ describe('the view toggle', () => {
     expect(screen.getByTestId('shape-card-0')).toHaveTextContent('Am');
     expect(screen.getByTestId('shape-card-1')).toHaveTextContent('F');
 
-    // Back to the song list and into a song with an unnamed bar.
+    // Back to the song list and into a piece whose chords are not all in the library.
     await userEvent.click(screen.getByTestId('song-back'));
     await userEvent.click(screen.getByTestId('song-row-bach-prelude-bwv999'));
     await userEvent.click(screen.getByTestId('view-shapes'));
     expect(screen.getByTestId('shape-card-0')).toHaveTextContent('Dm');
-    expect(screen.getByTestId('shape-card-2')).toHaveTextContent('shape');
+    // Bar 3 is G minor, which the library has no shape for: named from theory.
+    expect(screen.getByTestId('shape-card-2')).toHaveTextContent('Gm');
+    expect(screen.getByTestId('shape-card-2')).toHaveTextContent('Sol minor');
+  });
+
+  it('shows a quiet dash, not a word, when no chord fits', async () => {
+    open('alternate-picking-ladder');
+    await userEvent.click(screen.getByTestId('view-shapes'));
+
+    const card = screen.getByTestId('shape-card-0');
+    expect(within(card).getByTestId('shape-unnamed-0')).toHaveTextContent('—');
+    expect(card).not.toHaveTextContent('shape');
+    // Still a button that plays what is drawn.
+    expect(within(card).getByRole('button', { name: /no chord name, tap to hear/ })).toBeInTheDocument();
   });
 
   it('marks a chord that carries an extra note with a melody hint', async () => {
@@ -174,14 +189,16 @@ describe('following playback in the shapes view', () => {
   });
 
   it('follows a half bar when the bar was split in two', async () => {
-    open('carcassi-etude-op60-7'); // 4/4: bar 2 is split into 1.1 and 1.2
+    open('carcassi-etude-op60-7'); // 4/4: bar 4 is Am, then E: two cards, 3.1 and 3.2
     await userEvent.click(screen.getByTestId('view-shapes'));
 
-    playback.beat = 4.5;
-    await waitFor(() => expect(screen.getByTestId('shape-card-1.1')).toHaveAttribute('data-active', 'true'));
-    playback.beat = 6.5;
-    await waitFor(() => expect(screen.getByTestId('shape-card-1.2')).toHaveAttribute('data-active', 'true'));
-    expect(screen.getByTestId('shape-card-1.1')).not.toHaveAttribute('data-active');
+    playback.beat = 3 * 4 + 0.5;
+    await waitFor(() => expect(screen.getByTestId('shape-card-3.1')).toHaveAttribute('data-active', 'true'));
+    expect(screen.getByTestId('shape-card-3.1')).toHaveTextContent('Am');
+    playback.beat = 3 * 4 + 2.5;
+    await waitFor(() => expect(screen.getByTestId('shape-card-3.2')).toHaveAttribute('data-active', 'true'));
+    expect(screen.getByTestId('shape-card-3.2')).toHaveTextContent('E');
+    expect(screen.getByTestId('shape-card-3.1')).not.toHaveAttribute('data-active');
   });
 
   it('lights the string being plucked, and only that one', async () => {
@@ -298,60 +315,102 @@ describe('looping from the shapes view', () => {
   });
 });
 
+/**
+ * jsdom does no layout. Gives an element a scroll width and a client width, and
+ * a `scrollLeft` that clamps the way a browser's does.
+ */
+function fakeLayout(element: HTMLElement, { scrollWidth, clientWidth }: { scrollWidth: number; clientWidth: number }) {
+  let left = 0;
+  Object.defineProperty(element, 'scrollWidth', { value: scrollWidth, configurable: true });
+  Object.defineProperty(element, 'clientWidth', { value: clientWidth, configurable: true });
+  Object.defineProperty(element, 'scrollLeft', {
+    configurable: true,
+    get: () => left,
+    set: (value: number) => {
+      left = Math.min(scrollWidth - clientWidth, Math.max(0, value));
+    },
+  });
+}
+
 describe('leaving the scrollers alone while they are being touched', () => {
   let now = 0;
 
   beforeEach(() => {
-    now = 10_000;
-    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    now = 1_000_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
   });
 
   it('does not drag the tab back to the playhead while a finger is on it, and resumes three seconds after', async () => {
     open('gallop-in-e');
     const scroller = screen.getByTestId('tab-scroller');
+    fakeLayout(scroller, { scrollWidth: 4000, clientWidth: 300 });
 
-    playback.beat = 4;
-    await waitFor(() => expect(scroller.scrollLeft).toBeGreaterThan(0));
+    playback.beat = 6;
+    await waitFor(() => expect(scroller.scrollLeft).toBeGreaterThan(200));
     const following = scroller.scrollLeft;
 
     fireEvent.touchStart(scroller);
     scroller.scrollLeft = 5;
-    playback.beat = 8;
-    await act(() => new Promise((resolve) => setTimeout(resolve, 60)));
+    playback.beat = 12;
+    await act(() => new Promise((resolve) => setTimeout(resolve, 80)));
     expect(scroller.scrollLeft).toBe(5);
 
     fireEvent.touchEnd(scroller);
     now += 2000;
-    await act(() => new Promise((resolve) => setTimeout(resolve, 60)));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 80)));
     expect(scroller.scrollLeft).toBe(5);
 
     now += 1500;
     await waitFor(() => expect(scroller.scrollLeft).toBeGreaterThan(following));
   });
 
-  it('does not re-centre the shapes strip while a finger is on it, and catches up after three seconds', async () => {
-    const scrollTo = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { value: scrollTo, configurable: true, writable: true });
-    try {
-      open('bach-prelude-bwv999');
-      await userEvent.click(screen.getByTestId('view-shapes'));
-      const scroller = screen.getByTestId('shapes-scroller');
+  it('carries the shapes strip along with the song, and lets go of it while a finger is on it', async () => {
+    // Cards 130px apart and 112px wide: the strip is laid out by hand, since jsdom has no layout.
+    vi.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockImplementation(function (this: HTMLElement) {
+      const parent = this.parentElement;
+      return parent?.dataset.testid === 'shapes-scroller' ? [...parent.children].indexOf(this) * 130 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(112);
 
-      playback.beat = 0.2;
-      await waitFor(() => expect(scrollTo).toHaveBeenCalled());
-      scrollTo.mockClear();
+    open('bach-prelude-bwv999'); // 3/4
+    await userEvent.click(screen.getByTestId('view-shapes'));
+    const scroller = screen.getByTestId('shapes-scroller');
+    fakeLayout(scroller, { scrollWidth: 2400, clientWidth: 300 });
 
-      fireEvent.touchStart(scroller);
-      playback.beat = 3 * 4 + 0.2;
-      await waitFor(() => expect(screen.getByTestId('shape-card-4')).toHaveAttribute('data-active', 'true'));
-      await act(() => new Promise((resolve) => setTimeout(resolve, 60)));
-      expect(scrollTo).not.toHaveBeenCalled();
+    // Bar 8 holds the playhead: the strip scrolls to put its card in the middle.
+    const slot = screen.getByTestId('shape-card-7').parentElement as HTMLElement;
+    const centre = [...scroller.children].indexOf(slot) * 130 + 56;
+    playback.beat = 7 * 3 + 1.5;
+    await waitFor(() => expect(scroller.scrollLeft).toBeCloseTo(centre - 150, 0));
 
-      fireEvent.touchEnd(scroller);
-      now += 3100;
-      await waitFor(() => expect(scrollTo).toHaveBeenCalled());
-    } finally {
-      Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo');
-    }
+    fireEvent.touchStart(scroller);
+    scroller.scrollLeft = 10;
+    playback.beat = 11 * 3 + 1.5; // bar 12
+    await waitFor(() => expect(screen.getByTestId('shape-card-11')).toHaveAttribute('data-active', 'true'));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 80)));
+    expect(scroller.scrollLeft).toBe(10);
+
+    fireEvent.touchEnd(scroller);
+    now += 3100;
+    await waitFor(() => expect(scroller.scrollLeft).toBeGreaterThan(500));
+  });
+
+  it('leaves a paused strip where the player put it', async () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockImplementation(function (this: HTMLElement) {
+      const parent = this.parentElement;
+      return parent?.dataset.testid === 'shapes-scroller' ? [...parent.children].indexOf(this) * 130 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(112);
+
+    open('bach-prelude-bwv999');
+    await userEvent.click(screen.getByTestId('view-shapes'));
+    const scroller = screen.getByTestId('shapes-scroller');
+    fakeLayout(scroller, { scrollWidth: 2400, clientWidth: 300 });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    scroller.scrollLeft = 700;
+    playback.beat = 10;
+    await act(() => new Promise((resolve) => setTimeout(resolve, 80)));
+    expect(scroller.scrollLeft).toBe(700);
   });
 });

@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { AudioEngine } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
 import { createFretboardGeometry, Fretboard } from '@/render';
+import { RepeatIcon } from '@/ui/icons';
 import { shapeDiagram, strumVoicing, type SongShape } from './shapes';
 
 /** How long the "just strummed" ring holds after a tap. */
@@ -79,8 +80,8 @@ export const ShapeCard = memo(function ShapeCard({ shape, engine, active, looped
       <button
         type="button"
         onClick={handleStrum}
-        aria-label={`${barLabel(shape)}: ${shape.label}${shape.hint === undefined ? '' : ' with melody'}, tap to hear`}
-        className="flex w-full flex-col items-center rounded-2xl px-2 pt-7 pb-2.5 active:scale-[0.97]"
+        aria-label={`${barLabel(shape)}: ${shape.name.chord === undefined ? 'no chord name' : shape.label}${shape.hint === undefined ? '' : ' with melody'}, tap to hear`}
+        className="flex w-full flex-col items-center rounded-2xl px-2 pt-11 pb-2.5 active:scale-[0.97]"
       >
         <div className="relative h-32 w-full [@media(max-height:700px)]:h-24">
           <Fretboard
@@ -95,7 +96,7 @@ export const ShapeCard = memo(function ShapeCard({ shape, engine, active, looped
             showInlays={false}
             fit
             className="h-full w-full"
-            ariaLabel={`${shape.label} shape for ${barLabel(shape)}`}
+            ariaLabel={`${shape.name.chord === undefined ? 'Unnamed' : shape.label} shape for ${barLabel(shape)}`}
           />
           <svg
             aria-hidden="true"
@@ -142,12 +143,19 @@ export const ShapeCard = memo(function ShapeCard({ shape, engine, active, looped
         </div>
 
         <div className="mt-1.5 flex min-h-14 flex-col items-center justify-start text-center">
-          <span
-            className={`text-xl leading-none font-black ${shape.name.chord === undefined ? 'text-ink-dim' : ''}`}
-            style={{ color: strumming ? 'var(--color-accent)' : undefined }}
-          >
-            {shape.label}
-          </span>
+          {shape.name.chord === undefined ? (
+            // No chord fits these notes: say so quietly, not loudly.
+            <span data-testid={`shape-unnamed-${shape.key}`} aria-hidden="true" className="text-base leading-none text-ink-dim/50">
+              —
+            </span>
+          ) : (
+            <span
+              className="text-xl leading-none font-black"
+              style={{ color: strumming ? 'var(--color-accent)' : undefined }}
+            >
+              {shape.label}
+            </span>
+          )}
           {shape.solfege !== undefined && (
             <span className="mt-1 text-[10px] leading-tight text-ink-dim">{shape.solfege}</span>
           )}
@@ -164,7 +172,7 @@ export const ShapeCard = memo(function ShapeCard({ shape, engine, active, looped
 
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute top-2 left-3 text-[10px] font-bold tracking-wider text-ink-dim uppercase"
+        className="pointer-events-none absolute top-0 left-3 flex h-11 items-center text-[10px] font-bold tracking-wider text-ink-dim uppercase"
       >
         {barLabel(shape)}
       </span>
@@ -179,11 +187,15 @@ export const ShapeCard = memo(function ShapeCard({ shape, engine, active, looped
           aria-label={`Loop ${barLabel(shape).toLowerCase()}`}
           aria-pressed={looped}
           data-testid={`shape-loop-${shape.bar}`}
-          className={`absolute top-0.5 right-0.5 flex h-7 w-7 items-center justify-center rounded-full text-sm active:scale-90 ${
-            looped ? 'bg-accent text-ground' : 'text-ink-dim'
-          }`}
+          className="absolute top-0 right-0 flex h-11 w-11 items-center justify-center active:scale-90"
         >
-          <span aria-hidden="true">⟲</span>
+          <span
+            className={`flex h-8 w-8 items-center justify-center rounded-full ${
+              looped ? 'bg-accent text-ground' : 'text-ink-dim'
+            }`}
+          >
+            <RepeatIcon size={18} />
+          </span>
         </button>
       )}
     </div>

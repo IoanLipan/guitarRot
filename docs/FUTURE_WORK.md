@@ -826,16 +826,25 @@ fingering, so a fingering bug cannot change the music. Not used: Tárrega's
 *Claro de Luna* (needs a drop-D tuning), and everything by Aguado and Sor's
 Op. 2 (CC BY-SA).
 
-**Shapes view** (`src/songs/shapes.ts`, `ShapesView.tsx`, `ShapeCard.tsx`,
-`useFollowGate.ts`). A riff song gets a `Tab | Shapes` toggle; an arpeggio
+**Shapes view** (`src/songs/shapes.ts`, `chordNaming.ts`, `ShapesView.tsx`,
+`ShapeCard.tsx`). A riff song gets a `Tab | Shapes` toggle; an arpeggio
 chart gets `Chart | Tab | Shapes` (its tab is the one `songToRiff` already
 builds); a strummed chart gets no toggle. Shapes are derived from the tab, not
 authored: `deriveRiffShapes` takes the fretted positions in each bar and names
-the library chord they spell (`nameShape`: exact tones, or a chord with one
-extra note → "+ melody"; ties go to the chord built on the bass note;
-otherwise the plain label "shape"). A bar is split into halves only when it
-reaches more than four frets, or when the whole bar fits nothing but a half
-does. Arpeggio charts use the chart's own chord (with its finger numbers).
+the chord they spell from theory, not from the nine-shape library
+(`chordNaming.ts`: every root × every `ChordQuality` through
+`expectedPitchClasses`; exact tones first, then a chord of three or more tones
+plus one extra note → "+ melody", then a bare root-and-fifth → "G5"; the
+chord built on the bass note wins ties, so A, C, E over an A bass with a
+walking F is "Am + melody", not Fmaj7). The symbol is the one the rest of the
+app writes (Gm, Bb, A7, Dm7, Cmaj7, Asus2, Bdim, Caug, E5) with its solfège
+beside it ("Sol minor"); a bar that fits nothing shows a small muted dash.
+Across the five classical pieces, 71% of the shapes (and 61% of the bars) were
+named by the library alone and 77% (71%) by theory; what is left is mostly
+walking-bass bars, where the chord changes on every beat. A bar is split into
+halves only when it reaches more than four frets, or when the whole bar fits
+nothing but its two halves are two different chords. Arpeggio charts use the
+chart's own chord (with its finger numbers).
 
 During playback a rAF loop reads `currentBeat()`: which card is current is
 React state (it grows and rings), set only on the frames where the bar
@@ -844,10 +853,16 @@ attribute on an SVG overlay, so a run of sixteenths causes no re-render. A tap
 on a card strums its shape; a ⟲ badge on each card loops that bar with the same
 two-tap range as the chart, which makes loop-a-section available to riff songs
 for the first time (the chord-chart restriction in the section above no longer
-holds). While a finger or wheel is on the tab or the shapes strip the playhead
-leaves its scroll position alone and takes it back about three seconds later
-(`createFollowGate`; touch events rather than pointer events, because the browser
-cancels a touch pointer when it starts panning).
+holds). The tab and the shapes strip both follow the song through the shared
+`useFollowPlayhead` (`src/render/`): it stands down while a finger or wheel is
+on the scroller and eases back about three seconds later. The strip follows a
+`stripPosition`: the playhead glides from each card's centre to the next between
+the middles of their bars, so it scrolls steadily rather than jumping a card at
+every bar line. Only a playing song carries either scroller along; pausing
+returns the tab to the start with the song. The song player draws its buttons
+with `src/ui/icons.tsx` (no text glyphs; `songs/` is now in the glyph-scan
+test) and every tap target is at least 44px; on a phone under 700px tall the
+Shapes view hides the chips and the blurb to make room.
 
 Not done: the shape diagrams carry no finger numbers when derived from a tab
 (the tab does not say which finger plays what); consecutive identical bars are

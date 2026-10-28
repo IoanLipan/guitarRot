@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AudioEngine } from '@/audio';
 import type { TabEvent } from '@/content';
+import { useFollowPlayhead } from '@/render';
 import { SHAPE_CARD_WIDTH, ShapeCard, type ShapeCardProps } from './ShapeCard';
-import { pluckedPositions, shapeIndexAtBeat, type SongShape } from './shapes';
-import { useFollowGate } from './useFollowGate';
+import { pluckedPositions, shapeIndexAtBeat, stripPosition, type SongShape } from './shapes';
 
 export type ShapesLoopRange = { start: number; end: number };
 
@@ -29,7 +29,10 @@ function lightCard(card: HTMLElement | null, lit: readonly { stringIndex: number
  * card changes size, but it is set only on the frames where the bar changes.
  * Which string is being plucked is not state at all: the loop flips a
  * `data-lit` attribute on the current card's overlay, so a run of sixteenths
- * costs no re-render.
+ * costs no re-render. The strip itself scrolls to keep the playhead (see
+ * `stripPosition`) at its middle, through the same `useFollowPlayhead` the tab
+ * uses: it stands down while a finger is on the strip and eases back about
+ * three seconds after.
  */
 export function ShapesView({
   shapes,
@@ -52,31 +55,20 @@ export function ShapesView({
   const [active, setActive] = useState(-1);
   /** The card the strip last showed as current; survives the loop restarting, so it can clear it. */
   const shownRef = useRef(-1);
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const gate = useFollowGate();
-
-  const setScroller = useCallback(
-    (element: HTMLDivElement | null) => {
-      scrollerRef.current = element;
-      gate.attach(element);
-    },
-    [gate],
-  );
+  const { scrollerRef, follow } = useFollowPlayhead();
 
   useEffect(() => {
     let frame = 0;
     let shown = shownRef.current;
-    let centred = -1;
     let litSignature = '';
 
-    function centreOn(index: number) {
-      const scroller = scrollerRef.current;
-      const card = cardRefs.current[index];
-      if (scroller === null || card === null || card === undefined) return;
-      const left = Math.max(0, card.offsetLeft + card.offsetWidth / 2 - scroller.clientWidth / 2);
-      if (typeof scroller.scrollTo === 'function') scroller.scrollTo({ left, behavior: 'smooth' });
-      else scroller.scrollLeft = left;
+    /** The x of each card's centre, within the scrolled strip. */
+    function centres(): number[] {
+      return shapes.map((_, i) => {
+        const card = cardRefs.current[i];
+        return card === null || card === undefined ? 0 : card.offsetLeft + card.offsetWidth / 2;
+      });
     }
 
     const tick = () => {
@@ -91,13 +83,10 @@ export function ShapesView({
         setActive(index);
       }
 
-      // Follow the current bar, unless a finger is on the strip. Catching up
-      // after the hold runs out is the 'resumed' state: the bar has not
-      // changed, so nothing else would bring the strip back.
-      const follow = gate.check();
-      if (index >= 0 && follow !== 'blocked' && (index !== centred || follow === 'resumed')) {
-        centred = index;
-        centreOn(index);
+      // A playing song carries the strip along; a paused one is the player's to browse.
+      if (beat !== null) {
+        const x = stripPosition(shapes, centres(), beat);
+        if (x !== null) follow(x, 0.5);
       }
 
       const shape = index >= 0 ? shapes[index] : undefined;
@@ -116,14 +105,14 @@ export function ShapesView({
       cancelAnimationFrame(frame);
       lightCard(cardRefs.current[shown] ?? null, []);
     };
-  }, [shapes, events, playing, getBeat, gate]);
+  }, [shapes, events, playing, getBeat, follow]);
 
   return (
     <div className="flex min-h-full items-center" data-testid="shapes-view">
       <div
-        ref={setScroller}
+        ref={scrollerRef}
         data-testid="shapes-scroller"
-        className="flex w-full snap-x snap-proximity items-center gap-3 overflow-x-auto overflow-y-hidden py-6"
+        className="relative flex w-full items-center gap-3 overflow-x-auto overflow-y-hidden py-6 [@media(max-height:700px)]:py-3"
         // Room on both ends so the first and last bar can sit in the middle.
         style={{ paddingInline: `calc(50% - ${SHAPE_CARD_WIDTH / 2}px)` }}
       >
@@ -161,7 +150,7 @@ function ShapeCardSlot({
       ref={(element) => {
         cardRefs.current[index] = element;
       }}
-      className="shrink-0 snap-center"
+      className="shrink-0"
       style={{ width: SHAPE_CARD_WIDTH }}
     >
       <ShapeCard {...props} />

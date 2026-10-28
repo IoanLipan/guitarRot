@@ -10,14 +10,14 @@ import {
 } from '@/audio';
 import { beatsPerBar, chartBars, chordByName, songToRiff, type Song } from '@/content';
 import { STANDARD_TUNING } from '@/music';
-import { chordShapeToFretboard, createTabGeometry, Fretboard, TabStaff } from '@/render';
+import { chordShapeToFretboard, createTabGeometry, Fretboard, TabStaff, useFollowPlayhead } from '@/render';
 import { ShareButton } from '@/share';
+import { ArrowLeftIcon, CloseIcon, MetronomeIcon, PauseIcon, PlayIcon } from '@/ui/icons';
 import { DifficultyPill } from './DifficultyPill';
 import { ChordChart } from './ChordChart';
 import { keyLabel } from './keyLabel';
 import { hasShapes, songShapes } from './shapes';
 import { ShapesView } from './ShapesView';
-import { useFollowGate } from './useFollowGate';
 
 /** A tapped-out practice loop: the bar you tapped first, and the resulting range. */
 type LoopRange = { anchor: number; start: number; end: number };
@@ -55,16 +55,8 @@ export function SongPlayer({
   const playerRef = useRef<RiffPlayer | null>(null);
   const metronomeRef = useRef<Metronome | null>(null);
   const playheadRef = useRef<SVGGElement>(null);
-  const tabScrollRef = useRef<HTMLDivElement | null>(null);
-  /** Lets the player drag the tab sideways without the playhead wrenching it back. */
-  const tabScrollGate = useFollowGate();
-  const setTabScroller = useCallback(
-    (element: HTMLDivElement | null) => {
-      tabScrollRef.current = element;
-      tabScrollGate.attach(element);
-    },
-    [tabScrollGate],
-  );
+  /** Scrolls the tab along with the playhead, and stands down while the player's hands are on it. */
+  const { scrollerRef: tabScrollerRef, follow: followTab, scrollToStart: tabToStart } = useFollowPlayhead();
   /** Blocks a second tap of Play from overlapping a count-in already in flight. */
   const startingRef = useRef(false);
 
@@ -73,6 +65,8 @@ export function SongPlayer({
   const [speed, setSpeed] = useState(1);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const [loopRange, setLoopRange] = useState<LoopRange | null>(null);
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
   const speedRef = useRef(speed);
   speedRef.current = speed;
 
@@ -135,21 +129,21 @@ export function SongPlayer({
         if (head !== null) {
           const x = beat * geometry.beatWidth;
           head.style.transform = `translateX(${x}px)`;
-          // Keep the playhead in view, unless the player has hold of the tab.
-          const scroller = tabScrollRef.current;
-          if (scroller !== null && tabScrollGate.check() !== 'blocked') {
-            scroller.scrollLeft = Math.max(
-              0,
-              geometry.xForBeat(0) + x - scroller.clientWidth * 0.35,
-            );
-          }
+          // Keep the playhead in view while the song plays, unless the player
+          // has hold of the tab; a paused tab is theirs to browse.
+          if (playingRef.current) followTab(geometry.xForBeat(0) + x);
         }
       }
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [geometry, riff.bars, barLength, tabScrollGate]);
+  }, [geometry, riff.bars, barLength, followTab]);
+
+  // Pausing puts the song back at its start, so the tab goes back with it.
+  useEffect(() => {
+    if (!playing) tabToStart();
+  }, [playing, tabToStart]);
 
   async function handleToggle() {
     if (startingRef.current) return;
@@ -221,11 +215,11 @@ export function SongPlayer({
           onClick={onBack}
           aria-label="Back to songs"
           data-testid="song-back"
-          className="flex h-9 items-center gap-1.5 rounded-full bg-surface-2 pr-4 pl-3 text-xs font-bold tracking-wider text-ink-dim uppercase active:scale-95"
+          className="flex h-11 items-center gap-1.5 rounded-full bg-surface-2 pr-4 pl-3 text-xs font-bold tracking-wider text-ink-dim uppercase active:scale-95"
         >
-          <span aria-hidden="true">←</span> Songs
+          <ArrowLeftIcon size={18} /> Songs
         </button>
-        <ShareButton target={{ kind: 'song', id: song.id }} title={song.title} />
+        <ShareButton target={{ kind: 'song', id: song.id }} title={song.title} className="min-h-11" />
       </div>
 
       <div className="shrink-0">
@@ -233,14 +227,18 @@ export function SongPlayer({
         <p className="mt-0.5 text-sm text-ink-dim">{song.artist}</p>
       </div>
 
-      <div className="flex shrink-0 flex-wrap gap-1.5">
+      <div
+        className={`flex shrink-0 flex-wrap gap-1.5 ${
+          view === 'shapes' ? '[@media(max-height:700px)]:hidden' : ''
+        }`}
+      >
         <DifficultyPill difficulty={song.difficulty} />
         <Chip>{song.style}</Chip>
         <Chip>Key {keyLabel(song.key)}</Chip>
         <Chip>{song.bpm} BPM</Chip>
       </div>
 
-      {/* On a short phone the shapes need the room more than the blurb does. */}
+      {/* On a short phone the shapes need the room more than the chips and the blurb do. */}
       <p
         className={`shrink-0 text-[13px] leading-relaxed text-ink-dim ${
           view === 'shapes' ? '[@media(max-height:700px)]:hidden' : ''
@@ -259,9 +257,11 @@ export function SongPlayer({
             onClick={() => setLoopRange(null)}
             aria-label="Clear loop"
             data-testid="loop-clear"
-            className="rounded-full bg-surface-2 px-2 py-0.5 text-ink-dim active:scale-95"
+            className="-my-2.5 flex h-11 w-11 items-center justify-center rounded-full text-ink-dim active:scale-90"
           >
-            ✕
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-2">
+              <CloseIcon size={16} />
+            </span>
           </button>
         </div>
       )}
@@ -283,7 +283,7 @@ export function SongPlayer({
                 tapHaptic();
                 setChosenView(option);
               }}
-              className={`rounded-full px-4 py-1.5 text-xs font-extrabold tracking-wider uppercase active:scale-95 ${
+              className={`min-h-11 rounded-full px-4 text-xs font-extrabold tracking-wider uppercase active:scale-95 ${
                 view === option ? 'bg-accent text-ground' : 'text-ink-dim'
               }`}
             >
@@ -314,7 +314,7 @@ export function SongPlayer({
         ) : (
           <div className="flex h-full items-center">
             <div
-              ref={setTabScroller}
+              ref={tabScrollerRef}
               data-testid="tab-scroller"
               className="max-h-full w-full overflow-x-auto rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8"
             >
@@ -332,12 +332,9 @@ export function SongPlayer({
           className="flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent shadow-[0_6px_18px_rgba(255,176,32,0.35)] active:scale-95"
         >
           {playing ? (
-            <span className="flex gap-1">
-              <span className="h-4 w-1.5 rounded-xs bg-ground" />
-              <span className="h-4 w-1.5 rounded-xs bg-ground" />
-            </span>
+            <PauseIcon size={26} className="text-ground" />
           ) : (
-            <span className="ml-0.5 h-0 w-0 border-y-10 border-l-16 border-y-transparent border-l-ground" />
+            <PlayIcon size={26} className="text-ground" />
           )}
         </button>
 
@@ -347,13 +344,13 @@ export function SongPlayer({
           aria-label="Metronome"
           aria-pressed={metronomeOn}
           data-testid="metronome-toggle"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg active:scale-95"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full active:scale-95"
           style={{
             background: metronomeOn ? 'var(--color-accent)' : 'var(--color-surface-2)',
             color: metronomeOn ? 'var(--color-ground)' : 'var(--color-ink-dim)',
           }}
         >
-          ♩
+          <MetronomeIcon size={22} />
         </button>
 
         <label className="min-w-0 flex-1">

@@ -1,5 +1,4 @@
 import {
-  CHORDS,
   beatsPerBar,
   chartBars,
   chordByName,
@@ -10,18 +9,17 @@ import {
 } from '@/content';
 import {
   STANDARD_TUNING,
-  chordSolfegeName,
   chordStrings,
   chordVoicing,
-  expectedPitchClasses,
   fretToMidi,
-  midiToPitchClass,
   type ChordShape,
   type FretPosition,
   type Midi,
-  type PitchClass,
 } from '@/music';
 import { chordShapeToFretboard, type FretMarker } from '@/render';
+import { namedFromShape, nameShape, type ShapeName } from './chordNaming';
+
+export { nameShape, pitchClassesOfPositions, type NamedChord, type ShapeMatch, type ShapeName } from './chordNaming';
 
 /**
  * The left-hand shape of each bar of a song, worked out from its tab.
@@ -30,26 +28,10 @@ import { chordShapeToFretboard, type FretMarker } from '@/render';
  * arpeggio is a list of single notes, and what the fretting hand is doing is
  * not on the page. This module finds it: the set of fretted positions in a
  * bar (or in half a bar, when the hand moves part-way through), a chord name
- * when the notes spell a chord the app teaches, and a diagram to draw.
+ * when the notes spell a chord (`chordNaming.ts`), and a diagram to draw.
  *
  * Everything here is pure, so the rules can be tested without a screen.
  */
-
-/** How well a set of notes matches a chord from the library. */
-export type ShapeMatch =
-  /** The notes are exactly the chord's tones. */
-  | 'exact'
-  /** The chord's tones are all there, plus one more note: the tune on top. */
-  | 'with-melody'
-  /** Nothing in the library fits. */
-  | 'none';
-
-export type ShapeName = {
-  match: ShapeMatch;
-  chord?: ChordShape;
-  /** Pitch classes sounding beyond the chord's own tones. Empty unless `match` is 'with-melody'. */
-  extras: PitchClass[];
-};
 
 export type SongShape = {
   /** Unique within a song: the bar, plus ".1" or ".2" for the halves of a split bar. */
@@ -65,7 +47,7 @@ export type SongShape = {
   /** Every distinct fret position played in the span, ordered by string then fret. */
   positions: FretPosition[];
   name: ShapeName;
-  /** "Am", or "shape" when nothing in the library fits. */
+  /** "Am", or "shape" when no chord fits. */
   label: string;
   /** The chord in solfège ("La minor"), when it has a name. */
   solfege?: string;
@@ -102,10 +84,6 @@ function midiOfPosition(position: FretPosition): Midi {
   return fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret);
 }
 
-export function pitchClassesOfPositions(positions: readonly FretPosition[]): PitchClass[] {
-  return [...new Set(positions.map((p) => midiToPitchClass(midiOfPosition(p))))].sort((a, b) => a - b);
-}
-
 /** How far apart the highest and lowest fretted (not open) notes are; 0 for fewer than two. */
 export function fretSpan(positions: readonly FretPosition[]): number {
   const fretted = positions.map((p) => p.fret).filter((fret) => fret > 0);
@@ -114,76 +92,14 @@ export function fretSpan(positions: readonly FretPosition[]): number {
 }
 
 // ---------------------------------------------------------------------------
-// Naming a shape.
+// Labelling a shape.
 // ---------------------------------------------------------------------------
-
-type LibraryChord = { chord: ChordShape; tones: readonly PitchClass[]; index: number };
-
-const LIBRARY: readonly LibraryChord[] = CHORDS.map(
-  (chord, index) => ({
-    chord,
-    // The tones the chord is *supposed* to have; validateChordShape guarantees
-    // the library's own voicings sound exactly these.
-    tones: expectedPitchClasses(chord.root, chord.quality),
-    index,
-  }),
-);
-
-/** Most extra notes a named shape may carry: one tune note on top of a chord. */
-const MAX_EXTRA_NOTES = 1;
-
-/** Fewest tones a chord needs before an extra note can be called "a melody on it". */
-const MIN_TONES_FOR_MELODY = 3;
-
-/**
- * Names the chord a set of positions spells.
- *
- * Exact first: a bar whose notes are precisely Am's tones is Am. Failing
- * that, a chord whose tones are all present plus one other note is that chord
- * "with melody" — the picture is still the chord, the extra note is the tune
- * walking over it. When several chords qualify the one built on the lowest
- * note wins (the bass is what an ear hears as the chord), then an exact match
- * over a near one, then the fuller chord, then library order so the answer
- * never depends on iteration luck. So A, C and E with a walking F, over an A
- * bass, is "Am + melody" rather than a bare Fmaj7 with the A in the middle.
- * Power chords are never "with melody": two notes plus one is not a claim
- * worth making.
- */
-export function nameShape(positions: readonly FretPosition[]): ShapeName {
-  if (positions.length === 0) return { match: 'none', extras: [] };
-
-  const sounding = pitchClassesOfPositions(positions);
-  const bass = midiToPitchClass(Math.min(...positions.map(midiOfPosition)));
-
-  type Candidate = { entry: LibraryChord; extras: PitchClass[] };
-  const candidates = LIBRARY.flatMap((entry): Candidate[] => {
-    if (!entry.tones.every((tone) => sounding.includes(tone))) return [];
-    const extras = sounding.filter((pc) => !entry.tones.includes(pc));
-    if (extras.length === 0) return [{ entry, extras }];
-    const canCarryMelody = entry.tones.length >= MIN_TONES_FOR_MELODY;
-    return canCarryMelody && extras.length <= MAX_EXTRA_NOTES ? [{ entry, extras }] : [];
-  });
-
-  const score = ({ entry, extras }: Candidate): number =>
-    (midiToPitchClass(entry.chord.root) === bass ? 1000 : 0) +
-    (extras.length === 0 ? 200 : 0) +
-    entry.tones.length * 10 -
-    entry.index / 1000;
-
-  const best = [...candidates].sort((a, b) => score(b) - score(a))[0];
-  if (best === undefined) return { match: 'none', extras: [] };
-  return {
-    match: best.extras.length === 0 ? 'exact' : 'with-melody',
-    chord: best.entry.chord,
-    extras: best.extras,
-  };
-}
 
 function describe(name: ShapeName): Pick<SongShape, 'label' | 'solfege' | 'hint'> {
   if (name.chord === undefined) return { label: UNNAMED_LABEL };
   return {
     label: name.chord.name,
-    solfege: chordSolfegeName(name.chord),
+    solfege: name.chord.solfege,
     ...(name.match === 'with-melody' ? { hint: MELODY_HINT } : {}),
   };
 }
@@ -226,8 +142,8 @@ function startingIn(events: readonly TabEvent[], from: number, to: number): TabE
  *
  * A bar is split at its middle when its fretted notes reach more than four
  * frets (no single position covers them), or when the whole bar fits no chord
- * but a half does: the hand moved, and showing the two halves says so. A bar
- * with no notes in it has no shape.
+ * but its two halves are two different ones: the hand moved, and showing the
+ * halves says so. A bar with no notes in it has no shape.
  */
 export function deriveRiffShapes(riff: Riff): SongShape[] {
   const barLength = beatsPerBar(riff.timeSignature);
@@ -254,20 +170,14 @@ export function deriveRiffShapes(riff: Riff): SongShape[] {
       buildShape({ bar, part: 1, parts: 2, startBeat: middle, endBeat: end, events: secondHalf }),
     ];
     const tooWide = fretSpan(whole.positions) > MAX_SHAPE_SPAN;
-    const halvesDiffer =
-      halves[0] !== undefined &&
-      halves[1] !== undefined &&
-      positionsKey(halves[0].positions) !== positionsKey(halves[1].positions);
-    const halfIsNamed = halves.some((half) => half.name.match !== 'none');
-    const split = tooWide || (whole.name.match === 'none' && halvesDiffer && halfIsNamed);
+    const [one, two] = halves;
+    const twoChords =
+      one?.name.chord !== undefined && two?.name.chord !== undefined && one.name.chord.name !== two.name.chord.name;
+    const split = tooWide || (whole.name.match === 'none' && twoChords);
     shapes.push(...(split ? halves : [whole]));
   }
 
   return shapes;
-}
-
-function positionsKey(positions: readonly FretPosition[]): string {
-  return positions.map((p) => `${p.stringIndex}:${p.fret}`).join(',');
 }
 
 /** One shape per bar of an arpeggio chart: the chord the chart names, as written. */
@@ -283,7 +193,7 @@ export function deriveChartShapes(song: Song): SongShape[] {
     chord.frets.forEach((fret, stringIndex) => {
       if (fret !== null && fret !== undefined) positions.push({ stringIndex, fret });
     });
-    const name: ShapeName = { match: 'exact', chord, extras: [] };
+    const name: ShapeName = { match: 'exact', chord: namedFromShape(chord), extras: [] };
     return [
       {
         key: `${bar.index}`,
@@ -388,6 +298,31 @@ export function shapeIndexAtBeat(shapes: readonly SongShape[], beat: number): nu
     if (beat + EPSILON >= shape.startBeat && beat < shape.endBeat - EPSILON) found = i;
   }
   return found;
+}
+
+/**
+ * Where along a strip of cards the playhead is at `beat`, given the x of each
+ * card's centre. A card is "under" the playhead at the middle of its span, and
+ * between two middles the playhead glides from one card to the next, so a strip
+ * that follows it scrolls steadily instead of jumping a card at every bar line.
+ * Before the first middle and after the last it rests on that card.
+ */
+export function stripPosition(shapes: readonly SongShape[], centres: readonly number[], beat: number): number | null {
+  const count = Math.min(shapes.length, centres.length);
+  if (count === 0) return null;
+  const middle = (i: number): number => {
+    const shape = shapes[i];
+    return shape === undefined ? 0 : (shape.startBeat + shape.endBeat) / 2;
+  };
+  const centre = (i: number): number => centres[i] ?? 0;
+
+  if (beat <= middle(0)) return centre(0);
+  for (let i = 0; i < count - 1; i += 1) {
+    const from = middle(i);
+    const to = middle(i + 1);
+    if (beat < to) return centre(i) + ((beat - from) / (to - from)) * (centre(i + 1) - centre(i));
+  }
+  return centre(count - 1);
 }
 
 /** How long a plucked string stays lit, at most, in quarter notes. */

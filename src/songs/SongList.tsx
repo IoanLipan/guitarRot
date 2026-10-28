@@ -1,5 +1,6 @@
 import { DIFFICULTIES, type Song } from '@/content';
 import { tapHaptic } from '@/app/haptics';
+import { SearchIcon } from '@/ui/icons';
 import { DifficultyPill } from './DifficultyPill';
 import type { DifficultyFilter, SongFilter } from './searchSongs';
 
@@ -26,7 +27,7 @@ export function SongList({
             aria-hidden="true"
             className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-ink-dim"
           >
-            <SearchIcon />
+            <SearchIcon size={18} />
           </span>
           <input
             type="search"
@@ -52,7 +53,7 @@ export function SongList({
                   tapHaptic();
                   onFilterChange({ ...filter, difficulty: level });
                 }}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-extrabold tracking-wider uppercase active:scale-95 ${
+                className={`min-h-11 rounded-full px-4 text-xs font-extrabold tracking-wider uppercase active:scale-95 ${
                   isActive ? 'bg-accent text-ground' : 'bg-surface-2 text-ink-dim'
                 }`}
               >
@@ -95,15 +96,6 @@ export function SongList({
         )}
       </div>
     </div>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" aria-hidden="true">
-      <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="m16 16 4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
   );
 }
 

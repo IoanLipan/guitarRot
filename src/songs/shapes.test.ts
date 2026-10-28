@@ -7,12 +7,12 @@ import {
   deriveRiffShapes,
   fretSpan,
   hasShapes,
-  nameShape,
   pluckedPositions,
   positionsOf,
   shapeDiagram,
   shapeIndexAtBeat,
   songShapes,
+  stripPosition,
   strumVoicing,
 } from './shapes';
 
@@ -39,9 +39,6 @@ function riff(bars: number, events: TabEvent[], timeSignature: [number, number] 
   };
 }
 
-/** The open Am chord as positions: x02210. */
-const AM = [pos(1, 0), pos(2, 2), pos(3, 2), pos(4, 1), pos(5, 0)];
-
 function first<T>(items: readonly T[]): T {
   const item = items[0];
   if (item === undefined) throw new Error('expected at least one item');
@@ -60,73 +57,6 @@ describe('fretSpan', () => {
     expect(fretSpan([pos(0, 0), pos(1, 3), pos(2, 5)])).toBe(2);
     expect(fretSpan([pos(0, 0), pos(1, 0)])).toBe(0);
     expect(fretSpan([pos(1, 7)])).toBe(0);
-  });
-});
-
-describe('nameShape', () => {
-  it('names a shape whose notes are exactly a library chord', () => {
-    const name = nameShape(AM);
-    expect(name.match).toBe('exact');
-    expect(name.chord?.name).toBe('Am');
-    expect(name.extras).toEqual([]);
-  });
-
-  it('names the chord whichever way the notes are fingered', () => {
-    // Am again, but as the C-shape voicing a few frets up the neck.
-    const name = nameShape([pos(1, 12), pos(2, 14), pos(3, 14), pos(4, 13), pos(5, 12)]);
-    expect(name.match).toBe('exact');
-    expect(name.chord?.name).toBe('Am');
-  });
-
-  it('calls a chord with one extra note "with melody", and says which note', () => {
-    // Am, plus a D on the B string: the note the tune is on.
-    const name = nameShape([...AM, pos(4, 3)]);
-    expect(name.match).toBe('with-melody');
-    expect(name.chord?.name).toBe('Am');
-    expect(name.extras).toEqual([2]);
-  });
-
-  it('prefers the chord built on the bass note when two fit', () => {
-    // A, C, E and F over an A bass spell Fmaj7 exactly, but the bass says Am
-    // with a passing F: that is how it sounds, so that is the name.
-    const name = nameShape([...AM, pos(5, 1)]);
-    expect(name.chord?.name).toBe('Am');
-    expect(name.match).toBe('with-melody');
-    expect(name.extras).toEqual([5]);
-  });
-
-  it('keeps an exact match when the bass agrees with it', () => {
-    // The same four notes with the F in the bass: Fmaj7, no melody about it.
-    const name = nameShape([pos(0, 1), pos(2, 2), pos(3, 2), pos(4, 1), pos(5, 0)]);
-    expect(name.chord?.name).toBe('Fmaj7');
-    expect(name.match).toBe('exact');
-  });
-
-  it('leaves a shape unnamed when nothing in the library fits', () => {
-    // A chromatic cluster: C, C#, D, D#.
-    const name = nameShape([pos(1, 3), pos(2, 2), pos(2, 3), pos(2, 4)]);
-    expect(name.match).toBe('none');
-    expect(name.chord).toBeUndefined();
-  });
-
-  it('does not call two extra notes a melody', () => {
-    // Am with a G sharp and a D: too much to be "a chord with a tune".
-    expect(nameShape([...AM, pos(5, 4), pos(4, 3)]).match).toBe('none');
-  });
-
-  it('never calls a power chord plus a note a chord with melody', () => {
-    // E and B (E5) with a C on top.
-    expect(nameShape([pos(0, 0), pos(1, 2), pos(4, 1)]).match).toBe('none');
-  });
-
-  it('still names a bare power chord exactly', () => {
-    const name = nameShape([pos(0, 0), pos(1, 2), pos(2, 2)]);
-    expect(name.match).toBe('exact');
-    expect(name.chord?.name).toBe('E5');
-  });
-
-  it('names nothing for no notes', () => {
-    expect(nameShape([]).match).toBe('none');
   });
 });
 
@@ -179,13 +109,35 @@ describe('deriveRiffShapes', () => {
     expect(shapes[1]?.positions).toEqual([pos(2, 7), pos(3, 9)]);
   });
 
-  it('splits an unnamed bar when a half is a chord you can name', () => {
-    // First half: Em (E B E G). Second half: a G sharp and a D sharp. Together
-    // they fit nothing; apart, one half is Em.
-    const events = [note(0, 0, 0), note(1, 2, 0.5), note(2, 2, 1), note(3, 0, 1.5), note(3, 1, 2), note(4, 4, 3)];
+  it('splits an unnamed bar when its halves are two different chords', () => {
+    // First half: Em (E B E G). Second half: D major (D A D F#). Together,
+    // six notes that fit no chord; apart, one chord each.
+    const events = [
+      note(0, 0, 0), note(1, 2, 0.5), note(2, 2, 1), note(3, 0, 1.5),
+      note(2, 0, 2), note(3, 2, 2.5), note(4, 3, 3), note(5, 2, 3.5),
+    ];
     const shapes = deriveRiffShapes(riff(1, events));
-    expect(shapes.map((s) => s.parts)).toEqual([2, 2]);
-    expect(shapes[0]?.label).toBe('Em');
+    expect(shapes.map((s) => [s.parts, s.label])).toEqual([[2, 'Em'], [2, 'D']]);
+  });
+
+  it('keeps an unnamed bar whole when only one half is a chord', () => {
+    // Em, then a bare cluster: splitting would only add a second blank card.
+    const events = [
+      note(0, 0, 0), note(1, 2, 0.5), note(2, 2, 1), note(3, 0, 1.5),
+      note(1, 3, 2), note(1, 4, 2.5), note(2, 0, 3), note(2, 1, 3.5),
+    ];
+    const shapes = deriveRiffShapes(riff(1, events));
+    expect(shapes).toHaveLength(1);
+    expect(shapes[0]?.label).toBe('shape');
+  });
+
+  it('names a bar from theory, not only from the library: G minor', () => {
+    // G D G Bb D G, up the neck: no Gm in the chord library.
+    const events = [note(0, 3, 0), note(1, 5, 0.5), note(2, 5, 1), note(3, 3, 1.5), note(4, 3, 2), note(5, 3, 3)];
+    const [shape] = deriveRiffShapes(riff(1, events));
+    expect(shape?.label).toBe('Gm');
+    expect(shape?.solfege).toBe('Sol minor');
+    expect(shape?.hint).toBeUndefined();
   });
 
   it('keeps a bar whole when the whole bar is already a named chord', () => {
@@ -326,6 +278,31 @@ describe('strumVoicing', () => {
     const song = SONGS.find((candidate) => candidate.id === 'slow-burn') as Song;
     const { strings } = strumVoicing(first(deriveChartShapes(song)));
     expect(strings).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+});
+
+describe('stripPosition', () => {
+  const shapes = deriveRiffShapes(riff(3, [note(1, 0, 0), note(2, 2, 4), note(3, 2, 8)]));
+  const centres = [100, 200, 400];
+
+  it('rests on a card at the middle of its bar', () => {
+    expect(stripPosition(shapes, centres, 2)).toBe(100);
+    expect(stripPosition(shapes, centres, 6)).toBe(200);
+    expect(stripPosition(shapes, centres, 10)).toBe(400);
+  });
+
+  it('glides from one card to the next between the middles of their bars', () => {
+    expect(stripPosition(shapes, centres, 4)).toBe(150);
+    expect(stripPosition(shapes, centres, 8)).toBe(300);
+  });
+
+  it('rests on the first card before it and the last after it', () => {
+    expect(stripPosition(shapes, centres, 0)).toBe(100);
+    expect(stripPosition(shapes, centres, 12)).toBe(400);
+  });
+
+  it('has no position for nothing to follow', () => {
+    expect(stripPosition([], [], 3)).toBeNull();
   });
 });
 
