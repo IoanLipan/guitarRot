@@ -854,14 +854,21 @@ a mid-range phone (the transitions are compositor-only and the View Transition
 snapshot is one pane, but look for dropped frames on the tab switch and the Feed
 rise-in).
 
-**Left for the Songs tab** (`src/songs/*`, being changed by another agent, so not
-touched): it still has `active:scale-*` on its buttons (use `.press`), its list rows
-do not stagger in (`rise-in` + `stagger(i, 38, 12)` like `Course`), `SongPlayer`'s
-play button should use `PlayPauseIcon` and its staff gets the playhead glow for
-free (set `playheadRef.current.dataset.playing = 'true'` in its rAF loop as
-`RiffCard`/`PlayerPanel` do), chord chart cells could `ripple`, and the new
-"Shapes" view should reuse `strumFx` on its diagrams. The tab slide itself already
-covers Songs.
+**The Songs tab** (`src/songs/*`) follows the same rules now. `active:scale-*` is
+gone from it too (the test that enforces `.press` no longer excludes `songs/`).
+List rows rise in with `stagger(i, 38, 12)`; the play button is a `PlayPauseIcon`;
+`SongPlayer` sets `data-playing` on the playhead from its rAF loop, so the tab's
+playhead glows while the song plays; chord-chart cells (`fx-host`) ripple from the
+finger. The Tab | Shapes (| Chart) toggle is one sliding pill under its buttons,
+the same markup as Learn's section switch (its width is `(100% - (0.5 + 0.25(n-1))rem) / n`
+for n views). On the Shapes strip, tapping a card is `strumFx` on the card; the
+current bar's enlargement is the `scale` property eased by `.shape-card` (its ring
+and glow are a separate `.shape-halo` layer that fades, so no box-shadow moves);
+and a plucked string flashes through `.pluck-line` / `.pluck-ring`. `ShapesView`
+flips `data-lit` and, per new note, `data-pulse` between `a` and `b`: the two
+keyframes are identical, and switching between them is the only way CSS replays an
+animation, so the same string struck twice running still flashes twice. Nothing in
+that path is React state.
 
 ## Metronome, count-in, loop-a-section, more solos (built 2026-09-08)
 

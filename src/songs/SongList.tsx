@@ -1,6 +1,7 @@
 import { DIFFICULTIES, type Song } from '@/content';
 import { tapHaptic } from '@/app/haptics';
 import { SearchIcon } from '@/ui/icons';
+import { stagger } from '@/ui/motion';
 import { DifficultyPill } from './DifficultyPill';
 import type { DifficultyFilter, SongFilter } from './searchSongs';
 
@@ -53,7 +54,7 @@ export function SongList({
                   tapHaptic();
                   onFilterChange({ ...filter, difficulty: level });
                 }}
-                className={`min-h-11 rounded-full px-4 text-xs font-extrabold tracking-wider uppercase active:scale-95 ${
+                className={`press min-h-11 rounded-full px-4 text-xs font-extrabold tracking-wider uppercase ${
                   isActive ? 'bg-accent text-ground' : 'bg-surface-2 text-ink-dim'
                 }`}
               >
@@ -71,8 +72,8 @@ export function SongList({
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {songs.map((song) => (
-              <li key={song.id}>
+            {songs.map((song, index) => (
+              <li key={song.id} className="rise-in" style={stagger(index, 38, 12)}>
                 <button
                   type="button"
                   onClick={() => {
@@ -80,7 +81,7 @@ export function SongList({
                     onOpen(song);
                   }}
                   data-testid={`song-row-${song.id}`}
-                  className="flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-3 text-left ring-1 ring-white/5 active:scale-[0.99]"
+                  className="press press-soft flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-3 text-left ring-1 ring-white/5"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] font-bold">{song.title}</span>

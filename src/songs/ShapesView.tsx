@@ -3,20 +3,36 @@ import type { AudioEngine } from '@/audio';
 import type { TabEvent } from '@/content';
 import { useFollowPlayhead } from '@/render';
 import { SHAPE_CARD_WIDTH, ShapeCard, type ShapeCardProps } from './ShapeCard';
-import { pluckedPositions, shapeIndexAtBeat, stripPosition, type SongShape } from './shapes';
+import { pluckedNotes, shapeIndexAtBeat, stripPosition, type SongShape } from './shapes';
 
 export type ShapesLoopRange = { start: number; end: number };
 
+type Plucked = { stringIndex: number; fret: number; beat: number };
+
+/**
+ * Lights one overlay element for `note`, or puts it out. A new note on an
+ * element that is already lit flashes it again: the CSS runs one of two
+ * identical animations (`data-pulse` a or b), and switching between them is
+ * what restarts it when the same string is struck twice running.
+ */
+function light(element: SVGElement, note: Plucked | undefined) {
+  const key = note === undefined ? '' : String(note.beat);
+  if (element.dataset.note === key) return;
+  element.dataset.note = key;
+  element.dataset.lit = String(note !== undefined);
+  if (note !== undefined) element.dataset.pulse = element.dataset.pulse === 'a' ? 'b' : 'a';
+}
+
 /** Lights `lit` on one card and clears everything else on it. Touches the DOM only: no React state. */
-function lightCard(card: HTMLElement | null, lit: readonly { stringIndex: number; fret: number }[]) {
+function lightCard(card: HTMLElement | null, lit: readonly Plucked[]) {
   if (card === null) return;
-  const strings = new Set(lit.map((p) => String(p.stringIndex)));
-  const positions = new Set(lit.map((p) => `${p.stringIndex}:${p.fret}`));
+  const byString = new Map(lit.map((note) => [String(note.stringIndex), note]));
+  const byPosition = new Map(lit.map((note) => [`${note.stringIndex}:${note.fret}`, note]));
   card.querySelectorAll<SVGElement>('[data-pluck-string]').forEach((element) => {
-    element.dataset.lit = String(strings.has(element.dataset.pluckString ?? ''));
+    light(element, byString.get(element.dataset.pluckString ?? ''));
   });
   card.querySelectorAll<SVGElement>('[data-pluck-pos]').forEach((element) => {
-    element.dataset.lit = String(positions.has(element.dataset.pluckPos ?? ''));
+    light(element, byPosition.get(element.dataset.pluckPos ?? ''));
   });
 }
 
@@ -90,8 +106,8 @@ export function ShapesView({
       }
 
       const shape = index >= 0 ? shapes[index] : undefined;
-      const lit = shape === undefined || beat === null ? [] : pluckedPositions(events, shape, beat);
-      const signature = lit.map((p) => `${p.stringIndex}:${p.fret}`).join(',');
+      const lit = shape === undefined || beat === null ? [] : pluckedNotes(events, shape, beat);
+      const signature = lit.map((note) => `${note.stringIndex}:${note.fret}@${note.beat}`).join(',');
       if (signature !== litSignature) {
         litSignature = signature;
         lightCard(cardRefs.current[index] ?? null, lit);

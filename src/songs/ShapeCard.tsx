@@ -3,6 +3,7 @@ import type { AudioEngine } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
 import { createFretboardGeometry, Fretboard } from '@/render';
 import { RepeatIcon } from '@/ui/icons';
+import { strumFx } from '@/ui/motion';
 import { shapeDiagram, strumVoicing, type SongShape } from './shapes';
 
 /** How long the "just strummed" ring holds after a tap. */
@@ -33,7 +34,12 @@ function barLabel(shape: SongShape): string {
  * The diagram itself never re-renders while a song plays. The string that is
  * being plucked is lit by the strip flipping a `data-lit` attribute on the
  * overlay below (see ShapesView), which is why the overlay is drawn here with
- * the same geometry as the board and not as a prop on it.
+ * the same geometry as the board and not as a prop on it. A lit string flashes
+ * and settles (`.pluck-line`, `.pluck-ring` in index.css).
+ *
+ * The current bar grows by `scale` alone, which eases (`.shape-card`); its ring
+ * and glow are a separate layer that fades in (`.shape-halo`), so nothing but
+ * transform and opacity moves.
  */
 export const ShapeCard = memo(function ShapeCard({ shape, engine, active, looped, onLoopTap }: ShapeCardProps) {
   const diagram = useMemo(() => shapeDiagram(shape), [shape]);
@@ -51,8 +57,10 @@ export const ShapeCard = memo(function ShapeCard({ shape, engine, active, looped
     [],
   );
 
-  function handleStrum() {
+  function handleStrum(event: React.MouseEvent<HTMLButtonElement>) {
     tapHaptic();
+    // The ripple spreads from the finger across the card, and the strings of the diagram shiver in strum order.
+    strumFx(event.currentTarget, { x: event.clientX, y: event.clientY });
     const { midis, strings } = strumVoicing(shape);
     engine.strum(midis, { strings });
     setStrumming(true);
@@ -69,19 +77,21 @@ export const ShapeCard = memo(function ShapeCard({ shape, engine, active, looped
       data-active={active ? 'true' : undefined}
       data-looped={looped ? 'true' : undefined}
       style={{ width: SHAPE_CARD_WIDTH }}
-      className={`relative origin-center rounded-2xl transition-[transform,box-shadow,background-color] duration-200 ${
-        active
-          ? 'z-10 scale-[1.14] bg-surface-2 shadow-[0_0_0_2px_var(--color-accent),0_10px_28px_rgba(255,176,32,0.22)]'
-          : looped
-            ? 'bg-surface shadow-[0_0_0_1.5px_rgba(255,176,32,0.45)]'
-            : 'bg-surface shadow-[0_0_0_1px_rgba(255,255,255,0.06)]'
+      className={`shape-card relative origin-center rounded-2xl bg-surface ${active ? 'z-10 scale-[1.14]' : ''} ${
+        looped ? 'shadow-[0_0_0_1.5px_rgba(255,176,32,0.45)]' : 'shadow-[0_0_0_1px_rgba(255,255,255,0.06)]'
       }`}
     >
+      <span
+        aria-hidden="true"
+        data-testid={`shape-halo-${shape.key}`}
+        data-on={active ? 'true' : 'false'}
+        className="shape-halo pointer-events-none absolute inset-0 rounded-2xl"
+      />
       <button
         type="button"
         onClick={handleStrum}
         aria-label={`${barLabel(shape)}: ${shape.name.chord === undefined ? 'no chord name' : shape.label}${shape.hint === undefined ? '' : ' with melody'}, tap to hear`}
-        className="flex w-full flex-col items-center rounded-2xl px-2 pt-11 pb-2.5 active:scale-[0.97]"
+        className="press fx-host flex w-full flex-col items-center rounded-2xl px-2 pt-11 pb-2.5"
       >
         <div className="relative h-32 w-full [@media(max-height:700px)]:h-24">
           <Fretboard
@@ -117,8 +127,7 @@ export const ShapeCard = memo(function ShapeCard({ shape, engine, active, looped
                   stroke="var(--color-accent)"
                   strokeWidth={10}
                   strokeLinecap="round"
-                  opacity={0}
-                  className="transition-opacity duration-100 data-[lit=true]:opacity-70"
+                  className="pluck-line"
                 />
               );
             })}
@@ -134,8 +143,7 @@ export const ShapeCard = memo(function ShapeCard({ shape, engine, active, looped
                   fill="none"
                   stroke="var(--color-ink)"
                   strokeWidth={3}
-                  opacity={0}
-                  className="transition-opacity duration-100 data-[lit=true]:opacity-100"
+                  className="pluck-ring"
                 />
               );
             })}
@@ -187,7 +195,7 @@ export const ShapeCard = memo(function ShapeCard({ shape, engine, active, looped
           aria-label={`Loop ${barLabel(shape).toLowerCase()}`}
           aria-pressed={looped}
           data-testid={`shape-loop-${shape.bar}`}
-          className="absolute top-0 right-0 flex h-11 w-11 items-center justify-center active:scale-90"
+          className="press absolute top-0 right-0 z-10 flex h-11 w-11 items-center justify-center rounded-full"
         >
           <span
             className={`flex h-8 w-8 items-center justify-center rounded-full ${

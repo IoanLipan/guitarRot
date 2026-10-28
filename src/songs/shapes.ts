@@ -333,18 +333,17 @@ export const PLUCK_LIT_BEATS = 0.5;
  * counts from its first instant for as long as it lasts, up to half a beat,
  * so a long bass note flashes rather than staying lit for four beats.
  */
-export function pluckedPositions(
-  events: readonly TabEvent[],
-  shape: SongShape,
-  beat: number,
-): FretPosition[] {
-  return events
-    .filter(
-      (event) =>
-        event.beat >= shape.startBeat - EPSILON &&
-        event.beat < shape.endBeat - EPSILON &&
-        beat + EPSILON >= event.beat &&
-        beat < event.beat + Math.min(event.duration, PLUCK_LIT_BEATS) - EPSILON,
-    )
-    .map(({ stringIndex, fret }) => ({ stringIndex, fret }));
+export function pluckedNotes(events: readonly TabEvent[], shape: SongShape, beat: number): TabEvent[] {
+  return events.filter(
+    (event) =>
+      event.beat >= shape.startBeat - EPSILON &&
+      event.beat < shape.endBeat - EPSILON &&
+      beat + EPSILON >= event.beat &&
+      beat < event.beat + Math.min(event.duration, PLUCK_LIT_BEATS) - EPSILON,
+  );
+}
+
+/** `pluckedNotes`, as just the positions on the neck. */
+export function pluckedPositions(events: readonly TabEvent[], shape: SongShape, beat: number): FretPosition[] {
+  return pluckedNotes(events, shape, beat).map(({ stringIndex, fret }) => ({ stringIndex, fret }));
 }

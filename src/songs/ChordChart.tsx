@@ -1,4 +1,5 @@
 import { chartBars, type SongChart } from '@/content';
+import { ripple } from '@/ui/motion';
 
 /** Bars per row. Four is what fits a phone and how charts are written. */
 const BARS_PER_ROW = 4;
@@ -51,11 +52,15 @@ export function ChordChart({
                       <button
                         key={bar.index}
                         type="button"
-                        onClick={() => onBarTap?.(bar.index)}
+                        onClick={(event) => {
+                          // A ripple spreads from the finger across the cell.
+                          ripple(event.currentTarget, { x: event.clientX, y: event.clientY });
+                          onBarTap?.(bar.index);
+                        }}
                         data-testid={`chart-bar-${bar.index}`}
                         data-active={isActive ? 'true' : undefined}
                         data-looped={isLooped ? 'true' : undefined}
-                        className={`rounded-xl border py-3 text-center text-lg font-black transition-colors active:scale-95 ${
+                        className={`press fx-host rounded-xl border py-3 text-center text-lg font-black ${
                           isActive
                             ? 'border-accent bg-accent text-ground'
                             : isLooped
