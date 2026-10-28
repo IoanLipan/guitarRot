@@ -193,11 +193,12 @@ describe('Tuner', () => {
       expect(meter).toHaveAttribute('aria-valuemin', '-50');
       expect(meter).toHaveAttribute('aria-valuemax', '50');
       expect(meter).toHaveAttribute('aria-valuenow', '-25');
-      expect(screen.getByTestId('tuner-needle')).toHaveStyle({ left: '25%' });
+      // The needle rides a rail that is slid by a percentage of the meter's width.
+      expect(screen.getByTestId('tuner-needle-rail').style.transform).toBe('translateX(25%)');
 
       setMic('listening', reading(45, 50));
       rerender(<Tuner engine={fakeEngine()} />);
-      expect(screen.getByTestId('tuner-needle')).toHaveStyle({ left: '100%' });
+      expect(screen.getByTestId('tuner-needle-rail').style.transform).toBe('translateX(100%)');
     });
 
     it('tells you to tighten a string that is too low', () => {
@@ -236,6 +237,30 @@ describe('Tuner', () => {
         vi.advanceTimersByTime(150);
       });
       expect(screen.getByTestId('tuner-in-tune')).toHaveTextContent('In tune');
+    });
+
+    it('lights the target zone green once the note is held, and not before', () => {
+      setMic('listening', reading(52, 1.4));
+      render(<Tuner engine={fakeEngine()} />);
+      expect(screen.getByTestId('tuner-zone')).toHaveAttribute('data-lit', 'false');
+
+      act(() => {
+        vi.advanceTimersByTime(450);
+      });
+
+      expect(screen.getByTestId('tuner-zone')).toHaveAttribute('data-lit', 'true');
+      expect(screen.getByTestId('tuner-in-tune')).toHaveClass('pop-in');
+    });
+
+    it('moves the needle by transform on a rail, so it can ease, and never by left', () => {
+      setMic('listening', reading(52, 10));
+      render(<Tuner engine={fakeEngine()} />);
+
+      const rail = screen.getByTestId('tuner-needle-rail');
+      expect(rail).toHaveClass('tuner-needle');
+      expect(rail.style.transform).toBe('translateX(60%)');
+      expect(screen.getByTestId('tuner-needle').style.left).toBe('');
+      expect(rail).toContainElement(screen.getByTestId('tuner-needle'));
     });
 
     it('starts the hold again if the string drifts out and back', () => {

@@ -43,6 +43,7 @@ export function QuizVisual({
           { stringIndex: question.position.stringIndex, fret: question.position.fret, tone: dotTone },
         ]}
         onFretTap={handleFretTap}
+        popMarkers
         fit={fit}
         className={className}
         ariaLabel="Name-this-note prompt. Tap any fret to hear it."

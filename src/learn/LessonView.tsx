@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { Lesson } from '@/content';
 import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, CloseIcon } from '@/ui/icons';
+import { burst, fillTransform, stagger } from '@/ui/motion';
 import { RichText } from './steps/RichText';
 import { StepView, stepGate } from './steps/StepView';
 
@@ -51,6 +52,11 @@ export function LessonView({
   const [index, setIndex] = useState(() => Math.min(Math.max(0, initialStep), total));
   /** Steps whose question was answered. Kept so going Back and forward again does not re-lock Next. */
   const [passed, setPassed] = useState<readonly number[]>(initialPassed);
+  /** Which way the last move went; a step slides in from that side. */
+  const [direction, setDirection] = useState<'next' | 'back'>('next');
+  /** Set when this visit finishes the lesson, so coming back to a finished lesson does not throw confetti again. */
+  const celebrateRef = useRef(false);
+  const badgeRef = useRef<HTMLDivElement>(null);
 
   // Through a ref so a new callback identity on every parent render does not re-report.
   const onStepChangeRef = useRef(onStepChange);
@@ -71,14 +77,26 @@ export function LessonView({
 
   function handleNext() {
     tapHaptic();
-    if (isLast) onComplete(lesson.id);
+    if (isLast) {
+      celebrateRef.current = true;
+      onComplete(lesson.id);
+    }
+    setDirection('next');
     setIndex(index + 1);
   }
 
   function handleBack() {
     tapHaptic();
+    setDirection('back');
     setIndex(Math.max(0, index - 1));
   }
+
+  // The finish: sparks fly out of the badge as the card arrives.
+  useEffect(() => {
+    if (!finished || !celebrateRef.current) return;
+    celebrateRef.current = false;
+    burst(badgeRef.current, { count: 30, spread: 150, duration: 820, size: 9 });
+  }, [finished]);
 
   function handleClose() {
     tapHaptic();
@@ -86,6 +104,7 @@ export function LessonView({
   }
 
   const fraction = total === 0 ? 1 : Math.min(1, index / total);
+  const ready = gate === 'required' && isPassed;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-ground" data-testid="lesson-view">
@@ -98,7 +117,7 @@ export function LessonView({
             onClick={handleClose}
             aria-label="Close lesson"
             data-testid="lesson-close"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-dim active:scale-95"
+            className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-dim"
           >
             <CloseIcon size={22} />
           </button>
@@ -110,9 +129,11 @@ export function LessonView({
             aria-valuenow={Math.min(index, total)}
             className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2"
           >
+            {/* Slid, not stretched: a full-width bar pushed out of its track keeps its rounded end. */}
             <div
-              className="h-full rounded-full bg-accent transition-[width] duration-300"
-              style={{ width: `${fraction * 100}%` }}
+              data-testid="lesson-progress-fill"
+              className="fill-in h-full w-full rounded-full bg-accent transition-transform duration-[420ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+              style={{ transform: fillTransform(fraction) }}
             />
           </div>
           <span className="w-9 shrink-0 text-right text-xs font-bold text-ink-dim tabular-nums">
@@ -126,21 +147,28 @@ export function LessonView({
 
       {finished ? (
         <div
-          className="lesson-step-in flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-8 text-center"
+          className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-8 text-center"
           data-testid="lesson-complete"
         >
-          <div
-            className="flex h-20 w-20 items-center justify-center rounded-full bg-good text-ground"
-            style={{ boxShadow: '0 0 40px rgba(53,208,127,0.45)' }}
-            aria-hidden="true"
-          >
-            <CheckIcon size={44} strokeWidth={3} />
+          <div className="relative" ref={badgeRef} aria-hidden="true">
+            <span className="halo" />
+            <div
+              className="pop-in relative flex h-20 w-20 items-center justify-center rounded-full bg-good text-ground"
+              style={{ boxShadow: '0 0 40px rgba(53,208,127,0.45)' }}
+            >
+              <CheckIcon
+                size={44}
+                strokeWidth={3}
+                className="draw-check"
+                style={{ '--draw-delay': '240ms' } as CSSProperties}
+              />
+            </div>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="rise-in flex flex-col gap-2" style={stagger(2, 80)}>
             <h2 className="text-3xl font-black">Lesson complete</h2>
             <p className="text-base text-ink-dim">{lesson.title}</p>
           </div>
-          <div className="w-full max-w-sm rounded-2xl bg-surface px-5 py-4">
+          <div className="scale-in w-full max-w-sm rounded-2xl bg-surface px-5 py-4" style={stagger(3, 90)}>
             <p className="text-[11px] font-extrabold tracking-widest text-accent uppercase">
               Goal reached
             </p>
@@ -149,7 +177,7 @@ export function LessonView({
             </p>
           </div>
 
-          <div className="flex w-full max-w-sm flex-col gap-3">
+          <div className="rise-in flex w-full max-w-sm flex-col gap-3" style={stagger(5, 80)}>
             {nextLesson !== undefined && onOpenNext !== undefined ? (
               <button
                 type="button"
@@ -158,7 +186,7 @@ export function LessonView({
                   onOpenNext();
                 }}
                 data-testid="lesson-next-lesson"
-                className="flex min-h-16 flex-col items-center justify-center rounded-full bg-accent px-6 py-3 text-ground shadow-[0_6px_18px_rgba(255,176,32,0.3)] active:scale-95"
+                className="press flex min-h-16 flex-col items-center justify-center rounded-full bg-accent px-6 py-3 text-ground shadow-[0_6px_18px_rgba(255,176,32,0.3)]"
               >
                 <span className="text-lg font-extrabold">Next lesson</span>
                 <span className="max-w-full truncate text-xs font-semibold opacity-75">
@@ -172,7 +200,7 @@ export function LessonView({
               type="button"
               onClick={handleClose}
               data-testid="lesson-back-to-course"
-              className={`min-h-12 rounded-full px-6 py-3 text-base font-bold active:scale-95 ${
+              className={`press min-h-12 rounded-full px-6 py-3 text-base font-bold ${
                 nextLesson === undefined ? 'bg-accent text-ground' : 'bg-surface-2 text-ink'
               }`}
             >
@@ -186,6 +214,7 @@ export function LessonView({
             // Keyed by step so every step starts fresh at the top of its own scroll.
             key={index}
             data-testid="lesson-scroll"
+            data-dir={direction}
             className="lesson-step-in min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-4 short:pt-3 short:pb-3"
           >
             <div className="mx-auto w-full max-w-md">
@@ -204,7 +233,7 @@ export function LessonView({
                 onClick={handleBack}
                 aria-label="Previous step"
                 data-testid="lesson-back"
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-dim active:scale-95"
+                className="press flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-dim"
               >
                 <ArrowLeftIcon size={24} />
               </button>
@@ -214,7 +243,7 @@ export function LessonView({
                 type="button"
                 onClick={handleNext}
                 data-testid="lesson-skip"
-                className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-surface-2 text-base font-extrabold text-ink active:scale-[0.98]"
+                className="press press-soft flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-surface-2 text-base font-extrabold text-ink"
               >
                 Skip
                 <ArrowRightIcon size={20} />
@@ -225,7 +254,10 @@ export function LessonView({
                 onClick={handleNext}
                 disabled={gate === 'required' && !isPassed}
                 data-testid="lesson-next"
-                className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-accent text-base font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.25)] transition-colors active:scale-[0.98] disabled:bg-surface-2 disabled:text-ink-dim disabled:shadow-none"
+                data-ready={ready ? 'true' : undefined}
+                className={`press press-soft flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-accent text-base font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.25)] disabled:bg-surface-2 disabled:text-ink-dim disabled:shadow-none ${
+                  ready ? 'answer-pop' : ''
+                }`}
               >
                 {isLast ? 'Finish' : 'Next'}
                 {isLast ? <CheckIcon size={20} /> : <ArrowRightIcon size={20} />}

@@ -75,8 +75,17 @@ export function Learn({
         <div
           role="tablist"
           aria-label="Learn sections"
-          className="grid grid-cols-3 gap-1 rounded-full bg-surface p-1"
+          className="relative grid grid-cols-3 gap-1 rounded-full bg-surface p-1"
         >
+          {/* One pill that slides to the chosen section; the buttons sit above it. */}
+          <span
+            aria-hidden="true"
+            data-testid="learn-tab-pill"
+            className="tab-indicator pointer-events-none absolute top-1 bottom-1 left-1 w-[calc((100%-1rem)/3)] rounded-full bg-accent"
+            style={{
+              transform: `translateX(calc(${Math.max(0, SECTIONS.findIndex((candidate) => candidate.id === section))} * (100% + 0.25rem)))`,
+            }}
+          />
           {SECTIONS.map(({ id, label }) => {
             const selected = id === section;
             return (
@@ -90,8 +99,8 @@ export function Learn({
                   tapHaptic();
                   onPlaceChange((current) => ({ ...current, section: id }));
                 }}
-                className={`h-11 rounded-full text-sm font-extrabold transition-colors active:scale-95 ${
-                  selected ? 'bg-accent text-ground' : 'text-ink-dim'
+                className={`press relative z-10 h-11 rounded-full text-sm font-extrabold ${
+                  selected ? 'text-ground' : 'text-ink-dim'
                 }`}
               >
                 {label}
@@ -110,7 +119,7 @@ export function Learn({
           />
         )}
         {section === 'tuner' && (
-          <div className="px-5 pt-1 pb-8">
+          <div className="rise-in px-5 pt-1 pb-8">
             <Tuner engine={engine} />
           </div>
         )}

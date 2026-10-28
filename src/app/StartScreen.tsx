@@ -1,3 +1,4 @@
+import { stagger } from '@/ui/motion';
 import { LogoMark, Wordmark } from './Logo';
 import type { StartPlan } from './startPlan';
 import { startLabel } from './startPlan';
@@ -29,15 +30,24 @@ export function StartScreen({
 }) {
   const learnLabel = labelFor('learn', chosen, loading, failed, startLabel(plan));
   const feedLabel = labelFor('feed', chosen, loading, failed, sharedLink ? 'Open the shared link' : 'Just scroll riffs');
+  // The tapped button is the one that is working: it keeps full brightness and shimmers.
+  const learnBusy = loading && chosen === 'learn';
+  const feedBusy = loading && chosen === 'feed';
 
   return (
     <main className="flex h-dvh flex-col items-center justify-center gap-6 bg-ground p-8 text-center">
-      <LogoMark className="h-32 w-auto drop-shadow-[0_0_48px_rgba(255,176,32,0.35)]" />
+      {/* The pick drops in with a bounce; a glow behind it slowly breathes. */}
+      <div className="relative">
+        <div aria-hidden="true" className="logo-glow absolute -inset-14" />
+        <LogoMark className="logo-drop relative h-32 w-auto" />
+      </div>
       <div className="flex flex-col items-center gap-2">
-        <h1>
+        <h1 className="rise-in" style={stagger(4, 70)}>
           <Wordmark className="text-5xl" />
         </h1>
-        <p className="text-base font-semibold text-ink-dim">Scroll less. Play more.</p>
+        <p className="rise-in text-base font-semibold text-ink-dim" style={stagger(5, 70)}>
+          Scroll less. Play more.
+        </p>
       </div>
 
       {/* Web audio stays suspended until a real tap, so these buttons are also
@@ -50,8 +60,13 @@ export function StartScreen({
           // guessing wrong would send a returning learner back to lesson 1.
           disabled={loading || plan.kind === 'loading'}
           data-testid="start-learn"
-          className="min-h-14 rounded-full bg-accent px-8 py-3.5 text-lg leading-tight font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.3)] active:scale-95 disabled:opacity-60 disabled:active:scale-100"
+          aria-busy={learnBusy || undefined}
+          style={stagger(6, 70)}
+          className={`rise-in press flex min-h-14 items-center justify-center gap-2.5 rounded-full bg-accent px-8 py-3.5 text-lg leading-tight font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.3)] ${
+            learnBusy ? 'shimmer' : 'disabled:opacity-60'
+          }`}
         >
+          {learnBusy && <Spinner />}
           {learnLabel}
         </button>
         <button
@@ -59,8 +74,13 @@ export function StartScreen({
           onClick={() => onChoose('feed')}
           disabled={loading}
           data-testid="start-feed"
-          className="min-h-12 rounded-full bg-surface-2 px-8 py-3 text-base font-bold text-ink active:scale-95 disabled:opacity-60 disabled:active:scale-100"
+          aria-busy={feedBusy || undefined}
+          style={stagger(7, 70)}
+          className={`rise-in press flex min-h-12 items-center justify-center gap-2.5 rounded-full bg-surface-2 px-8 py-3 text-base font-bold text-ink ${
+            feedBusy ? 'shimmer' : 'disabled:opacity-60'
+          }`}
         >
+          {feedBusy && <Spinner />}
           {feedLabel}
         </button>
       </div>
@@ -71,6 +91,16 @@ export function StartScreen({
         </p>
       )}
     </main>
+  );
+}
+
+/** The wheel on a button that is working. It is the button's own text colour. */
+function Spinner() {
+  return (
+    <span
+      aria-hidden="true"
+      className="h-4.5 w-4.5 shrink-0 animate-spin rounded-full border-[2.5px] border-current border-t-transparent"
+    />
   );
 }
 

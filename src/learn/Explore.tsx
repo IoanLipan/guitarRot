@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRightIcon } from '@/ui/icons';
 import type { AudioEngine } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
+import { strumFx } from '@/ui/motion';
 import { CHORDS } from '@/content';
 import {
   chordSolfegeName,
@@ -64,8 +65,9 @@ export function Explore({ engine }: { engine: AudioEngine }) {
     setTapped(position);
   }
 
-  function handleChordTap(chord: ChordShape) {
+  function handleChordTap(chord: ChordShape, event: React.MouseEvent<HTMLElement>) {
     tapHaptic();
+    strumFx(event.currentTarget, { x: event.clientX, y: event.clientY });
     engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
     flashChord(chord);
   }
@@ -74,7 +76,7 @@ export function Explore({ engine }: { engine: AudioEngine }) {
     tapped === null ? null : noteLabel(fretToMidi(STANDARD_TUNING, tapped.stringIndex, tapped.fret));
 
   return (
-    <div className="flex flex-col gap-9 px-5 pt-2 pb-8">
+    <div className="rise-in flex flex-col gap-9 px-5 pt-2 pb-8">
       <section className="flex flex-col gap-3">
         <h2 className="text-[13px] font-bold tracking-wider text-ink-dim uppercase">
           Fretboard explorer
@@ -85,6 +87,7 @@ export function Explore({ engine }: { engine: AudioEngine }) {
             fretRange={EXPLORER_FRET_RANGE}
             markers={tapped === null ? [] : [{ ...tapped, tone: 'root' }]}
             onFretTap={handleExplorerTap}
+            popMarkers
             ariaLabel="Fretboard explorer"
           />
         </div>
@@ -120,9 +123,9 @@ export function Explore({ engine }: { engine: AudioEngine }) {
                 key={chord.id}
                 type="button"
                 data-testid={`chord-tile-${chord.id}`}
-                onClick={() => handleChordTap(chord)}
+                onClick={(event) => handleChordTap(chord, event)}
                 aria-pressed={isPlaying}
-                className={`flex flex-col items-center gap-1.5 rounded-2xl px-2 py-2.5 transition-all duration-200 active:scale-95 ${
+                className={`press press-tile fx-host flex flex-col items-center gap-1.5 rounded-2xl px-2 py-2.5 ${
                   isPlaying ? 'bg-accent/12 ring-2 ring-accent' : 'bg-surface ring-2 ring-transparent'
                 }`}
               >

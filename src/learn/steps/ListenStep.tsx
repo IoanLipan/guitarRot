@@ -191,7 +191,7 @@ export function ListenStep({
               type="button"
               onClick={handleHear}
               data-testid="listen-hear"
-              className="flex h-13 items-center justify-center gap-2 rounded-full bg-surface-2 text-base font-extrabold active:scale-95"
+              className="press flex h-13 items-center justify-center gap-2 rounded-full bg-surface-2 text-base font-extrabold"
             >
               <SpeakerIcon size={20} />
               Hear it
@@ -203,7 +203,7 @@ export function ListenStep({
                 disabled={mic.status === 'starting'}
                 data-testid="listen-mic"
                 aria-pressed={mic.status === 'listening'}
-                className={`flex h-13 items-center justify-center gap-2 rounded-full text-base font-extrabold active:scale-95 disabled:opacity-60 ${
+                className={`press flex h-13 items-center justify-center gap-2 rounded-full text-base font-extrabold disabled:opacity-60 ${
                   mic.status === 'listening' ? 'bg-accent text-ground' : 'bg-surface-2'
                 }`}
               >

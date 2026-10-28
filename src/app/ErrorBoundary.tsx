@@ -41,7 +41,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <button
           type="button"
           onClick={this.handleReset}
-          className="rounded-full bg-accent px-8 py-4 text-lg font-extrabold text-ground active:scale-95"
+          className="press rounded-full bg-accent px-8 py-4 text-lg font-extrabold text-ground"
         >
           Keep going
         </button>

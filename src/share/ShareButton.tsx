@@ -92,7 +92,7 @@ export function ShareButton({ target, title, className }: ShareButtonProps) {
       onClick={() => void handleShare()}
       aria-label={`Share ${title}`}
       data-testid="share-button"
-      className={`flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1.5 text-xs font-bold tracking-wider text-ink-dim uppercase active:scale-95 ${className ?? ''}`}
+      className={`press flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1.5 text-xs font-bold tracking-wider text-ink-dim uppercase ${className ?? ''}`}
     >
       <ShareIcon size={14} />
       {copied ? 'Link copied' : 'Share'}

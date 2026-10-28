@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { NoteIcon } from '@/ui/icons';
 import type { AudioEngine } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
+import { stagger, strumFx } from '@/ui/motion';
 import {
   chordSolfegeName,
   chordToneNames,
@@ -16,7 +17,16 @@ import { chordShapeToFretboard, Fretboard } from '@/render';
 /** How long the "just strummed" highlight holds after a tap. */
 const STRUM_FLASH_MS = 700;
 
-export function ChordCard({ chord, engine }: { chord: ChordShape; engine: AudioEngine }) {
+export function ChordCard({
+  chord,
+  engine,
+  isActive = true,
+}: {
+  chord: ChordShape;
+  engine: AudioEngine;
+  /** The card that owns the screen: its contents rise in one after another when it becomes this. */
+  isActive?: boolean;
+}) {
   const diagram = chordShapeToFretboard(chord);
   const [strumming, setStrumming] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -28,14 +38,18 @@ export function ChordCard({ chord, engine }: { chord: ChordShape; engine: AudioE
     [],
   );
 
-  function handleStrum() {
+  function handleStrum(event: React.MouseEvent<HTMLButtonElement>) {
     tapHaptic();
+    // The whole card is the button: the ripple spreads from the finger across it,
+    // and the strings of the diagram shiver in strum order.
+    strumFx(event.currentTarget, { x: event.clientX, y: event.clientY });
     engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
     setStrumming(true);
     if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => setStrumming(false), STRUM_FLASH_MS);
   }
 
+  const rise = isActive ? 'rise-in' : '';
   const tones = chordToneNames(chord, STANDARD_TUNING).map(withSolfege);
 
   return (
@@ -43,9 +57,9 @@ export function ChordCard({ chord, engine }: { chord: ChordShape; engine: AudioE
       type="button"
       onClick={handleStrum}
       data-testid={`chord-card-${chord.id}`}
-      className="flex h-full min-h-0 w-full flex-col items-center justify-center gap-5 bg-linear-to-b from-surface-2 to-ground px-6 pt-8 pb-6 text-center"
+      className="fx-host flex h-full min-h-0 w-full flex-col items-center justify-center gap-5 bg-linear-to-b from-surface-2 to-ground px-6 pt-8 pb-6 text-center"
     >
-      <div className="shrink-0">
+      <div className={`${rise} shrink-0`} style={stagger(0)}>
         <div className="text-6xl leading-none font-black">{chord.name}</div>
         <div className="mt-1.5 text-sm tracking-wider text-ink-dim uppercase">
           {chordSolfegeName(chord)}
@@ -53,9 +67,10 @@ export function ChordCard({ chord, engine }: { chord: ChordShape; engine: AudioE
       </div>
 
       <div
-        className={`flex min-h-0 w-full max-w-64 flex-1 items-center justify-center rounded-3xl transition-all duration-200 ${
+        className={`${rise} flex min-h-0 w-full max-w-64 flex-1 items-center justify-center rounded-3xl transition-[scale,background-color,box-shadow] duration-200 ${
           strumming ? 'scale-[1.03] bg-accent/10 ring-2 ring-accent/60' : 'ring-2 ring-transparent'
         }`}
+        style={stagger(1)}
       >
         <Fretboard
           orientation="vertical"
@@ -72,7 +87,7 @@ export function ChordCard({ chord, engine }: { chord: ChordShape; engine: AudioE
         />
       </div>
 
-      <div className="flex min-h-16 shrink-0 flex-col items-center justify-center gap-1.5">
+      <div className={`${rise} flex min-h-16 shrink-0 flex-col items-center justify-center gap-1.5`} style={stagger(2)}>
         {/* Each tone stays whole if a longer chord has to wrap. */}
         <div className="text-center text-base font-bold tracking-wide tabular-nums">
           {tones.map((tone, index) => (

@@ -3,7 +3,8 @@ import { createRiffPlayer, type AudioEngine, type RiffPlayer } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
 import type { Riff } from '@/content';
 import { createTabGeometry, TabStaff, useFollowPlayhead } from '@/render';
-import { PauseIcon, PlayIcon } from '@/ui/icons';
+import { stagger } from '@/ui/motion';
+import { PlayPauseIcon } from '@/ui/PlayPauseIcon';
 
 /**
  * A card that believes it is playing but hears nothing (the transport is not
@@ -91,6 +92,11 @@ export function RiffCard({
       const player = playerRef.current;
       if (player !== null) {
         const audible = player.isPlaying();
+        // Tells the playhead's glow whether it is playing (see .playhead-glow).
+        const flag = audible ? 'true' : 'false';
+        if (playheadRef.current !== null && playheadRef.current.dataset.playing !== flag) {
+          playheadRef.current.dataset.playing = flag;
+        }
         if (audible) {
           silentSince = null;
           retried = false;
@@ -134,17 +140,23 @@ export function RiffCard({
     }
   }
 
+  // When this becomes the card on screen its parts rise in one after another:
+  // chips, title, staff, controls.
+  const rise = isActive ? 'rise-in' : '';
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 bg-linear-to-b from-surface to-ground px-6 pt-8 pb-6">
-      <div className="flex flex-wrap gap-2">
+      <div className={`${rise} flex flex-wrap gap-2`} style={stagger(0)}>
         <Chip>{riff.style}</Chip>
         <Chip>Lvl {riff.level}</Chip>
         <Chip>{riff.bpm} BPM</Chip>
       </div>
 
-      <h2 className="text-3xl leading-tight font-black">{riff.title}</h2>
+      <h2 className={`${rise} text-3xl leading-tight font-black`} style={stagger(1)}>
+        {riff.title}
+      </h2>
 
-      <div className="flex min-h-0 flex-1 items-center">
+      <div className={`${rise} flex min-h-0 flex-1 items-center`} style={stagger(2)}>
         {/* overscroll-x-contain: a sideways swipe that runs out of staff must
             stop here, not chain on into the vertical feed. */}
         <div
@@ -156,14 +168,14 @@ export function RiffCard({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-4">
+      <div className={`${rise} flex shrink-0 items-center gap-4`} style={stagger(3)}>
         <button
           type="button"
           onClick={handleToggle}
           aria-label={playing ? 'Pause' : 'Play'}
-          className="flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent text-ground shadow-[0_6px_18px_rgba(255,176,32,0.35)] active:scale-95"
+          className="press flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent text-ground shadow-[0_6px_18px_rgba(255,176,32,0.35)]"
         >
-          {playing ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
+          <PlayPauseIcon playing={playing} size={24} />
         </button>
 
         <label className="flex-1">

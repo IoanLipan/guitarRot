@@ -402,6 +402,100 @@ describe('AppShell', () => {
     });
   });
 
+  describe('moving between tabs', () => {
+    afterEach(() => {
+      // @ts-expect-error - jsdom has no View Transitions; put it back
+      delete document.startViewTransition;
+      // @ts-expect-error - jsdom has no matchMedia; put it back
+      delete window.matchMedia;
+      document.documentElement.removeAttribute('data-motion-dir');
+    });
+
+    it('swaps the tab at once where the browser has no View Transitions', async () => {
+      await openOnFeed();
+
+      fireEvent.click(tab('Quiz'));
+
+      expect(screen.getByTestId('quiz-screen')).toBeInTheDocument();
+      expect(screen.queryByTestId('feed-screen')).not.toBeInTheDocument();
+      expect(document.documentElement.hasAttribute('data-motion-dir')).toBe(false);
+    });
+
+    it('does the swap inside a view transition, told which way it moves, and names the pane for its length only', async () => {
+      await openOnFeed();
+      let finish: () => void = () => undefined;
+      const seenDuring: { dir: string | null; named: string; quiz: boolean }[] = [];
+      Object.defineProperty(document, 'startViewTransition', {
+        configurable: true,
+        value: vi.fn((update: () => void) => {
+          // The old picture is captured, then the update runs; record what the page looks like at that moment.
+          update();
+          seenDuring.push({
+            dir: document.documentElement.getAttribute('data-motion-dir'),
+            named: (document.querySelector('main > div') as HTMLElement).style.getPropertyValue('view-transition-name'),
+            quiz: screen.queryByTestId('quiz-screen') !== null,
+          });
+          return { finished: new Promise<void>((resolve) => (finish = resolve)) };
+        }),
+      });
+
+      fireEvent.click(tab('Quiz'));
+      expect(seenDuring).toEqual([{ dir: 'forward', named: 'tab-content', quiz: true }]);
+      expect(tab('Quiz')).toHaveAttribute('aria-current', 'page');
+
+      await act(async () => {
+        finish();
+      });
+      expect((document.querySelector('main > div') as HTMLElement).style.getPropertyValue('view-transition-name')).toBe('');
+      expect(document.documentElement.hasAttribute('data-motion-dir')).toBe(false);
+
+      // And coming back goes the other way.
+      fireEvent.click(tab('Feed'));
+      expect(document.documentElement.getAttribute('data-motion-dir')).toBe('back');
+      expect(screen.getByTestId('feed-screen')).toBeInTheDocument();
+    });
+
+    it('does not start a transition when you tap the tab you are already on', async () => {
+      await openOnFeed();
+      const start = vi.fn();
+      Object.defineProperty(document, 'startViewTransition', { configurable: true, value: start });
+
+      fireEvent.click(tab('Feed'));
+
+      expect(start).not.toHaveBeenCalled();
+    });
+
+    it('skips the transition when the person asked for less motion', async () => {
+      await openOnFeed();
+      const start = vi.fn();
+      Object.defineProperty(document, 'startViewTransition', { configurable: true, value: start });
+      window.matchMedia = vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })) as never;
+
+      fireEvent.click(tab('Quiz'));
+
+      expect(start).not.toHaveBeenCalled();
+      expect(screen.getByTestId('quiz-screen')).toBeInTheDocument();
+    });
+
+    it('the Back button returns to the Feed the same way', async () => {
+      vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+      await openOnFeed();
+      fireEvent.click(tab('Quiz'));
+      Object.defineProperty(document, 'startViewTransition', {
+        configurable: true,
+        value: vi.fn((update: () => void) => {
+          update();
+          return { finished: new Promise<void>(() => undefined) };
+        }),
+      });
+
+      pressBack();
+
+      expect(screen.getByTestId('feed-screen')).toBeInTheDocument();
+      expect(document.documentElement.getAttribute('data-motion-dir')).toBe('back');
+    });
+  });
+
   describe('going to the background', () => {
     it('stops the engine and saves progress when the page is hidden', async () => {
       await openOnFeed();

@@ -89,6 +89,30 @@ export const TabStaff = forwardRef<SVGSVGElement, TabStaffProps>(function TabSta
 
       {showPlayhead && (
         <g ref={playheadRef} data-testid="playhead" style={{ willChange: 'transform' }}>
+          {/* A soft glow: two wider, fainter strokes under the line. Cheaper than
+              an SVG blur filter, which would be re-rendered every frame the head moves. */}
+          <line
+            className="playhead-glow"
+            x1={geometry.xForBeat(0)}
+            y1={geometry.staffTop - 8}
+            x2={geometry.xForBeat(0)}
+            y2={geometry.staffBottom + 8}
+            stroke="var(--color-accent)"
+            strokeWidth={14}
+            strokeLinecap="round"
+            strokeOpacity={0.16}
+          />
+          <line
+            className="playhead-glow"
+            x1={geometry.xForBeat(0)}
+            y1={geometry.staffTop - 8}
+            x2={geometry.xForBeat(0)}
+            y2={geometry.staffBottom + 8}
+            stroke="var(--color-accent)"
+            strokeWidth={7}
+            strokeLinecap="round"
+            strokeOpacity={0.32}
+          />
           <line
             x1={geometry.xForBeat(0)}
             y1={geometry.staffTop - 8}

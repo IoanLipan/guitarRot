@@ -88,7 +88,7 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
       >
         <p
           data-testid="tuner-note"
-          className="min-h-[1.1em] text-center text-6xl font-black tracking-tight"
+          className="min-h-[1.1em] text-center text-6xl font-black tracking-tight transition-colors duration-200"
           style={{ color: inTune ? 'var(--color-good)' : 'var(--color-ink)' }}
         >
           {reading === null ? '—' : noteLabel(reading.midi)}
@@ -123,19 +123,29 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
           className="relative mt-2 h-14 w-full"
         >
           <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-surface-2" />
+          {/* The target zone lights up green, and softly pulses, once the string is held in tune. */}
           <div
-            className="absolute top-1/2 h-10 -translate-y-1/2 rounded-lg bg-good/20 ring-1 ring-good/60"
+            data-testid="tuner-zone"
+            data-lit={inTune ? 'true' : 'false'}
+            className="tuner-zone absolute top-1/2 h-10 -translate-y-1/2 rounded-lg bg-good/20 ring-1 ring-good/60"
             style={{ left: `${50 - zonePercent / 2}%`, width: `${zonePercent}%` }}
           />
+          {/* The needle rides a full-width rail that is slid across, so it moves by transform (the
+              percentage is the meter's own width) and eases between readings instead of jumping. */}
           <div
-            data-testid="tuner-needle"
-            className="absolute top-1 bottom-1 w-1.5 -translate-x-1/2 rounded-full transition-[left,opacity] duration-100"
-            style={{
-              left: `${needlePercent}%`,
-              background: needleColor,
-              opacity: reading === null ? 0 : 1,
-            }}
-          />
+            data-testid="tuner-needle-rail"
+            className="tuner-needle absolute inset-0"
+            style={{ transform: `translateX(${needlePercent}%)`, opacity: reading === null ? 0 : 1 }}
+          >
+            <div
+              data-testid="tuner-needle"
+              className="absolute top-1 bottom-1 left-0 w-1.5 -translate-x-1/2 rounded-full transition-colors duration-200"
+              style={{
+                background: needleColor,
+                boxShadow: inZone ? '0 0 14px rgba(53,208,127,0.8)' : undefined,
+              }}
+            />
+          </div>
         </div>
         <div className="-mt-2 flex w-full justify-between text-xs font-bold text-ink-dim">
           <span className="flex items-center gap-1">
@@ -154,7 +164,7 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
               {inTune ? (
                 <p
                   data-testid="tuner-in-tune"
-                  className="text-2xl font-black text-good"
+                  className="pop-in text-2xl font-black text-good"
                   style={{ textShadow: '0 0 24px rgba(53,208,127,0.5)' }}
                 >
                   In tune
@@ -204,7 +214,7 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
             type="button"
             data-testid="tuner-stop"
             onClick={handleStop}
-            className="flex items-center justify-center gap-2.5 rounded-full bg-surface-2 px-6 py-3.5 text-base font-extrabold text-ink active:scale-95"
+            className="press flex items-center justify-center gap-2.5 rounded-full bg-surface-2 px-6 py-3.5 text-base font-extrabold text-ink"
           >
             <StopIcon size={20} />
             Stop tuner
@@ -215,7 +225,7 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
             data-testid="tuner-start"
             disabled={status === 'starting'}
             onClick={handleStart}
-            className="flex items-center justify-center gap-2.5 rounded-full bg-accent px-6 py-3.5 text-base font-extrabold text-ground active:scale-95 disabled:opacity-60"
+            className="press flex items-center justify-center gap-2.5 rounded-full bg-accent px-6 py-3.5 text-base font-extrabold text-ground disabled:opacity-60"
           >
             <MicIcon size={20} />
             {status === 'starting' ? 'Starting…' : 'Start tuner'}
@@ -240,7 +250,7 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
                 data-closest={isClosest}
                 aria-label={`Hear string ${stringNumber(stringIndex)}, ${noteLabel(open)}`}
                 onClick={() => handleHear(stringIndex)}
-                className={`flex flex-col items-center gap-0.5 rounded-2xl px-2 py-4 transition-all duration-200 active:scale-95 ${
+                className={`press press-tile flex flex-col items-center gap-0.5 rounded-2xl px-2 py-4 ${
                   isClosest ? 'bg-accent/12 ring-2 ring-accent' : 'bg-surface ring-2 ring-transparent'
                 }`}
               >

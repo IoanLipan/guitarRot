@@ -11,9 +11,27 @@ const TABS: readonly { id: TabId; label: string }[] = [
 
 const INACTIVE_COLOR = '#5f5f6b';
 
+/** Which way moving from one tab to another goes, by their order in the bar. */
+export function tabDirection(from: TabId, to: TabId): 'forward' | 'back' {
+  return TABS.findIndex((tab) => tab.id === to) >= TABS.findIndex((tab) => tab.id === from) ? 'forward' : 'back';
+}
+
 export function TabBar({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) {
+  const activeIndex = Math.max(
+    0,
+    TABS.findIndex((tab) => tab.id === active),
+  );
   return (
-    <nav className="flex shrink-0 border-t border-surface-2 bg-surface pb-[env(safe-area-inset-bottom)]">
+    <nav className="relative flex shrink-0 border-t border-surface-2 bg-surface pb-[env(safe-area-inset-bottom)]">
+      {/* One pill that slides to the active tab, instead of one per tab fading in and out. */}
+      <span
+        aria-hidden="true"
+        data-testid="tab-indicator"
+        className="tab-indicator pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+7px)] left-0 flex w-1/4 justify-center"
+        style={{ transform: `translateX(${activeIndex * 100}%)` }}
+      >
+        <span className="h-1 w-6 rounded-full bg-accent shadow-[0_0_10px_rgba(255,176,32,0.7)]" />
+      </span>
       {TABS.map((tab) => {
         const isActive = tab.id === active;
         return (
@@ -25,10 +43,13 @@ export function TabBar({ active, onChange }: { active: TabId; onChange: (id: Tab
               onChange(tab.id);
             }}
             aria-current={isActive ? 'page' : undefined}
-            className="flex h-[78px] flex-1 flex-col items-center justify-center gap-1 text-[11px] font-bold active:scale-95"
+            className="press press-tile flex h-[78px] flex-1 flex-col items-center justify-center gap-1 pb-1 text-[11px] font-bold"
             style={{ color: isActive ? 'var(--color-accent)' : INACTIVE_COLOR }}
           >
-            <TabIcon id={tab.id} active={isActive} />
+            {/* Keyed by state: becoming active remounts the icon, which replays its pop. */}
+            <span key={isActive ? 'on' : 'off'} className={`flex ${isActive ? 'tab-icon-pop' : ''}`}>
+              <TabIcon id={tab.id} active={isActive} />
+            </span>
             {tab.label}
           </button>
         );

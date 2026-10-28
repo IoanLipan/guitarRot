@@ -32,6 +32,8 @@ export type NeckProps = {
   highlightStrings?: readonly number[];
   /** Grows the dots; a lesson picture has room for them a little bigger. */
   markerScale?: number;
+  /** The dots spring in when they appear (a dot that is the answer to a tap or a question). */
+  popMarkers?: boolean;
   /** Widest board, in pixels, still scaled to fit; wider ones scroll. Defaults to what a lesson screen holds. */
   fitLimit?: number;
   /**
@@ -52,6 +54,7 @@ export function Neck({
   labelMode = 'note',
   highlightStrings,
   markerScale,
+  popMarkers,
   fitLimit = FIT_LIMIT,
   bleed = true,
   ariaLabel,
@@ -100,6 +103,7 @@ export function Neck({
           labelMode={labelMode}
           highlightStrings={highlightStrings}
           markerScale={markerScale}
+          popMarkers={popMarkers}
           onFretTap={onFretTap}
           fit
           className="h-full w-full"

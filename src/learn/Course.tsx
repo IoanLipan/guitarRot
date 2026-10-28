@@ -1,4 +1,5 @@
 import { tapHaptic } from '@/app/haptics';
+import { fillTransform, stagger } from '@/ui/motion';
 import { ArrowRightIcon, CheckIcon } from '@/ui/icons';
 import type { Lesson } from '@/content';
 import { RichText } from './steps/RichText';
@@ -61,7 +62,7 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
 
   return (
     <div className="flex flex-col gap-7 px-5 pt-1 pb-8" data-testid="course">
-      <section className="flex flex-col gap-2" aria-label="Your progress">
+      <section className="rise-in flex flex-col gap-2" aria-label="Your progress">
         <div className="flex items-baseline justify-between">
           <p className="text-lg font-extrabold" data-testid="course-progress">
             {doneCount} of {lessons.length} lessons
@@ -79,8 +80,8 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
           className="h-2 overflow-hidden rounded-full bg-surface-2"
         >
           <div
-            className="h-full rounded-full bg-accent transition-[width] duration-500"
-            style={{ width: `${(doneCount / lessons.length) * 100}%` }}
+            className="fill-in h-full w-full rounded-full bg-accent transition-transform duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+            style={{ transform: fillTransform(doneCount / lessons.length) }}
           />
         </div>
       </section>
@@ -90,7 +91,8 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
           type="button"
           onClick={() => open(next.id)}
           data-testid="course-continue"
-          className="flex flex-col gap-3 rounded-3xl bg-linear-to-br from-accent to-accent-deep p-5 text-left text-ground shadow-[0_10px_30px_rgba(255,176,32,0.22)] active:scale-[0.98]"
+          style={stagger(1, 60)}
+          className="rise-in press press-soft glow-breathe flex flex-col gap-3 rounded-3xl bg-linear-to-br from-accent to-accent-deep p-5 text-left text-ground shadow-[0_10px_30px_rgba(255,176,32,0.22)]"
         >
           <span className="text-[11px] font-extrabold tracking-widest uppercase opacity-70">
             {doneCount === 0 ? 'Start here' : 'Continue'} · Lesson {nextNumber}
@@ -109,7 +111,7 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
       ) : (
         finishedAll && (
           <div
-            className="flex flex-col gap-1.5 rounded-3xl bg-good/12 p-5 ring-1 ring-good/40"
+            className="scale-in flex flex-col gap-1.5 rounded-3xl bg-good/12 p-5 ring-1 ring-good/40"
             data-testid="course-finished"
           >
             <span className="text-2xl font-black text-good">Course complete</span>
@@ -134,13 +136,14 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
               {group.lessons.map(({ lesson, number }) => {
                 const status = statusOf(lesson);
                 return (
-                  <li key={lesson.id}>
+                  // Rows rise in one after another down the list (the first few; the rest are off screen).
+                  <li key={lesson.id} className="rise-in" style={stagger(number + 1, 38, 12)}>
                     <button
                       type="button"
                       onClick={() => open(lesson.id)}
                       data-testid={`lesson-row-${lesson.id}`}
                       data-status={status}
-                      className={`flex min-h-16 w-full items-center gap-3.5 rounded-2xl px-3.5 py-3 text-left transition-colors active:scale-[0.99] ${
+                      className={`press press-soft flex min-h-16 w-full items-center gap-3.5 rounded-2xl px-3.5 py-3 text-left ${
                         status === 'next' ? 'bg-surface ring-2 ring-accent/70' : 'bg-surface ring-2 ring-transparent'
                       }`}
                     >

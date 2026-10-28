@@ -69,7 +69,7 @@ export function AndroidAppBanner({ floating = false }: { floating?: boolean }) {
         href={ANDROID_APP_URL}
         download
         onClick={() => tapHaptic()}
-        className="shrink-0 rounded-full bg-accent px-4 py-2 text-sm font-extrabold text-ground active:scale-95"
+        className="press shrink-0 rounded-full bg-accent px-4 py-2 text-sm font-extrabold text-ground"
       >
         Download
       </a>
@@ -77,7 +77,7 @@ export function AndroidAppBanner({ floating = false }: { floating?: boolean }) {
         type="button"
         onClick={dismiss}
         aria-label="Dismiss"
-        className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-dim active:scale-90"
+        className="press -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-dim"
       >
         <CloseIcon size={20} />
       </button>

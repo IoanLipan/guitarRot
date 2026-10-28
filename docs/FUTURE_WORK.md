@@ -16,9 +16,8 @@ rebuilt or forgotten between sessions.
   working, not at spec parity.** It was built directly from
   `design_handoff_guitarrot_app/` — a simplified visual mockup, not the full
   spec — so real distance remains from what spec §8/§9 describe. Gaps below.
-- **Plan 3 — Content, design pass, Capacitor wrap**: content and the
-  design/motion pass not started; the **Capacitor wrap itself is now done**
-  — see below.
+- **Plan 3 — Content, design pass, Capacitor wrap**: the **motion pass is now
+  done** (see "Motion" below) and so is the **Capacitor wrap itself** — see below.
 
 ## Plan 2 — App (feed, quizzes, Learn tab, shell)
 
@@ -751,6 +750,118 @@ it the riff went silent until you scrolled to the next card and back.
   fails if one comes back. Notation stays text (♭ ♯ in note names); arrows
   inside lesson illustrations and the `×` on a chord diagram's muted strings
   are drawing, not buttons, and are exempt.
+
+## Motion (built 2026-10-28)
+
+The app was static; now it has one consistent layer of motion. Two files own it:
+the **Motion** section of `src/index.css` (keyframes and classes) and
+`src/ui/motion.ts` (helpers for what has to be driven from code). Read both
+before adding an animation; the rules below are what keeps it 60fps and quiet.
+
+**Rules.** Only `transform` and `opacity` move (exceptions, all tiny: a drawn
+check's `stroke-dashoffset`, the one-line press `filter`, the old `note-ping`
+box-shadow; `ui/motionCss.test.ts` fails on any other animated property).
+Durations: taps 90-170ms, entrances 260-380ms, celebrations at most 900ms.
+Curves are `--motion-pop` (overshoot) and `--motion-slide` (soft stop). **An
+element's own style is always the END state**; keyframes only say where it comes
+from (`from { ... }`, fill `backwards`). That is what makes switching an
+animation off (reduced motion, an old WebView) leave the finished picture and
+never a half-drawn one: do not write `opacity: 0` or `stroke-dashoffset: N` as
+the resting style.
+
+**Reduced motion.** The last block of `index.css` sets `animation: none
+!important; transition: none !important` on `*` (plus the view-transition
+pseudos), and names the entrance classes (a test pins that, in that block, which
+must stay last in the file). `motion.ts` checks the same media query before it
+animates anything, so sparks, string shivers, ripples, pings and view
+transitions all just do not happen; the SettingsSheet unmounts at once.
+
+**Shared helpers (`src/ui/motion.ts`).** `prefersReducedMotion()`,
+`burst(el, opts)` (confetti/sparks on a fixed layer over the page, removed when
+done, never longer than 900ms), `vibrateStrings(root)` (shakes the `data-string`
+groups `Fretboard` draws, in strum order, skipping `data-muted` ones; amplitude
+is converted from screen px so a thumbnail still visibly moves), `ripple(host,
+point)` and `strumFx(host, point)` (ripple + strings), `pingAt(svg, cx, cy, r)`,
+`runViewTransition(update, {element, name, direction})` and `useViewTransition()`,
+`useBump(n)` (counts increases; use as a `key`), `fillTransform(fraction)`,
+`stagger(order)` (the `--delay` for `.rise-in`). Also `ui/PlayPauseIcon.tsx` and
+`ui/FlashWash.tsx`. Environments that cannot animate (jsdom: no `Element.animate`,
+no `startViewTransition`) get a no-op, so content is always in the DOM at once.
+
+**What animates where.**
+- **Tabs.** `AppShell.changeTab` runs the swap in a View Transition (feature
+  detected; reduced motion or no support = instant). The pane (`main > div`) is
+  given `view-transition-name: tab-content` only for the length of the transition
+  (a permanent name is a stacking context for nothing) and the direction is
+  `html[data-motion-dir]`: moving to a higher tab enters from the right. Back
+  button's go-to-feed goes through the same path. TabBar: a sliding pill, the
+  active icon pops (remounted by a `key`), label colour eases via `.press`.
+- **Buttons.** `.press` (scale 0.96 + brightness on `:active`, spring back past
+  1) on every button/chip/tile outside Songs; `press-soft` (0.985) for big cards,
+  `press-tile` (0.97) for tiles. It uses the `scale` property, as Tailwind v4
+  does, so the two never fight. `active:scale-*` is gone outside Songs (a test
+  checks). `.press` sets `transition`, so do not also put `transition-*` utilities
+  on the same element (unlayered CSS beats Tailwind's layer, so `.press` would win).
+- **Start screen.** Pick drops in with a bounce (`logo-drop`), a radial `logo-glow`
+  behind it breathes (not a `drop-shadow` filter: it would be re-rasterised), title
+  and buttons rise staggered, the tapped button shimmers with a spinner while
+  "Loading sounds…".
+- **Feed.** The active card's parts rise in (chips, title, staff, controls; chord
+  and quiz cards the same) via `isActive`, which Feed now passes to all three card
+  kinds. The playhead has a two-stroke halo (cheaper than a blur filter) that
+  brightens while playing (`data-playing` set from the rAF loop). Play/Pause
+  morphs (`PlayPauseIcon`, also used for Play/Stop in lessons).
+- **Answers** (`AnswerGrid`, `CheckStep`, `QuizCard`, `Quiz`, `DrillStep`). Right:
+  pop, a ring that leaves the button, sparks (`burst`), a green `FlashWash`; a check
+  that draws itself (lesson check). Wrong: shake, red ring, red wash. The endless
+  box-shadow pulses are gone. After a right answer in the Feed/Quiz a thin bar
+  (`advance-sweep`) fills over exactly the 1s wait before moving on, so the advance
+  reads as deliberate. Quiz tab: each question's parts rise in (keyed by a deal
+  counter), the streak bumps when it goes up, the progress bar is slid, not stretched.
+- **Lessons.** A step slides in from the right after Next and from the left after Back
+  (`data-dir`); progress bars are a full-width fill slid with `fillTransform` and
+  fill in from empty when their screen opens; Next pops when a question is answered;
+  the finish screen: badge pops with a halo, its check draws, `burst` confetti (only
+  when this visit finished the lesson, not when you come back to the tab), the
+  "Goal reached" card scales in, buttons rise. Course rows rise in staggered (capped
+  at ~460ms), the Continue card has a breathing glow (`glow-breathe`, a blurred
+  pseudo-element whose opacity/transform animate), Learn's section switch has one
+  sliding pill.
+- **Chords and notes.** Strumming (Feed chord card, Explore tiles, lesson chord
+  step and chord tiles) ripples the tile and shivers the strings. Tapping a fret on
+  any interactive board pings it (`Fretboard` does that itself); boards with
+  `popMarkers` (Explore, drill, quiz notes) spring a new dot in. Tuner: the needle
+  rides a full-width rail moved by `transform` and eases; the zone and note go green
+  with a pulsing glow once "In tune" holds. (The tuner needs a microphone, so its
+  look was checked by tests only: try it on a device.)
+- **Settings sheet.** Slides up over a fading backdrop and down on close; it stays
+  mounted for `SHEET_EXIT_MS` (230ms) after `open` goes false.
+
+**Bugs found while doing it, worth remembering.** (1) Two siblings with the same
+`key` (both `0`: the streak bump and the question counter in `Quiz`) made React
+leave a stale element behind, so there were two streak counters on screen; the
+unit test only caught it once written for it. Prefix keys when a parent has more
+than one keyed child. (2) A ring scaled to 1.16 wider than the gutter was clipped
+by the scroll container; keep ring growth within the 20px gutter.
+
+**How it was checked.** Headless Chrome 156 over CDP at 390x844: animations were
+paused and scrubbed with `document.getAnimations()` (`currentTime = t`) so frames
+are exact (view-transition pseudo-element animations are included), and the tab
+switch was also captured in real time. Reduced motion was checked with
+`Emulation.setEmulatedMedia`: no running animations anywhere, view transitions
+skipped, the settings sheet gone at once. Not checked: a real Android WebView on
+a mid-range phone (the transitions are compositor-only and the View Transition
+snapshot is one pane, but look for dropped frames on the tab switch and the Feed
+rise-in).
+
+**Left for the Songs tab** (`src/songs/*`, being changed by another agent, so not
+touched): it still has `active:scale-*` on its buttons (use `.press`), its list rows
+do not stagger in (`rise-in` + `stagger(i, 38, 12)` like `Course`), `SongPlayer`'s
+play button should use `PlayPauseIcon` and its staff gets the playhead glow for
+free (set `playheadRef.current.dataset.playing = 'true'` in its rAF loop as
+`RiffCard`/`PlayerPanel` do), chord chart cells could `ripple`, and the new
+"Shapes" view should reuse `strumFx` on its diagrams. The tab slide itself already
+covers Songs.
 
 ## Metronome, count-in, loop-a-section, more solos (built 2026-09-08)
 

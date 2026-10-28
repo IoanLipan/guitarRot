@@ -175,6 +175,7 @@ export function DrillStep({
             markers={[{ ...question.position, tone: 'root' }]}
             onFretTap={handleFretTap}
             focus={question.position}
+            popMarkers
             ariaLabel="Name-this-note prompt. Tap any fret to hear it."
           />
 
@@ -189,9 +190,9 @@ export function DrillStep({
           />
 
           <div className="flex min-h-28 flex-col items-center gap-3" role="status" aria-live="polite">
-            {correct && <p className="text-2xl font-black text-good">Right</p>}
+            {correct && <p className="pop-in text-2xl font-black text-good">Right</p>}
             {answered && !correct && picked !== null && (
-              <Reveal className="flex scroll-mb-8 flex-col items-center gap-3">
+              <Reveal className="rise-in flex scroll-mb-8 flex-col items-center gap-3">
                 <p className="text-2xl font-black text-bad">Not quite</p>
                 <p
                   data-testid="drill-explanation"
@@ -205,7 +206,7 @@ export function DrillStep({
                     tapHaptic();
                     advance();
                   }}
-                  className="flex items-center justify-center gap-2 rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink active:scale-95"
+                  className="press flex items-center justify-center gap-2 rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink"
                 >
                   {index + 1 >= total ? 'See how you did' : 'Next question'}
                   <ArrowRightIcon size={18} />
@@ -228,7 +229,7 @@ export function DrillStep({
               type="button"
               onClick={handleAgain}
               data-testid="drill-again"
-              className="mt-2 rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink active:scale-95"
+              className="press mt-2 rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink"
             >
               Try again
             </button>

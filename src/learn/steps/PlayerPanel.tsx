@@ -11,7 +11,8 @@ import {
 import { beatsPerBar, type Riff, type SongChart } from '@/content';
 import { createTabGeometry, TabStaff, useFollowPlayhead } from '@/render';
 import { ChordChart } from '@/songs/ChordChart';
-import { MetronomeIcon, PlayIcon, StopIcon } from '@/ui/icons';
+import { MetronomeIcon } from '@/ui/icons';
+import { PlayPauseIcon } from '@/ui/PlayPauseIcon';
 
 /**
  * A compact player for the riff or song a lesson step points at: the tab (or,
@@ -98,6 +99,7 @@ export function PlayerPanel({
 
         const head = playheadRef.current;
         if (head !== null) {
+          head.dataset.playing = 'true';
           const x = beat * geometry.beatWidth;
           head.style.transform = `translateX(${x}px)`;
           follow(geometry.xForBeat(0) + x);
@@ -109,7 +111,10 @@ export function PlayerPanel({
     return () => {
       cancelAnimationFrame(frame);
       setActiveBar(null);
-      if (playheadRef.current !== null) playheadRef.current.style.transform = 'translateX(0px)';
+      if (playheadRef.current !== null) {
+        playheadRef.current.style.transform = 'translateX(0px)';
+        playheadRef.current.dataset.playing = 'false';
+      }
       scrollToStart();
     };
   }, [playing, geometry, riff.bars, barLength, follow, scrollToStart]);
@@ -179,9 +184,9 @@ export function PlayerPanel({
           onClick={() => void handleToggle()}
           aria-label={playing ? 'Stop' : 'Play'}
           data-testid="player-toggle"
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-ground shadow-[0_6px_18px_rgba(255,176,32,0.35)] active:scale-95"
+          className="press flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-ground shadow-[0_6px_18px_rgba(255,176,32,0.35)]"
         >
-          {playing ? <StopIcon size={24} /> : <PlayIcon size={24} />}
+          <PlayPauseIcon playing={playing} stop size={24} />
         </button>
 
         <button
@@ -190,7 +195,7 @@ export function PlayerPanel({
           aria-label="Metronome"
           aria-pressed={metronomeOn}
           data-testid="metronome-toggle"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full active:scale-95"
+          className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
           style={{
             background: metronomeOn ? 'var(--color-accent)' : 'var(--color-surface-2)',
             color: metronomeOn ? 'var(--color-ground)' : 'var(--color-ink-dim)',

@@ -10,6 +10,7 @@ import {
   type Midi,
   type Tuning,
 } from '@/music';
+import { pingAt } from '@/ui/motion';
 import {
   createFretboardGeometry,
   type Orientation,
@@ -54,8 +55,10 @@ export type FretboardProps = {
   markerScale?: number;
   showInlays?: boolean;
   showFretNumbers?: boolean;
-  /** Passing this makes the board interactive: bigger cells and tap targets. */
+  /** Passing this makes the board interactive: bigger cells and tap targets. A tap also pulses the fret it landed on. */
   onFretTap?: (position: FretPosition) => void;
+  /** The dots spring in when they appear: for a board whose dot is the answer to a tap or a question. */
+  popMarkers?: boolean;
   /**
    * Scales the board to fill its container instead of rendering at its
    * intrinsic pixel size. The viewBox keeps the aspect ratio, so the board
@@ -117,6 +120,7 @@ export function Fretboard({
   showInlays = true,
   showFretNumbers = true,
   onFretTap,
+  popMarkers = false,
   fit = false,
   className,
   ariaLabel,
@@ -142,6 +146,7 @@ export function Fretboard({
       role="img"
       aria-label={ariaLabel ?? 'Guitar fretboard'}
       data-testid="fretboard"
+      data-orientation={orientation}
     >
       {/*
         The body covers the whole canvas, not just nut-to-last-fret. Open
@@ -202,7 +207,13 @@ export function Fretboard({
         const focused = highlightStrings.includes(stringIndex);
         const dimmed = highlightStrings.length > 0 && !focused;
         return (
-          <g key={`string-${stringIndex}`}>
+          // data-string / data-muted are what motion.vibrateStrings looks for.
+          <g
+            key={`string-${stringIndex}`}
+            className="fb-string"
+            data-string={stringIndex}
+            data-muted={mutedStrings.includes(stringIndex) ? 'true' : undefined}
+          >
             {focused && (
               <line
                 data-testid={`string-glow-${stringIndex}`}
@@ -299,7 +310,10 @@ export function Fretboard({
         // "G" fills a dot; "Sol" or "Fa#" has to shrink to stay inside it.
         const textScale = text.length <= 1 ? 0.95 : text.length === 2 ? 0.8 : 0.62;
         return (
-          <g key={`marker-s${marker.stringIndex}f${marker.fret}`}>
+          <g
+            key={`marker-s${marker.stringIndex}f${marker.fret}`}
+            className={popMarkers ? 'fb-dot-pop' : undefined}
+          >
             <circle
               cx={point.x}
               cy={point.y}
@@ -341,7 +355,11 @@ export function Fretboard({
                 style={{ cursor: 'pointer' }}
                 role="button"
                 aria-label={`${noteLabel(midi, { withOctave: true })}, string ${stringNumber(stringIndex)}, fret ${fret}`}
-                onClick={() => onFretTap?.({ stringIndex, fret })}
+                onClick={(event) => {
+                  onFretTap?.({ stringIndex, fret });
+                  const point = geometry.markerPoint({ stringIndex, fret });
+                  pingAt(event.currentTarget.ownerSVGElement, point.x, point.y, markerRadius);
+                }}
               />
             );
           }),

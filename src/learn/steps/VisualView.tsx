@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { NoteIcon } from '@/ui/icons';
 import { tapHaptic } from '@/app/haptics';
+import { strumFx } from '@/ui/motion';
 import type { AudioEngine } from '@/audio';
 import { CHORDS, type NeckDot, type Visual } from '@/content';
 import {
@@ -210,12 +211,13 @@ function ChordsView({
               data-testid={`chord-tile-${chord.id}`}
               data-playing={playing ? 'true' : undefined}
               aria-label={`${chord.name}, ${chordSolfegeName(chord)}. Notes: ${tones.map(withSolfege).join(', ')}. Tap to strum it.`}
-              onClick={() => {
+              onClick={(event) => {
                 tapHaptic();
                 engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
+                strumFx(event.currentTarget, { x: event.clientX, y: event.clientY });
                 flash(chord.id);
               }}
-              className={`flex min-w-[6.25rem] max-w-[10.5rem] flex-1 flex-col items-center gap-0.5 rounded-2xl px-2 pt-2.5 pb-2.5 transition-all duration-200 active:scale-[0.97] ${
+              className={`press press-tile fx-host flex min-w-[6.25rem] max-w-[10.5rem] flex-1 flex-col items-center gap-0.5 rounded-2xl px-2 pt-2.5 pb-2.5 ${
                 playing ? 'scale-[1.02] bg-accent/12 ring-2 ring-accent/70' : 'bg-white/[0.035] ring-2 ring-transparent'
               }`}
             >
@@ -309,7 +311,7 @@ function NotesView({ notes, engine }: { notes: readonly string[]; engine: AudioE
                 engine.playNote(midi);
                 flash(index);
               }}
-              className="flex min-w-0 flex-col items-center gap-1.5 active:scale-90"
+              className="press press-tile flex min-w-0 flex-col items-center gap-1.5"
               style={{ transition: 'transform 120ms' }}
             >
               <span

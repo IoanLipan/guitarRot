@@ -59,6 +59,23 @@ describe('Quiz', () => {
     expect(screen.getByText('Streak 6')).toBeInTheDocument();
   });
 
+  it('bumps the streak counter when it goes up, and keeps just the one counter on screen', () => {
+    const at = (current: number) =>
+      fakeProgress({ state: { ...emptyProgressState(), streak: { current, longest: current, lastActiveDate: null } } });
+    const { rerender } = render(<Quiz engine={fakeEngine()} progress={at(0)} />);
+    // Not on first render.
+    expect(screen.getByTestId('streak')).not.toHaveClass('bump');
+
+    rerender(<Quiz engine={fakeEngine()} progress={at(1)} />);
+    expect(screen.getAllByTestId('streak')).toHaveLength(1);
+    expect(screen.getByTestId('streak')).toHaveTextContent('Streak 1');
+    expect(screen.getByTestId('streak')).toHaveClass('bump');
+
+    // A reset is not a bump.
+    rerender(<Quiz engine={fakeEngine()} progress={at(0)} />);
+    expect(screen.getAllByTestId('streak')).toHaveLength(1);
+  });
+
   it('offers four options before answering', () => {
     render(<Quiz engine={fakeEngine()} progress={fakeProgress()} />);
     expect(screen.getByRole('button', { name: CORRECT })).toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Style, StatusBar } from '@capacitor/status-bar';
@@ -12,13 +12,14 @@ import { Songs } from '@/songs';
 import { SettingsSheet } from './SettingsSheet';
 import { StartScreen, type StartChoice } from './StartScreen';
 import { planStart } from './startPlan';
-import { TabBar, type TabId } from './TabBar';
+import { TabBar, tabDirection, type TabId } from './TabBar';
 import { useAppLifecycle } from './useAppLifecycle';
 import { useAudioEngine } from './useAudioEngine';
 import { backAction, minimizeApp, useBackButton } from './useBackButton';
 import { useProgress } from './useProgress';
 import { useWakeAudio } from './useWakeAudio';
 import { GearIcon } from '@/ui/icons';
+import { useViewTransition } from '@/ui/motion';
 import { AndroidAppBanner } from './AndroidAppBanner';
 
 export function AppShell() {
@@ -33,6 +34,16 @@ export function AppShell() {
   // step and song, and Back knows what there is to close.
   const [learnPlace, setLearnPlace] = useState<LearnPlace>(START_PLACE);
   const [openSongId, setOpenSongId] = useState<string | null>(null);
+
+  // Moving between tabs slides the content the way you moved, as a View
+  // Transition where the browser has them (the tab unmounts, so the old
+  // picture has to be a snapshot) and with no animation where it does not.
+  const paneRef = useRef<HTMLDivElement>(null);
+  const transition = useViewTransition();
+  function changeTab(next: TabId) {
+    if (next === tab) return;
+    transition(() => setTab(next), { element: paneRef.current, direction: tabDirection(tab, next) });
+  }
 
   // A shared link (`/?p=riff:blues-shuffle-e`) opens on the card it names.
   // The parameter is stripped once read, so a later reload is an ordinary
@@ -100,7 +111,7 @@ export function AppShell() {
         setOpenSongId(null);
         break;
       case 'go-to-feed':
-        setTab('feed');
+        changeTab('feed');
         break;
       case 'minimize':
         minimizeApp();
@@ -151,33 +162,35 @@ export function AppShell() {
       {/* min-h-0 lets this pane actually shrink, so its own scrollers work
           instead of the whole page growing past the viewport. */}
       <main className="relative min-h-0 flex-1 overflow-hidden pt-[env(safe-area-inset-top)]">
-        {tab === 'feed' && (
-          <Feed
-            engine={engine}
-            progress={progress}
-            initialItem={shared?.tab === 'feed' ? shared.item : undefined}
-          />
-        )}
-        {tab === 'songs' && (
-          <Songs engine={engine} openSongId={openSongId} onOpenSongChange={setOpenSongId} />
-        )}
-        {tab === 'learn' && (
-          <Learn engine={engine} progress={progress} place={learnPlace} onPlaceChange={setLearnPlace} />
-        )}
-        {tab === 'quiz' && <Quiz engine={engine} progress={progress} />}
+        <div ref={paneRef} className="h-full">
+          {tab === 'feed' && (
+            <Feed
+              engine={engine}
+              progress={progress}
+              initialItem={shared?.tab === 'feed' ? shared.item : undefined}
+            />
+          )}
+          {tab === 'songs' && (
+            <Songs engine={engine} openSongId={openSongId} onOpenSongChange={setOpenSongId} />
+          )}
+          {tab === 'learn' && (
+            <Learn engine={engine} progress={progress} place={learnPlace} onPlaceChange={setLearnPlace} />
+          )}
+          {tab === 'quiz' && <Quiz engine={engine} progress={progress} />}
+        </div>
 
         <button
           type="button"
           onClick={() => setSettingsOpen(true)}
           aria-label="Settings"
           data-testid="open-settings"
-          className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-ground/55 text-ink backdrop-blur-md active:scale-95"
+          className="press absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-ground/55 text-ink backdrop-blur-md"
         >
           <GearIcon size={22} />
         </button>
       </main>
 
-      <TabBar active={tab} onChange={setTab} />
+      <TabBar active={tab} onChange={changeTab} />
 
       <SettingsSheet
         open={settingsOpen}

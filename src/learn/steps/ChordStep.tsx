@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NoteIcon } from '@/ui/icons';
 import { tapHaptic } from '@/app/haptics';
+import { ripple, vibrateStrings } from '@/ui/motion';
 import type { AudioEngine } from '@/audio';
 import { CHORDS, type LessonStep } from '@/content';
 import {
@@ -31,6 +32,7 @@ export function ChordStep({
   const chord = CHORDS.find((candidate) => candidate.id === step.chordId);
   const [strumming, setStrumming] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const diagramRef = useRef<HTMLDivElement>(null);
 
   useEffect(
     () => () => {
@@ -51,9 +53,12 @@ export function ChordStep({
       ? 'Strum all six strings.'
       : `Start the strum on string ${stringNumber(lowest)} and leave the thicker strings alone.`;
 
-  function handleStrum() {
+  function handleStrum(event: React.MouseEvent<HTMLButtonElement>) {
     if (chord === undefined) return;
     tapHaptic();
+    // The button ripples under the finger and the diagram's strings shiver.
+    ripple(event.currentTarget, { x: event.clientX, y: event.clientY }, 'rgba(11, 11, 15, 0.22)');
+    vibrateStrings(diagramRef.current);
     engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
     setStrumming(true);
     if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
@@ -69,7 +74,8 @@ export function ChordStep({
       </div>
 
       <div
-        className={`h-52 w-40 rounded-3xl transition-all duration-200 ${
+        ref={diagramRef}
+        className={`h-52 w-40 rounded-3xl transition-[scale,background-color,box-shadow] duration-200 ${
           strumming ? 'scale-[1.03] bg-accent/10 ring-2 ring-accent/60' : 'ring-2 ring-transparent'
         }`}
       >
@@ -103,7 +109,7 @@ export function ChordStep({
         type="button"
         onClick={handleStrum}
         data-testid="chord-strum"
-        className="flex h-14 items-center gap-2.5 rounded-full bg-accent px-8 text-base font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.3)] active:scale-95"
+        className="press fx-host flex h-14 items-center gap-2.5 rounded-full bg-accent px-8 text-base font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.3)]"
       >
         <NoteIcon size={22} />
         {strumming ? 'Strumming…' : 'Strum it'}

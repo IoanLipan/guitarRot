@@ -1,5 +1,6 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ExternalLinkIcon, NoteIcon } from '@/ui/icons';
+import { prefersReducedMotion } from '@/ui/motion';
 import { Capacitor } from '@capacitor/core';
 import { getToneProfile, TONE_PROFILES, type AudioEngine } from '@/audio';
 import { getChord } from '@/content';
@@ -10,6 +11,8 @@ import { ANDROID_APP_URL, PRIVACY_URL } from './links';
 /** Strummed when you audition a tone — an open E, the first chord everyone learns. */
 const PREVIEW_CHORD_ID = 'E-open';
 
+/** How long the sheet takes to slide away; it stays mounted that long after `open` goes false (see index.css). */
+export const SHEET_EXIT_MS = 230;
 
 export function SettingsSheet({
   open,
@@ -23,6 +26,18 @@ export function SettingsSheet({
   progress: ProgressHandle;
 }) {
   const activeToneId = progress.state.settings.toneId;
+
+  // The sheet slides up when opened and down when closed, so closing has to
+  // keep it on screen a moment: `mounted` stays true until the slide is done.
+  // With reduced motion there is no slide, so it goes at once.
+  const [mounted, setMounted] = useState(open);
+  if (open && !mounted) setMounted(true);
+  const closing = mounted && !open;
+  useEffect(() => {
+    if (!closing) return;
+    const timer = setTimeout(() => setMounted(false), SHEET_EXIT_MS);
+    return () => clearTimeout(timer);
+  }, [closing]);
 
   useEffect(() => {
     if (!open) return;
@@ -45,24 +60,28 @@ export function SettingsSheet({
     }
   }
 
-  if (!open) return null;
+  if (!open && (!mounted || prefersReducedMotion())) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end" data-testid="settings-sheet">
+    <div
+      className="sheet-root fixed inset-0 z-50 flex flex-col justify-end"
+      data-testid="settings-sheet"
+      data-state={open ? 'open' : 'closing'}
+    >
       <button
         type="button"
         aria-label="Close settings"
         onClick={onClose}
-        className="absolute inset-0 bg-black/60"
+        className="sheet-backdrop absolute inset-0 bg-black/60"
       />
 
-      <div className="relative max-h-[85%] overflow-y-auto rounded-t-3xl bg-surface pb-[calc(env(safe-area-inset-bottom)+1.5rem)] shadow-[0_-20px_60px_rgba(0,0,0,0.6)]">
+      <div className="sheet-panel relative max-h-[85%] overflow-y-auto rounded-t-3xl bg-surface pb-[calc(env(safe-area-inset-bottom)+1.5rem)] shadow-[0_-20px_60px_rgba(0,0,0,0.6)]">
         <div className="sticky top-0 flex items-center justify-between bg-surface px-6 pt-5 pb-3">
           <h2 className="text-2xl font-black">Settings</h2>
           <button
             type="button"
             onClick={onClose}
-            className="flex min-h-11 items-center rounded-full bg-surface-2 px-5 text-sm font-bold text-ink-dim active:scale-95"
+            className="press flex min-h-11 items-center rounded-full bg-surface-2 px-5 text-sm font-bold text-ink-dim"
           >
             Done
           </button>
@@ -86,7 +105,7 @@ export function SettingsSheet({
                   data-testid={`tone-${profile.id}`}
                   aria-pressed={isActive}
                   onClick={() => handlePick(profile.id)}
-                  className={`flex items-center gap-4 rounded-2xl px-4 py-4 text-left transition-all active:scale-[0.99] ${
+                  className={`press press-soft flex items-center gap-4 rounded-2xl px-4 py-4 text-left ${
                     isActive ? 'bg-accent/12 ring-2 ring-accent' : 'bg-surface-2 ring-2 ring-transparent'
                   }`}
                 >
@@ -178,7 +197,7 @@ function AboutLink({
       target="_blank"
       rel="noopener noreferrer"
       data-testid={testId}
-      className="flex items-center justify-between rounded-2xl bg-surface-2 px-4 py-3 text-[15px] font-bold text-ink active:scale-[0.99]"
+      className="press press-soft flex items-center justify-between rounded-2xl bg-surface-2 px-4 py-3 text-[15px] font-bold text-ink"
     >
       {children}
       <ExternalLinkIcon size={20} className="text-ink-dim" />

@@ -1,3 +1,6 @@
+import { useEffect, useRef } from 'react';
+import { burst } from '@/ui/motion';
+
 export type AnswerGridProps = {
   options: string[];
   correctAnswer: string;
@@ -21,6 +24,13 @@ export function AnswerGrid({
   formatOption = (option) => option,
 }: AnswerGridProps) {
   const answered = picked !== null;
+  const pickedRef = useRef<HTMLButtonElement>(null);
+
+  // A right answer pops and throws sparks; a wrong one shakes (see index.css).
+  const rightPick = picked !== null && picked === correctAnswer;
+  useEffect(() => {
+    if (rightPick) burst(pickedRef.current, { count: 12, spread: 72, duration: 680, size: 8 });
+  }, [rightPick]);
 
   return (
     <div className="grid w-full grid-cols-2 gap-3" data-testid="answer-grid">
@@ -29,14 +39,14 @@ export function AnswerGrid({
         const isCorrectPick = isPicked && option === correctAnswer;
         const isWrongPick = isPicked && option !== correctAnswer;
 
-        const classes = ['rounded-2xl border-2 py-5 text-center text-xl font-extrabold transition-opacity'];
+        const classes = ['press press-tile rounded-2xl border-2 py-5 text-center text-xl font-extrabold'];
         if (isCorrectPick) {
           classes.push(
-            'border-[var(--color-good)] bg-[var(--color-good)] text-[var(--color-ground)] answer-pulse-correct',
+            'answer-pop answer-ring border-[var(--color-good)] bg-[var(--color-good)] text-[var(--color-ground)]',
           );
         } else if (isWrongPick) {
           classes.push(
-            'border-[var(--color-bad)] bg-[var(--color-bad)] text-[var(--color-ground)] answer-pulse-wrong',
+            'answer-shake answer-ring border-[var(--color-bad)] bg-[var(--color-bad)] text-[var(--color-ground)]',
           );
         } else if (answered) {
           classes.push('border-[#22222b] bg-[var(--color-surface)] text-[var(--color-ink)] opacity-40');
@@ -49,6 +59,8 @@ export function AnswerGrid({
             key={option}
             type="button"
             disabled={answered}
+            ref={isPicked ? pickedRef : undefined}
+            data-tone={isWrongPick ? 'bad' : undefined}
             onClick={() => onPick(option)}
             className={classes.join(' ')}
           >

@@ -35,24 +35,6 @@ body {
   overscroll-behavior: none;
 }
 
-@keyframes answer-correct-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(53, 208, 127, 0.55); }
-  50% { box-shadow: 0 0 0 16px rgba(53, 208, 127, 0); }
-}
-
-@keyframes answer-wrong-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 95, 0.55); }
-  50% { box-shadow: 0 0 0 16px rgba(255, 90, 95, 0); }
-}
-
-.answer-pulse-correct {
-  animation: answer-correct-pulse 1.4s ease-out infinite;
-}
-
-.answer-pulse-wrong {
-  animation: answer-wrong-pulse 1.4s ease-out infinite;
-}
-
 /* A lesson step arriving: a short rise and fade, so a new screen reads as a new screen. */
 @keyframes lesson-step-in {
   from { opacity: 0; transform: translateY(10px); }
@@ -130,9 +112,444 @@ body {
   animation: note-ping 520ms ease-out both;
 }
 
+
+/*
+ * ==========================================================================
+ * Motion
+ *
+ * Rules the whole file follows (src/ui/motion.ts is the JS half):
+ *  - Only transform and opacity move. The odd exceptions (a drawn check, a
+ *    one-line button press brightness) are tiny and say so.
+ *  - Durations: taps 90-160ms, entrances 200-320ms, celebrations <= 900ms.
+ *  - The element's own style is always the END state; keyframes only say
+ *    where it comes from. So switching an animation off (reduced motion, an
+ *    old WebView) leaves the finished picture, never a half-drawn one.
+ *  - Everything stops under prefers-reduced-motion; see the last block.
+ * ==========================================================================
+ */
+:root {
+  /* A little overshoot: pops, bounces, things landing. */
+  --motion-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Fast start, long soft stop: slides and rises. */
+  --motion-slide: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/*
+ * One press feel for every button, chip and tile: it dips to 96% and a touch
+ * darker while a finger is down, and springs back past 100% on release. A big
+ * card dips less (`press-soft`), a small tile a bit more (`press-tile`).
+ * `scale` (not `transform`) is what Tailwind's own scale utilities set, so the
+ * two never fight over one property.
+ */
+.press {
+  transition:
+    scale 170ms var(--motion-pop),
+    filter 170ms ease-out,
+    background-color 200ms ease-out,
+    border-color 200ms ease-out,
+    color 200ms ease-out,
+    box-shadow 200ms ease-out,
+    opacity 200ms ease-out;
+}
+
+.press:active:not(:disabled, [aria-disabled='true']) {
+  scale: var(--press-scale, 0.96);
+  filter: brightness(0.92);
+  transition:
+    scale 90ms ease-out,
+    filter 90ms ease-out,
+    background-color 200ms ease-out,
+    border-color 200ms ease-out,
+    color 200ms ease-out,
+    box-shadow 200ms ease-out,
+    opacity 200ms ease-out;
+}
+
+.press-soft { --press-scale: 0.985; }
+.press-tile { --press-scale: 0.97; }
+
+/* Something that grows pieces of its own on a tap (ripples, sparks). */
+.fx-host {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Entrances shared by every screen: a rise that can be staggered with --delay. */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; scale: 0.4; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.88) translateY(10px); }
+}
+
+.rise-in {
+  animation: rise-in 360ms var(--motion-slide) backwards;
+  animation-delay: var(--delay, 0ms);
+}
+
+.pop-in {
+  animation: pop-in 380ms var(--motion-pop) backwards;
+  animation-delay: var(--delay, 0ms);
+}
+
+.scale-in {
+  animation: scale-in 340ms var(--motion-pop) backwards;
+  animation-delay: var(--delay, 0ms);
+}
+
+/* ---- Tab switch (the View Transitions half lives in AppShell + motion.ts) ---- */
+@keyframes tab-out-left { to { opacity: 0; transform: translateX(-20px); } }
+@keyframes tab-out-right { to { opacity: 0; transform: translateX(20px); } }
+@keyframes tab-in-from-right { from { opacity: 0; transform: translateX(32px); } }
+@keyframes tab-in-from-left { from { opacity: 0; transform: translateX(-32px); } }
+
+/* Only the named tab pane animates; the rest of the page is already identical in both snapshots. */
+::view-transition-old(root) { display: none; }
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-group(tab-content) { animation-duration: 0s; }
+::view-transition-old(tab-content),
+::view-transition-new(tab-content) { mix-blend-mode: normal; }
+
+html[data-motion-dir='forward']::view-transition-old(tab-content) {
+  animation: tab-out-left 120ms ease-in both;
+}
+html[data-motion-dir='forward']::view-transition-new(tab-content) {
+  animation: tab-in-from-right 270ms var(--motion-slide) 40ms both;
+}
+html[data-motion-dir='back']::view-transition-old(tab-content) {
+  animation: tab-out-right 120ms ease-in both;
+}
+html[data-motion-dir='back']::view-transition-new(tab-content) {
+  animation: tab-in-from-left 270ms var(--motion-slide) 40ms both;
+}
+
+/* ---- Tab bar ---- */
+@keyframes tab-icon-pop {
+  0% { transform: scale(0.78); }
+  55% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+
+.tab-icon-pop {
+  animation: tab-icon-pop 360ms var(--motion-pop);
+}
+
+.tab-indicator {
+  transition: transform 320ms var(--motion-pop);
+}
+
+/* ---- Start screen ---- */
+@keyframes logo-drop {
+  0% { opacity: 0; transform: translateY(-44px) scale(0.72) rotate(-9deg); }
+  55% { opacity: 1; transform: translateY(7px) scale(1.06) rotate(2.5deg); }
+  78% { transform: translateY(-3px) scale(0.985) rotate(-1deg); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes shimmer-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+.logo-drop {
+  transform-origin: 50% 85%;
+  animation: logo-drop 540ms var(--motion-slide) backwards;
+}
+
+.logo-glow {
+  background: radial-gradient(closest-side, rgba(255, 176, 32, 0.4), rgba(255, 176, 32, 0) 72%);
+  animation: glow-pulse 3.4s ease-in-out 540ms infinite;
+}
+
+/* A button that is working: a soft band of light crosses it. */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 25%, rgba(255, 255, 255, 0.34) 50%, transparent 75%);
+  animation: shimmer-sweep 1.25s ease-in-out infinite;
+}
+
+/* ---- Lesson steps ---- */
+@keyframes step-in-next { from { opacity: 0; transform: translateX(36px); } }
+@keyframes step-in-back { from { opacity: 0; transform: translateX(-36px); } }
+
+/* Forward arrives from the right, Back from the left. */
+.lesson-step-in[data-dir='next'] {
+  animation: step-in-next 260ms var(--motion-slide) backwards;
+}
+.lesson-step-in[data-dir='back'] {
+  animation: step-in-back 260ms var(--motion-slide) backwards;
+}
+
+/* ---- Answers (lesson checks, drills, quiz cards, the Quiz tab) ---- */
+@keyframes answer-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+
+@keyframes answer-shake {
+  0%, 100% { transform: translateX(0); }
+  16% { transform: translateX(-10px); }
+  34% { transform: translateX(9px); }
+  52% { transform: translateX(-6px); }
+  70% { transform: translateX(4px); }
+  86% { transform: translateX(-2px); }
+}
+
+@keyframes answer-ring {
+  from { opacity: 0.9; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.05, 1.22); }
+}
+
+@keyframes draw-stroke {
+  from { stroke-dashoffset: 26; }
+}
+
+@keyframes wash-flash {
+  0% { opacity: 0; }
+  22% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes number-bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.32); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fill-in {
+  from { transform: translateX(-100%); }
+}
+
+@keyframes advance-sweep {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* A progress bar fills from empty to where it is when its screen opens. */
+.fill-in { animation: fill-in 620ms var(--motion-slide) 180ms backwards; }
+
+.answer-pop { animation: answer-pop 400ms var(--motion-pop); }
+.answer-shake { animation: answer-shake 380ms ease-out; }
+
+/* A ring that leaves the picked answer: the one-shot replacement for the old endless pulse. */
+.answer-ring { position: relative; }
+.answer-ring::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 3px solid var(--ring, var(--color-good));
+  opacity: 0;
+  pointer-events: none;
+  animation: answer-ring 560ms ease-out;
+}
+.answer-ring[data-tone='bad'] { --ring: var(--color-bad); }
+
+/* The check inside a right answer draws itself. */
+.draw-check path {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 0;
+  animation: draw-stroke 340ms var(--motion-slide) var(--draw-delay, 90ms) backwards;
+}
+
+/* A tint across a whole card for a moment: green for right, red for wrong. */
+.flash-wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 42%, rgba(53, 208, 127, 0.4), rgba(53, 208, 127, 0) 72%);
+  animation: wash-flash 560ms ease-out backwards;
+}
+.flash-wash[data-tone='bad'] {
+  background: radial-gradient(circle at 50% 42%, rgba(255, 90, 95, 0.42), rgba(255, 90, 95, 0) 72%);
+}
+
+.bump { animation: number-bump 440ms var(--motion-pop); }
+
+/* The auto-advance after a right answer: a bar fills over exactly the wait, so the move on is deliberate. */
+.advance-sweep {
+  display: block;
+  height: 3px;
+  width: 100%;
+  border-radius: 9999px;
+  background: var(--color-good);
+  opacity: 0.55;
+  transform-origin: left;
+  animation: advance-sweep var(--advance-ms, 1000ms) linear backwards;
+}
+
+/* ---- Lesson complete ---- */
+@keyframes halo-expand {
+  from { opacity: 0.7; transform: scale(0.85); }
+  to { opacity: 0; transform: scale(2.1); }
+}
+
+.halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--color-good);
+  opacity: 0;
+  pointer-events: none;
+  animation: halo-expand 760ms ease-out 120ms backwards;
+}
+
+/* The continue card slowly breathes a halo of light. */
+@keyframes breathe {
+  0%, 100% { opacity: 0.35; transform: scale(0.97); }
+  50% { opacity: 0.85; transform: scale(1.03); }
+}
+
+.glow-breathe {
+  position: relative;
+  isolation: isolate;
+}
+
+.glow-breathe::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(255, 176, 32, 0.55);
+  filter: blur(18px);
+  opacity: 0.5;
+  pointer-events: none;
+  animation: breathe 3s ease-in-out infinite;
+}
+
+/* ---- Play / pause: the two icons trade places by turning and scaling ---- */
+.morph-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 220ms var(--motion-pop),
+    opacity 140ms ease-out;
+}
+
+.morph-icon[data-on='false'] {
+  opacity: 0;
+  transform: scale(0.35) rotate(-90deg);
+}
+
+/* ---- Fretboard ---- */
+@keyframes dot-pop {
+  from { opacity: 0; transform: scale(0.3); }
+}
+
+@keyframes fb-ping {
+  from { opacity: 0.75; transform: scale(0.7); }
+  to { opacity: 0; transform: scale(2.1); }
+}
+
+.fb-dot-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dot-pop 340ms var(--motion-pop) backwards;
+}
+
+/* A string is a group the strum helper shakes; it turns about its own middle. */
+.fb-string {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* The playhead: a halo around the line, brighter while the riff is playing. */
+.playhead-glow {
+  opacity: 0.55;
+  transition: opacity 260ms ease-out;
+}
+[data-playing='true'] .playhead-glow { opacity: 1; }
+
+/* ---- Tuner ---- */
+@keyframes lit-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+.tuner-needle {
+  transition:
+    transform 200ms var(--motion-slide),
+    opacity 160ms ease-out;
+}
+
+.tuner-zone::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 14px;
+  background: rgba(53, 208, 127, 0.38);
+  filter: blur(12px);
+  opacity: 0;
+  transition: opacity 240ms ease-out;
+  pointer-events: none;
+}
+
+.tuner-zone[data-lit='true']::after {
+  opacity: 0.8;
+  animation: lit-pulse 1.4s ease-in-out infinite;
+}
+
+/* ---- Settings sheet ---- */
+@keyframes sheet-up { from { transform: translateY(100%); } }
+@keyframes sheet-down { to { transform: translateY(100%); } }
+@keyframes backdrop-in { from { opacity: 0; } }
+@keyframes backdrop-out { to { opacity: 0; } }
+
+.sheet-panel { animation: sheet-up 320ms var(--motion-slide) backwards; }
+.sheet-backdrop { animation: backdrop-in 240ms ease-out backwards; }
+[data-state='closing'].sheet-root .sheet-panel { animation: sheet-down 230ms cubic-bezier(0.5, 0, 0.9, 0.4) forwards; }
+[data-state='closing'].sheet-root .sheet-backdrop { animation: backdrop-out 230ms ease-in forwards; }
+.sheet-root[data-state='closing'] { pointer-events: none; }
+
+/*
+ * Reduced motion: nothing moves, every state change is instant. The named
+ * entrances are listed on purpose (a test pins them); the `*` rule is the net
+ * under everything else, including the endless loops, and the JS helpers
+ * (ui/motion.ts) check the same media query before they animate anything.
+ */
 @media (prefers-reduced-motion: reduce) {
   .lesson-step-in,
+  .lesson-step-in[data-dir],
   .explain-pop,
   .explain-rise,
-  .note-ping { animation: none; }
+  .note-ping,
+  .rise-in,
+  .pop-in,
+  .scale-in { animation: none; }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .advance-sweep { display: none; }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
 }

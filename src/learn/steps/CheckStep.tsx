@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { errorHaptic, successHaptic } from '@/app/haptics';
 import type { LessonStep } from '@/content';
+import { CheckIcon } from '@/ui/icons';
+import { burst } from '@/ui/motion';
 import { Reveal } from './Reveal';
 import { RichText } from './RichText';
 import { StepKicker } from './StepHeading';
@@ -19,6 +21,12 @@ export function CheckStep({
 }) {
   const [wrong, setWrong] = useState<readonly string[]>([]);
   const [solved, setSolved] = useState(false);
+  const rightRef = useRef<HTMLButtonElement>(null);
+
+  // The right answer throws a few sparks.
+  useEffect(() => {
+    if (solved) burst(rightRef.current, { count: 14, spread: 84, duration: 700, size: 9 });
+  }, [solved]);
 
   function handlePick(option: string) {
     if (solved || wrong.includes(option)) return;
@@ -48,12 +56,12 @@ export function CheckStep({
           const isRight = solved && option === step.answer;
           const isWrong = wrong.includes(option);
           const classes = [
-            'min-h-14 w-full rounded-2xl border-2 px-4 py-3.5 text-left text-[18px] leading-snug font-bold transition-opacity active:scale-[0.99] [&_[data-note-chip]]:text-[1em]',
+            'press press-soft min-h-14 w-full rounded-2xl border-2 px-4 py-3.5 text-left text-[18px] leading-snug font-bold [&_[data-note-chip]]:text-[1em]',
           ];
           if (isRight) {
-            classes.push('border-[var(--color-good)] bg-[var(--color-good)] text-[var(--color-ground)]');
+            classes.push('answer-pop answer-ring border-[var(--color-good)] bg-[var(--color-good)] pr-12 text-[var(--color-ground)]');
           } else if (isWrong) {
-            classes.push('border-[var(--color-bad)] bg-[var(--color-bad)] text-[var(--color-ground)]');
+            classes.push('answer-shake answer-ring border-[var(--color-bad)] bg-[var(--color-bad)] text-[var(--color-ground)]');
           } else if (solved) {
             classes.push('border-[#22222b] bg-[var(--color-surface)] text-[var(--color-ink)] opacity-40');
           } else {
@@ -65,10 +73,19 @@ export function CheckStep({
               type="button"
               disabled={solved || isWrong}
               data-state={isRight ? 'right' : isWrong ? 'wrong' : 'idle'}
+              data-tone={isWrong ? 'bad' : undefined}
+              ref={isRight ? rightRef : undefined}
               onClick={() => handlePick(option)}
               className={classes.join(' ')}
             >
               <RichText onAccent={isRight || isWrong}>{option}</RichText>
+              {isRight && (
+                <CheckIcon
+                  size={24}
+                  strokeWidth={3}
+                  className="draw-check absolute top-1/2 right-4 -translate-y-1/2"
+                />
+              )}
             </button>
           );
         })}
@@ -77,8 +94,10 @@ export function CheckStep({
       <div className="min-h-24" role="status" aria-live="polite">
         {answered && (
           <Reveal
+            // Keyed so "Correct" arrives as fresh as "Not quite" did.
+            key={solved ? 'right' : 'wrong'}
             data-testid="check-feedback"
-            className={`scroll-mb-8 rounded-2xl px-4 py-3.5 ${solved ? 'bg-good/12' : 'bg-bad/12'}`}
+            className={`rise-in scroll-mb-8 rounded-2xl px-4 py-3.5 ${solved ? 'bg-good/12' : 'bg-bad/12'}`}
           >
             <p className={`text-lg font-black ${solved ? 'text-good' : 'text-bad'}`}>
               {solved ? 'Correct' : 'Not quite'}

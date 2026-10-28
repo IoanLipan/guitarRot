@@ -103,13 +103,16 @@ export function Feed({
           {item.kind === 'riff' && (
             <RiffCard riff={item.riff} engine={engine} isActive={index === activeIndex} />
           )}
-          {item.kind === 'chord' && <ChordCard chord={item.chord} engine={engine} />}
+          {item.kind === 'chord' && (
+            <ChordCard chord={item.chord} engine={engine} isActive={index === activeIndex} />
+          )}
           {item.kind === 'quiz' && (
             <QuizCard
               question={item.question}
               engine={engine}
               onAnswered={progress.recordAnswer}
               onAdvance={() => scrollToCard(index + 1)}
+              isActive={index === activeIndex}
             />
           )}
         </div>
