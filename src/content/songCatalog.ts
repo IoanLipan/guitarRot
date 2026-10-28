@@ -1,6 +1,7 @@
 import type { Riff, TabEvent } from './types';
 import type { Song, SongSection } from './songs';
 import { melodyRiff } from './melody';
+import { HARD_SONGS } from './hardSongs';
 
 const TRAD = (where: string) => `Traditional ${where}; melody and harmony are in the public domain.`;
 
@@ -732,6 +733,9 @@ export const SONGS: readonly Song[] = [
   maryHadALittleLamb,
   jingleBells,
   auClairDeLaLune,
+
+  // --- Hard: classical pieces and advanced studies (hardSongs.ts) --------
+  ...HARD_SONGS,
 ];
 
 export function getSong(id: string): Song | undefined {

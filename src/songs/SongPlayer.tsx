@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import {
   createMetronome,
@@ -15,9 +15,26 @@ import { ShareButton } from '@/share';
 import { DifficultyPill } from './DifficultyPill';
 import { ChordChart } from './ChordChart';
 import { keyLabel } from './keyLabel';
+import { hasShapes, songShapes } from './shapes';
+import { ShapesView } from './ShapesView';
+import { useFollowGate } from './useFollowGate';
 
 /** A tapped-out practice loop: the bar you tapped first, and the resulting range. */
 type LoopRange = { anchor: number; start: number; end: number };
+
+/**
+ * What the song area shows. A strummed chart is only ever its chart; a riff is
+ * its tab or its shapes; an arpeggio chart is its chart, the tab that chart
+ * plays, or its shapes.
+ */
+type SongView = 'chart' | 'tab' | 'shapes';
+
+const VIEW_LABELS: Record<SongView, string> = { chart: 'Chart', tab: 'Tab', shapes: 'Shapes' };
+
+function viewsFor(song: Song): readonly SongView[] {
+  if (!hasShapes(song)) return song.chart !== undefined ? ['chart'] : ['tab'];
+  return song.chart !== undefined ? ['chart', 'tab', 'shapes'] : ['tab', 'shapes'];
+}
 
 export function SongPlayer({
   song,
@@ -38,7 +55,16 @@ export function SongPlayer({
   const playerRef = useRef<RiffPlayer | null>(null);
   const metronomeRef = useRef<Metronome | null>(null);
   const playheadRef = useRef<SVGGElement>(null);
-  const staffScrollRef = useRef<HTMLDivElement>(null);
+  const tabScrollRef = useRef<HTMLDivElement | null>(null);
+  /** Lets the player drag the tab sideways without the playhead wrenching it back. */
+  const tabScrollGate = useFollowGate();
+  const setTabScroller = useCallback(
+    (element: HTMLDivElement | null) => {
+      tabScrollRef.current = element;
+      tabScrollGate.attach(element);
+    },
+    [tabScrollGate],
+  );
   /** Blocks a second tap of Play from overlapping a count-in already in flight. */
   const startingRef = useRef(false);
 
@@ -49,6 +75,12 @@ export function SongPlayer({
   const [loopRange, setLoopRange] = useState<LoopRange | null>(null);
   const speedRef = useRef(speed);
   speedRef.current = speed;
+
+  const views = useMemo(() => viewsFor(song), [song]);
+  const [chosenView, setChosenView] = useState<SongView | null>(null);
+  const view = chosenView !== null && views.includes(chosenView) ? chosenView : (views[0] ?? 'tab');
+  const shapes = useMemo(() => songShapes(song), [song]);
+  const getBeat = useCallback(() => playerRef.current?.currentBeat() ?? null, []);
 
   // Opening a song starts it, the same way opening a feed card does.
   // The cleanup is what guarantees leaving the screen leaves no audio behind.
@@ -103,8 +135,9 @@ export function SongPlayer({
         if (head !== null) {
           const x = beat * geometry.beatWidth;
           head.style.transform = `translateX(${x}px)`;
-          const scroller = staffScrollRef.current;
-          if (scroller !== null) {
+          // Keep the playhead in view, unless the player has hold of the tab.
+          const scroller = tabScrollRef.current;
+          if (scroller !== null && tabScrollGate.check() !== 'blocked') {
             scroller.scrollLeft = Math.max(
               0,
               geometry.xForBeat(0) + x - scroller.clientWidth * 0.35,
@@ -116,7 +149,7 @@ export function SongPlayer({
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [geometry, riff.bars, barLength]);
+  }, [geometry, riff.bars, barLength, tabScrollGate]);
 
   async function handleToggle() {
     if (startingRef.current) return;
@@ -207,9 +240,16 @@ export function SongPlayer({
         <Chip>{song.bpm} BPM</Chip>
       </div>
 
-      <p className="shrink-0 text-[13px] leading-relaxed text-ink-dim">{song.about}</p>
+      {/* On a short phone the shapes need the room more than the blurb does. */}
+      <p
+        className={`shrink-0 text-[13px] leading-relaxed text-ink-dim ${
+          view === 'shapes' ? '[@media(max-height:700px)]:hidden' : ''
+        }`}
+      >
+        {song.about}
+      </p>
 
-      {song.chart !== undefined && loopRange !== null && (
+      {loopRange !== null && (
         <div className="flex shrink-0 items-center gap-2 text-xs font-bold text-ink-dim">
           <span data-testid="loop-range-label">
             Looping bars {loopRange.start + 1}–{loopRange.end + 1}
@@ -226,18 +266,56 @@ export function SongPlayer({
         </div>
       )}
 
+      {views.length > 1 && (
+        <div
+          role="group"
+          aria-label="Song view"
+          data-testid="view-toggle"
+          className="flex shrink-0 gap-1 self-start rounded-full bg-surface-2 p-1"
+        >
+          {views.map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={view === option}
+              data-testid={`view-${option}`}
+              onClick={() => {
+                tapHaptic();
+                setChosenView(option);
+              }}
+              className={`rounded-full px-4 py-1.5 text-xs font-extrabold tracking-wider uppercase active:scale-95 ${
+                view === option ? 'bg-accent text-ground' : 'text-ink-dim'
+              }`}
+            >
+              {VIEW_LABELS[option]}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {song.chart !== undefined ? (
+        {view === 'chart' && song.chart !== undefined ? (
           <ChordChart
             chart={song.chart}
             activeBar={activeBar}
             loopRange={loopRange}
             onBarTap={handleBarTap}
           />
+        ) : view === 'shapes' ? (
+          <ShapesView
+            shapes={shapes}
+            events={riff.events}
+            engine={engine}
+            playing={playing}
+            getBeat={getBeat}
+            loopRange={loopRange}
+            onLoopTap={handleBarTap}
+          />
         ) : (
           <div className="flex h-full items-center">
             <div
-              ref={staffScrollRef}
+              ref={setTabScroller}
+              data-testid="tab-scroller"
               className="max-h-full w-full overflow-x-auto rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8"
             >
               <TabStaff riff={riff} geometry={geometry} showPlayhead playheadRef={playheadRef} />
@@ -295,7 +373,8 @@ export function SongPlayer({
           />
         </label>
 
-        {currentChord !== undefined && (
+        {/* The shapes view already enlarges the current chord. */}
+        {currentChord !== undefined && view !== 'shapes' && (
           <div className="w-16 shrink-0" data-testid="current-chord">
             <Fretboard
               orientation="vertical"

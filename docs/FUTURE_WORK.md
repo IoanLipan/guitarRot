@@ -744,6 +744,66 @@ cross-device progress sync ("if you uninstall the app, bad luck for now" —
 left alone (not asked about, and unlike `leftHanded` it's at least
 plausible future work rather than confirmed dead).
 
+## Hard songs and the Shapes view (built 2026-10-28)
+
+**Eight hard songs** (`src/content/hardSongs.ts`, appended to `SONGS` by
+`songCatalog.ts`; 40 songs in all):
+
+- *Five public-domain classical pieces*, read note for note from the MIDI of
+  their Mutopia Project editions (mutopiaproject.org; each piece's own page
+  was checked and every one is **Public Domain**, never ShareAlike or
+  NonCommercial): Bach, Prelude in D minor BWV 999 (id 60, Jakob Bagterp);
+  Carcassi, Études Op. 60 No. 7 (id 300) and No. 3 (id 14) (Jeff Covey);
+  Mertz, Étude in A minor (id 111, Emre Akbas, the whole piece); Sor,
+  Étude Op. 35 No. 14 (id 64, Jakob Bagterp). Each is a 16-bar excerpt with
+  the edition's own time signature and tempo. The attribution names composer,
+  dates, "Mutopia Project edition by <typesetter>, Public Domain" and the
+  piece URL, and `hardSongs.test.ts` checks all of it.
+- *Three original studies*: Alternate Picking Ladder (A minor, 140 bpm),
+  Sweep Cascade (Am–F–C–G, five up and three back, open position then up the
+  neck) and Travis Blues in E (twelve bars, alternating thumb).
+
+The classical tab is *generated data* in `src/content/classicalTabs.ts`
+(`[start, string, fret, length]` rows in 1/24 beat). The notes are the
+edition's; the string and fret of each is ours: a small search over the MIDI
+notes that keeps every fretted note sounding together inside a 5-fret reach,
+prefers open strings and low positions, uses nothing above the 15th fret, and
+never puts two notes on one string at once. The MIDI parser and the search
+were throwaway dev scripts kept outside the repo (nothing downloaded was ever
+executed), so the file says "do not edit by hand". `hardSongs.test.ts` pins the
+first three bars' pitches of each piece, read from the MIDI rather than from the
+fingering, so a fingering bug cannot change the music. Not used: Tárrega's
+*Lágrima* and *Adelita* (Mutopia has them only as two-guitar arrangements), his
+*Claro de Luna* (needs a drop-D tuning), and everything by Aguado and Sor's
+Op. 2 (CC BY-SA).
+
+**Shapes view** (`src/songs/shapes.ts`, `ShapesView.tsx`, `ShapeCard.tsx`,
+`useFollowGate.ts`). A riff song gets a `Tab | Shapes` toggle; an arpeggio
+chart gets `Chart | Tab | Shapes` (its tab is the one `songToRiff` already
+builds); a strummed chart gets no toggle. Shapes are derived from the tab, not
+authored: `deriveRiffShapes` takes the fretted positions in each bar and names
+the library chord they spell (`nameShape`: exact tones, or a chord with one
+extra note → "+ melody"; ties go to the chord built on the bass note;
+otherwise the plain label "shape"). A bar is split into halves only when it
+reaches more than four frets, or when the whole bar fits nothing but a half
+does. Arpeggio charts use the chart's own chord (with its finger numbers).
+
+During playback a rAF loop reads `currentBeat()`: which card is current is
+React state (it grows and rings), set only on the frames where the bar
+changes; the plucked string and fret are lit by flipping a `data-lit`
+attribute on an SVG overlay, so a run of sixteenths causes no re-render. A tap
+on a card strums its shape; a ⟲ badge on each card loops that bar with the same
+two-tap range as the chart, which makes loop-a-section available to riff songs
+for the first time (the chord-chart restriction in the section above no longer
+holds). While a finger or wheel is on the tab or the shapes strip the playhead
+leaves its scroll position alone and takes it back about three seconds later
+(`createFollowGate`; touch events rather than pointer events, because the browser
+cancels a touch pointer when it starts panning).
+
+Not done: the shape diagrams carry no finger numbers when derived from a tab
+(the tab does not say which finger plays what); consecutive identical bars are
+not merged; no per-note labels on the dots.
+
 ## Deployment
 
 The `guitar-rot` Vercel project (org `lipanovskis-projects`) auto-deploys
