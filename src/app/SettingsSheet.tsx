@@ -4,15 +4,11 @@ import { getToneProfile, TONE_PROFILES, type AudioEngine } from '@/audio';
 import { getChord } from '@/content';
 import { chordStrings, chordVoicing, STANDARD_TUNING } from '@/music';
 import type { ProgressHandle } from './useProgress';
+import { ANDROID_APP_URL, PRIVACY_URL } from './links';
 
 /** Strummed when you audition a tone — an open E, the first chord everyone learns. */
 const PREVIEW_CHORD_ID = 'E-open';
 
-/** Play requires the policy to be reachable from inside the app, not only from the store listing. */
-const PRIVACY_URL = 'https://guitar-rot.vercel.app/privacy.html';
-/** The sideloadable build, offered to people on the website. */
-const ANDROID_APP_URL =
-  'https://github.com/IoanLipan/guitarRot/releases/latest/download/guitarRot.apk';
 
 export function SettingsSheet({
   open,

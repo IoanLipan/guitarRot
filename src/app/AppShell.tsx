@@ -17,6 +17,7 @@ import { useAppLifecycle } from './useAppLifecycle';
 import { useAudioEngine } from './useAudioEngine';
 import { backAction, minimizeApp, useBackButton } from './useBackButton';
 import { useProgress } from './useProgress';
+import { AndroidAppBanner } from './AndroidAppBanner';
 
 export function AppShell() {
   const { ready, engine, loading, failed, start } = useAudioEngine();
@@ -124,19 +125,23 @@ export function AppShell() {
 
   if (!ready || engine === null) {
     return (
-      <StartScreen
-        plan={plan}
-        loading={loading}
-        failed={failed}
-        chosen={chosen}
-        sharedLink={shared !== null}
-        onChoose={begin}
-      />
+      <>
+        <AndroidAppBanner floating />
+        <StartScreen
+          plan={plan}
+          loading={loading}
+          failed={failed}
+          chosen={chosen}
+          sharedLink={shared !== null}
+          onChoose={begin}
+        />
+      </>
     );
   }
 
   return (
     <div className="flex h-dvh flex-col bg-ground">
+      <AndroidAppBanner />
       {/* min-h-0 lets this pane actually shrink, so its own scrollers work
           instead of the whole page growing past the viewport. */}
       <main className="relative min-h-0 flex-1 overflow-hidden pt-[env(safe-area-inset-top)]">
