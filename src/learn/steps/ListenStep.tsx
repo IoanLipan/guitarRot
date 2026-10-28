@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { CheckIcon, MicIcon, SpeakerIcon } from '@/ui/icons';
 import { successHaptic, tapHaptic } from '@/app/haptics';
 import { useMicPitch } from '@/app/useMicPitch';
 import type { AudioEngine } from '@/audio';
@@ -144,7 +145,10 @@ export function ListenStep({
           className="flex flex-col items-center gap-1 rounded-3xl bg-good/12 px-5 py-7 text-center"
           data-testid="listen-complete"
         >
-          <p className="text-3xl font-black text-good">✓ Played</p>
+          <p className="flex items-center justify-center gap-2 text-3xl font-black text-good">
+            <CheckIcon size={30} strokeWidth={3} />
+            Played
+          </p>
           <p className="text-sm text-ink-dim">
             {total === 1 ? 'That note' : `All ${total} notes`} heard. Nicely done.
           </p>
@@ -189,7 +193,8 @@ export function ListenStep({
               data-testid="listen-hear"
               className="flex h-13 items-center justify-center gap-2 rounded-full bg-surface-2 text-base font-extrabold active:scale-95"
             >
-              <span aria-hidden="true">♪</span> Hear it
+              <SpeakerIcon size={20} />
+              Hear it
             </button>
             {mic.status !== 'unsupported' && (
               <button
@@ -202,6 +207,7 @@ export function ListenStep({
                   mic.status === 'listening' ? 'bg-accent text-ground' : 'bg-surface-2'
                 }`}
               >
+                <MicIcon size={20} />
                 {mic.status === 'listening'
                   ? 'Stop listening'
                   : mic.status === 'starting'

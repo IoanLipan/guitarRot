@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRightIcon } from '@/ui/icons';
 import { errorHaptic, successHaptic, tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { LessonStep } from '@/content';
@@ -204,9 +205,10 @@ export function DrillStep({
                     tapHaptic();
                     advance();
                   }}
-                  className="rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink active:scale-95"
+                  className="flex items-center justify-center gap-2 rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink active:scale-95"
                 >
-                  {index + 1 >= total ? 'See how you did →' : 'Next question →'}
+                  {index + 1 >= total ? 'See how you did' : 'Next question'}
+                  <ArrowRightIcon size={18} />
                 </button>
               </Reveal>
             )}

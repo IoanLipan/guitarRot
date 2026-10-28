@@ -48,6 +48,20 @@ describe('Course', () => {
     expect(within(chords).getAllByRole('listitem')).toHaveLength(1);
   });
 
+  it('draws a done lesson\'s check and the Continue arrow as SVG icons, not text glyphs', () => {
+    render(<Course lessons={FIXTURE_COURSE} done={['alpha']} onOpen={vi.fn()} />);
+
+    const done = screen.getByTestId('lesson-row-alpha');
+    expect(done.querySelector('svg')).not.toBeNull();
+    // The badge no longer prints a ✓; the row still says it is done, to a screen reader.
+    expect(done).toHaveTextContent('Done');
+    expect(done.textContent).not.toContain('✓');
+
+    const next = screen.getByTestId('course-continue');
+    expect(next.querySelector('svg')).not.toBeNull();
+    expect(next.textContent).not.toContain('→');
+  });
+
   it('locks nothing: a lesson far ahead opens like any other', () => {
     const onOpen = vi.fn();
     render(<Course lessons={FIXTURE_COURSE} done={[]} onOpen={onOpen} />);

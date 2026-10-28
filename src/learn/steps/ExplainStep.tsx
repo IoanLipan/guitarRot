@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { BulbIcon, WarningIcon } from '@/ui/icons';
 import type { AudioEngine } from '@/audio';
 import type { LessonStep } from '@/content';
 import { RichText } from './RichText';
@@ -52,14 +53,14 @@ function Point({
 
 const CALLOUTS = {
   tip: {
-    icon: '💡',
+    Icon: BulbIcon,
     label: 'Tip',
     color: 'var(--color-accent)',
     tint: 'rgba(255,176,32,0.09)',
     edge: 'rgba(255,176,32,0.28)',
   },
   warn: {
-    icon: '⚠️',
+    Icon: WarningIcon,
     label: 'Common mistake',
     color: 'var(--color-bad)',
     tint: 'rgba(255,90,95,0.10)',
@@ -85,8 +86,8 @@ function Callout({ kind, children, order }: { kind: keyof typeof CALLOUTS; child
         } as CSSProperties
       }
     >
-      <span aria-hidden="true" className="mt-0.5 text-[20px] leading-none">
-        {look.icon}
+      <span aria-hidden="true" className="mt-px shrink-0" style={{ color: look.color }}>
+        <look.Icon size={22} />
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[11px] leading-none font-extrabold tracking-widest uppercase" style={{ color: look.color }}>

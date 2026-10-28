@@ -62,6 +62,16 @@ describe('AndroidAppBanner', () => {
     }
   });
 
+  it('dismisses with an icon button that is still named, and big enough to hit', () => {
+    useAgent(ANDROID_UA);
+    render(<AndroidAppBanner />);
+    const dismiss = screen.getByRole('button', { name: 'Dismiss' });
+    expect(dismiss.querySelector('svg')).not.toBeNull();
+    expect(dismiss).toHaveTextContent('');
+    expect(dismiss.className).toContain('h-11');
+    expect(dismiss.className).toContain('w-11');
+  });
+
   it('stays gone once dismissed', async () => {
     useAgent(ANDROID_UA);
     const { unmount } = render(<AndroidAppBanner />);

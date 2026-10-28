@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { NoteIcon } from '@/ui/icons';
 import type { AudioEngine } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
 import {
@@ -92,7 +93,7 @@ export function ChordCard({ chord, engine }: { chord: ChordShape; engine: AudioE
               color: strumming ? 'var(--color-ground)' : 'var(--color-ink-dim)',
             }}
           >
-            ♪
+            <NoteIcon size={18} />
           </span>
           {strumming ? 'strumming…' : 'tap anywhere to hear it'}
         </div>

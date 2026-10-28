@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ArrowLeftIcon, ArrowRightIcon, MicIcon, SpeakerIcon, StopIcon } from '@/ui/icons';
 import { tapHaptic } from '@/app/haptics';
 import { useMicPitch, type MicReading } from '@/app/useMicPitch';
 import type { AudioEngine } from '@/audio';
@@ -137,8 +138,14 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
           />
         </div>
         <div className="-mt-2 flex w-full justify-between text-xs font-bold text-ink-dim">
-          <span>♭ flat</span>
-          <span>sharp ♯</span>
+          <span className="flex items-center gap-1">
+            <ArrowLeftIcon size={14} />
+            Flat
+          </span>
+          <span className="flex items-center gap-1">
+            Sharp
+            <ArrowRightIcon size={14} />
+          </span>
         </div>
 
         <div className="flex min-h-14 flex-col items-center justify-center gap-1">
@@ -197,8 +204,9 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
             type="button"
             data-testid="tuner-stop"
             onClick={handleStop}
-            className="rounded-full bg-surface-2 px-6 py-3.5 text-base font-extrabold text-ink active:scale-95"
+            className="flex items-center justify-center gap-2.5 rounded-full bg-surface-2 px-6 py-3.5 text-base font-extrabold text-ink active:scale-95"
           >
+            <StopIcon size={20} />
             Stop tuner
           </button>
         ) : (
@@ -207,8 +215,9 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
             data-testid="tuner-start"
             disabled={status === 'starting'}
             onClick={handleStart}
-            className="rounded-full bg-accent px-6 py-3.5 text-base font-extrabold text-ground active:scale-95 disabled:opacity-60"
+            className="flex items-center justify-center gap-2.5 rounded-full bg-accent px-6 py-3.5 text-base font-extrabold text-ground active:scale-95 disabled:opacity-60"
           >
+            <MicIcon size={20} />
             {status === 'starting' ? 'Starting…' : 'Start tuner'}
           </button>
         ))}
@@ -235,7 +244,10 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
                   isClosest ? 'bg-accent/12 ring-2 ring-accent' : 'bg-surface ring-2 ring-transparent'
                 }`}
               >
-                <span className="text-xl font-extrabold">{noteLabel(open)}</span>
+                <span className="flex items-center gap-1.5 text-xl font-extrabold">
+                  {noteLabel(open)}
+                  <SpeakerIcon size={16} className="text-ink-dim" />
+                </span>
                 <span className="text-xs text-ink-dim">String {stringNumber(stringIndex)}</span>
               </button>
             );

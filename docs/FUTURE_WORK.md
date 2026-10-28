@@ -703,6 +703,55 @@ What the Android build needed before it could ship, all in `src/app/`:
   per fresh feed, so it applies every time the Feed tab is opened, including for
   experienced players.
 
+## Tab swipes, silent riffs and the icon set (fixed 2026-10-28)
+
+Owner report on the Android app: sliding the tab did nothing, and after trying
+it the riff went silent until you scrolled to the next card and back.
+
+- **Swiping the tab did nothing: confirmed.** `RiffCard`'s (and
+  `PlayerPanel`'s) rAF loop assigned `scrollLeft` every frame, so a swipe moved
+  the staff a few pixels and the next frame put it back. Measured in headless
+  Chrome with real touch events: a 250 px swipe changed nothing, the staff kept
+  moving at the playhead's 81 px/s. `render/useFollowPlayhead.ts` is the fix and
+  the one place that logic lives: `follow(playheadX)` is called each frame and
+  stands down while the staff is touched, wheeled or still gliding from a fling
+  (detected by the staff not being where `follow` left it), and for
+  `FOLLOW_IDLE_MS` (3 s) after, then eases back instead of snapping. The staffs
+  also carry `overscroll-x-contain`. A riff card only follows while it is
+  playing, so a paused staff is the user's to browse. `songs/SongPlayer.tsx`
+  has the same bug and should adopt the hook.
+- **The silence: the mechanism is reproduced, the Android trigger is not.**
+  Tone's `Transport.start()` calls `context.resume()` (unawaited), and a
+  suspended context freezes the transport's clock while `transport.state` still
+  reads `started`. Suspending the context behind the app's back in headless
+  Chrome gives exactly the report: sound gone, the button still says Pause, and
+  leaving the card and coming back brings the sound back, because the new
+  player's `transport.start()` resumed the context. What suspended it on the
+  phone is not known (nothing in `useAppLifecycle` or the swipe itself does it
+  in a browser). Ruled out: the feed does not jump on a horizontal or diagonal
+  swipe (the browser latches to the staff, and the old build behaved the same
+  at the staff's ends), and across 120 random leave-and-return flickers the
+  re-created player always started. The `RangeError: Value must be within [0,
+  Infinity], got: -2.6e-13` is real (about 1 card change in 13) but it only ever
+  came out of `dispose()`'s `part.stop()`, which `quietly()` contains.
+- **What heals it now.** `useWakeAudio` (AppShell) makes every pointer, touch or
+  key event resume a non-running context from inside the gesture (`wakeAudio`,
+  synchronous so it still counts as the user's); touch only grants audio
+  permission on `touchend`/`pointerup`, which is why those are listened to too.
+  `riffPlayer.start()` returns whether the transport really started, retries
+  once and warns instead of swallowing; `isPlaying()` is "transport started and
+  context running". `RiffCard` reads it every frame: silent for 200 ms and it
+  starts itself again (what the manual workaround did), silent for 700 ms and
+  its button says Play. It goes back to Pause by itself if the sound returns.
+  `PlayerPanel` and `SongPlayer` do not do the button part yet.
+- **Icons.** `ui/icons.tsx` is the set (24 px box, 2 px round strokes,
+  `currentColor`, `aria-hidden`; the button carries the name). Text glyphs as
+  icons (← × ▶ ♪ ✓ ↗ →) rendered too small or as emoji on Android and are gone
+  from everything outside `songs/`; `ui/icons.test.tsx` scans the sources and
+  fails if one comes back. Notation stays text (♭ ♯ in note names); arrows
+  inside lesson illustrations and the `×` on a chord diagram's muted strings
+  are drawing, not buttons, and are exempt.
+
 ## Metronome, count-in, loop-a-section, more solos (built 2026-09-08)
 
 **Metronome** (`src/audio/metronome.ts`) — its own `Tone.Synth`, connected

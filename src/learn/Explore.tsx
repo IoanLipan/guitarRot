@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ArrowRightIcon } from '@/ui/icons';
 import type { AudioEngine } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
 import { CHORDS } from '@/content';
@@ -92,7 +93,8 @@ export function Explore({ engine }: { engine: AudioEngine }) {
             'Tap any fret to hear it.'
           ) : (
             <>
-              You tapped fret {tapped.fret}, string {stringNumber(tapped.stringIndex)} →{' '}
+              You tapped fret {tapped.fret}, string {stringNumber(tapped.stringIndex)}{' '}
+              <ArrowRightIcon size={14} className="inline-block align-[-2px]" />{' '}
               <strong data-testid="tapped-note" className="text-accent">
                 {tappedNote}
               </strong>

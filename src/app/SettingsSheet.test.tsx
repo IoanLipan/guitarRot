@@ -61,6 +61,15 @@ describe('SettingsSheet', () => {
     expect(screen.queryByTestId('settings-sheet')).not.toBeInTheDocument();
   });
 
+  it('draws each tone\'s badge and the About links\' arrow as SVG icons', () => {
+    renderSheet();
+    expect(screen.getByTestId('tone-clean').querySelector('svg')).not.toBeNull();
+    expect(screen.getByTestId('tone-clean').textContent).not.toContain('♪');
+    expect(screen.getByTestId('privacy-link').querySelector('svg')).not.toBeNull();
+    expect(screen.getByTestId('privacy-link').textContent).not.toContain('↗');
+    expect(screen.getByRole('button', { name: 'Close settings' })).toBeInTheDocument();
+  });
+
   it('still lets you pick a tone and hear it', async () => {
     const { progress, engine } = renderSheet();
 

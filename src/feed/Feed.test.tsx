@@ -15,9 +15,10 @@ vi.mock('@/audio', async (importOriginal) => {
     ...actual,
     createRiffPlayer: vi.fn(() => {
       const player = {
-        start: vi.fn(),
+        start: vi.fn(() => true),
         stop: vi.fn(),
         dispose: vi.fn(),
+        isPlaying: vi.fn(() => true),
         setSpeed: vi.fn(),
         progress: vi.fn(() => 0),
         totalBeats: 8,

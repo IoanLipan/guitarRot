@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { ExternalLinkIcon, NoteIcon } from '@/ui/icons';
 import { Capacitor } from '@capacitor/core';
 import { getToneProfile, TONE_PROFILES, type AudioEngine } from '@/audio';
 import { getChord } from '@/content';
@@ -61,7 +62,7 @@ export function SettingsSheet({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-surface-2 px-4 py-2 text-sm font-bold text-ink-dim active:scale-95"
+            className="flex min-h-11 items-center rounded-full bg-surface-2 px-5 text-sm font-bold text-ink-dim active:scale-95"
           >
             Done
           </button>
@@ -90,13 +91,13 @@ export function SettingsSheet({
                   }`}
                 >
                   <span
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-black"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
                     style={{
                       background: isActive ? 'var(--color-accent)' : 'var(--color-surface)',
                       color: isActive ? 'var(--color-ground)' : 'var(--color-ink-dim)',
                     }}
                   >
-                    ♪
+                    <NoteIcon size={22} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span
@@ -180,9 +181,7 @@ function AboutLink({
       className="flex items-center justify-between rounded-2xl bg-surface-2 px-4 py-3 text-[15px] font-bold text-ink active:scale-[0.99]"
     >
       {children}
-      <span aria-hidden="true" className="text-ink-dim">
-        ↗
-      </span>
+      <ExternalLinkIcon size={20} className="text-ink-dim" />
     </a>
   );
 }

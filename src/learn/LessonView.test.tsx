@@ -121,7 +121,23 @@ describe('LessonView: moving through a lesson', () => {
     expect(screen.getByText('First.')).toBeInTheDocument();
   });
 
-  it('closes from the ×', () => {
+  it('draws close, back and next as SVG icons and still names them for a screen reader', () => {
+    view(lesson('x', [card(['First.']), card(['Second.']), CHECK]));
+
+    const close = screen.getByRole('button', { name: 'Close lesson' });
+    expect(close.querySelector('svg')).not.toBeNull();
+    expect(close).toHaveTextContent('');
+
+    expect(next().querySelector('svg')).not.toBeNull();
+    expect(next()).toHaveAccessibleName('Next');
+
+    clickNext();
+    const back = screen.getByRole('button', { name: 'Previous step' });
+    expect(back.querySelector('svg')).not.toBeNull();
+    expect(back).toHaveTextContent('');
+  });
+
+  it('closes from the close button', () => {
     const { props } = view(lesson('x', [card(['Hi.']), CHECK]));
     fireEvent.click(screen.getByTestId('lesson-close'));
     expect(props.onClose).toHaveBeenCalledTimes(1);
@@ -664,7 +680,7 @@ describe('LessonView: drill steps', () => {
 
     expect(screen.getByTestId('drill-explanation')).toHaveTextContent(/String 6/);
     expect(screen.getByTestId('drill-count')).toHaveTextContent('1 / 3');
-    fireEvent.click(screen.getByText('Next question →'));
+    fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
     expect(screen.getByTestId('drill-count')).toHaveTextContent('2 / 3');
   });
 
@@ -672,7 +688,7 @@ describe('LessonView: drill steps', () => {
     view(lesson('x', [DRILL]));
     for (let i = 0; i < 3; i += 1) {
       fireEvent.click(screen.getByRole('button', { name: answerFor().wrong }));
-      fireEvent.click(screen.getByText(i === 2 ? 'See how you did →' : 'Next question →'));
+      fireEvent.click(screen.getByRole('button', { name: i === 2 ? 'See how you did' : 'Next question' }));
     }
 
     expect(screen.getByTestId('drill-summary')).toHaveTextContent('0 / 3');

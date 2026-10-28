@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { NoteIcon } from '@/ui/icons';
 import { tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import { CHORDS, type LessonStep } from '@/content';
@@ -104,7 +105,7 @@ export function ChordStep({
         data-testid="chord-strum"
         className="flex h-14 items-center gap-2.5 rounded-full bg-accent px-8 text-base font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.3)] active:scale-95"
       >
-        <span aria-hidden="true">♪</span>
+        <NoteIcon size={22} />
         {strumming ? 'Strumming…' : 'Strum it'}
       </button>
 

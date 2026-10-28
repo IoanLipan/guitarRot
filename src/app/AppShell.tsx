@@ -17,6 +17,8 @@ import { useAppLifecycle } from './useAppLifecycle';
 import { useAudioEngine } from './useAudioEngine';
 import { backAction, minimizeApp, useBackButton } from './useBackButton';
 import { useProgress } from './useProgress';
+import { useWakeAudio } from './useWakeAudio';
+import { GearIcon } from '@/ui/icons';
 import { AndroidAppBanner } from './AndroidAppBanner';
 
 export function AppShell() {
@@ -70,6 +72,10 @@ export function AppShell() {
 
   // Off screen: silence, suspend the audio clock, save. On screen: resume.
   useAppLifecycle({ engine, flushProgress: progress.flush });
+
+  // And while it is on screen, any touch revives audio that something else
+  // suspended. See useWakeAudio.
+  useWakeAudio(engine !== null);
 
   useBackButton(() => {
     if (!ready) {
@@ -165,9 +171,9 @@ export function AppShell() {
           onClick={() => setSettingsOpen(true)}
           aria-label="Settings"
           data-testid="open-settings"
-          className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-ground/55 text-lg backdrop-blur-md active:scale-95"
+          className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-ground/55 text-ink backdrop-blur-md active:scale-95"
         >
-          <GearIcon />
+          <GearIcon size={22} />
         </button>
       </main>
 
@@ -180,22 +186,6 @@ export function AppShell() {
         progress={progress}
       />
     </div>
-  );
-}
-
-/** A cog: eight teeth round a hole. (Rays round a circle read as a brightness toggle.) */
-function GearIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-      <path
-        d="M10.51 5.06 L10.72 2.49 L13.28 2.49 L13.49 5.06 L15.85 6.04 L17.82 4.37 L19.63 6.18 L17.96 8.15 L18.94 10.51 L21.51 10.72 L21.51 13.28 L18.94 13.49 L17.96 15.85 L19.63 17.82 L17.82 19.63 L15.85 17.96 L13.49 18.94 L13.28 21.51 L10.72 21.51 L10.51 18.94 L8.15 17.96 L6.18 19.63 L4.37 17.82 L6.04 15.85 L5.06 13.49 L2.49 13.28 L2.49 10.72 L5.06 10.51 L6.04 8.15 L4.37 6.18 L6.18 4.37 L8.15 6.04 Z"
-        fill="none"
-        stroke="var(--color-ink)"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="12" r="3" fill="none" stroke="var(--color-ink)" strokeWidth="1.6" />
-    </svg>
   );
 }
 

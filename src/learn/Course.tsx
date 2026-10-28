@@ -1,4 +1,5 @@
 import { tapHaptic } from '@/app/haptics';
+import { ArrowRightIcon, CheckIcon } from '@/ui/icons';
 import type { Lesson } from '@/content';
 import { RichText } from './steps/RichText';
 
@@ -101,7 +102,8 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
             </span>
           </span>
           <span className="mt-1 flex h-12 items-center justify-center self-start rounded-full bg-ground px-6 text-base font-extrabold text-accent">
-            {doneCount === 0 ? 'Start' : 'Continue'} →
+            {doneCount === 0 ? 'Start' : 'Continue'}
+            <ArrowRightIcon size={20} className="ml-2" />
           </span>
         </button>
       ) : (
@@ -152,7 +154,7 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
                               : 'bg-surface-2 text-ink-dim'
                         }`}
                       >
-                        {status === 'done' ? '✓' : number}
+                        {status === 'done' ? <CheckIcon size={18} strokeWidth={3} /> : number}
                       </span>
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="text-base leading-tight font-bold">{lesson.title}</span>
