@@ -37,6 +37,10 @@ const ANIMATION_CLASSES = [
   'sheet-panel',
   'sheet-backdrop',
   'tab-indicator',
+  'shape-card',
+  'shape-halo',
+  'pluck-line',
+  'pluck-ring',
 ];
 
 function sources(dir: string): string[] {
@@ -89,13 +93,11 @@ describe('index.css motion', () => {
   it('lets the press feel be the one shared utility, applied to the main controls', () => {
     expect(css).toMatch(/\.press:active:not\(:disabled/);
     expect(css).toMatch(/scale:\s*var\(--press-scale,\s*0\.96\)/);
-    const used = sources(resolve(process.cwd(), 'src'))
-      .filter((path) => !path.includes(`${join('src', 'songs')}`))
-      .map((path) => readFileSync(path, 'utf8'));
+    const used = sources(resolve(process.cwd(), 'src')).map((path) => readFileSync(path, 'utf8'));
     expect(used.filter((text) => /\bpress\b/.test(text)).length).toBeGreaterThan(15);
-    // The old per-button dip is gone from everything but the Songs tab.
+    // The old per-button dip is gone everywhere, the Songs tab included.
     const stragglers = sources(resolve(process.cwd(), 'src'))
-      .filter((path) => !path.includes(join('src', 'songs')) && !path.endsWith('.test.tsx'))
+      .filter((path) => !path.endsWith('.test.tsx'))
       .filter((path) => /active:scale-/.test(readFileSync(path, 'utf8')));
     expect(stragglers).toEqual([]);
   });

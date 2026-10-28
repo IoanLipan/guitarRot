@@ -12,7 +12,8 @@ import { beatsPerBar, chartBars, chordByName, songToRiff, type Song } from '@/co
 import { STANDARD_TUNING } from '@/music';
 import { chordShapeToFretboard, createTabGeometry, Fretboard, TabStaff, useFollowPlayhead } from '@/render';
 import { ShareButton } from '@/share';
-import { ArrowLeftIcon, CloseIcon, MetronomeIcon, PauseIcon, PlayIcon } from '@/ui/icons';
+import { ArrowLeftIcon, CloseIcon, MetronomeIcon } from '@/ui/icons';
+import { PlayPauseIcon } from '@/ui/PlayPauseIcon';
 import { DifficultyPill } from './DifficultyPill';
 import { ChordChart } from './ChordChart';
 import { keyLabel } from './keyLabel';
@@ -129,6 +130,9 @@ export function SongPlayer({
         if (head !== null) {
           const x = beat * geometry.beatWidth;
           head.style.transform = `translateX(${x}px)`;
+          // Tells the playhead's glow whether the song is playing (see .playhead-glow).
+          const flag = playingRef.current ? 'true' : 'false';
+          if (head.dataset.playing !== flag) head.dataset.playing = flag;
           // Keep the playhead in view while the song plays, unless the player
           // has hold of the tab; a paused tab is theirs to browse.
           if (playingRef.current) followTab(geometry.xForBeat(0) + x);
@@ -215,7 +219,7 @@ export function SongPlayer({
           onClick={onBack}
           aria-label="Back to songs"
           data-testid="song-back"
-          className="flex h-11 items-center gap-1.5 rounded-full bg-surface-2 pr-4 pl-3 text-xs font-bold tracking-wider text-ink-dim uppercase active:scale-95"
+          className="press flex h-11 items-center gap-1.5 rounded-full bg-surface-2 pr-4 pl-3 text-xs font-bold tracking-wider text-ink-dim uppercase"
         >
           <ArrowLeftIcon size={18} /> Songs
         </button>
@@ -257,7 +261,7 @@ export function SongPlayer({
             onClick={() => setLoopRange(null)}
             aria-label="Clear loop"
             data-testid="loop-clear"
-            className="-my-2.5 flex h-11 w-11 items-center justify-center rounded-full text-ink-dim active:scale-90"
+            className="press -my-2.5 flex h-11 w-11 items-center justify-center rounded-full text-ink-dim"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-2">
               <CloseIcon size={16} />
@@ -271,8 +275,19 @@ export function SongPlayer({
           role="group"
           aria-label="Song view"
           data-testid="view-toggle"
-          className="flex shrink-0 gap-1 self-start rounded-full bg-surface-2 p-1"
+          style={{ gridTemplateColumns: `repeat(${views.length}, minmax(0, 1fr))` }}
+          className="relative grid shrink-0 gap-1 self-start rounded-full bg-surface-2 p-1"
         >
+          {/* One pill that slides to the chosen view, like Learn's section switch; the buttons sit above it. */}
+          <span
+            aria-hidden="true"
+            data-testid="view-pill"
+            className="tab-indicator pointer-events-none absolute top-1 bottom-1 left-1 rounded-full bg-accent"
+            style={{
+              width: `calc((100% - ${0.5 + 0.25 * (views.length - 1)}rem) / ${views.length})`,
+              transform: `translateX(calc(${Math.max(0, views.indexOf(view))} * (100% + 0.25rem)))`,
+            }}
+          />
           {views.map((option) => (
             <button
               key={option}
@@ -283,8 +298,8 @@ export function SongPlayer({
                 tapHaptic();
                 setChosenView(option);
               }}
-              className={`min-h-11 rounded-full px-4 text-xs font-extrabold tracking-wider uppercase active:scale-95 ${
-                view === option ? 'bg-accent text-ground' : 'text-ink-dim'
+              className={`press relative z-10 min-h-11 min-w-20 rounded-full px-4 text-xs font-extrabold tracking-wider uppercase ${
+                view === option ? 'text-ground' : 'text-ink-dim'
               }`}
             >
               {VIEW_LABELS[option]}
@@ -329,13 +344,9 @@ export function SongPlayer({
           type="button"
           onClick={() => void handleToggle()}
           aria-label={playing ? 'Pause' : 'Play'}
-          className="flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent shadow-[0_6px_18px_rgba(255,176,32,0.35)] active:scale-95"
+          className="press flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent shadow-[0_6px_18px_rgba(255,176,32,0.35)]"
         >
-          {playing ? (
-            <PauseIcon size={26} className="text-ground" />
-          ) : (
-            <PlayIcon size={26} className="text-ground" />
-          )}
+          <PlayPauseIcon playing={playing} size={26} className="text-ground" />
         </button>
 
         <button
@@ -344,7 +355,7 @@ export function SongPlayer({
           aria-label="Metronome"
           aria-pressed={metronomeOn}
           data-testid="metronome-toggle"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full active:scale-95"
+          className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
           style={{
             background: metronomeOn ? 'var(--color-accent)' : 'var(--color-surface-2)',
             color: metronomeOn ? 'var(--color-ground)' : 'var(--color-ink-dim)',
