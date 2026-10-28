@@ -8,7 +8,22 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-: "${JAVA_HOME:=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home}"
+# Use JAVA_HOME if it points at a real JDK; otherwise the first JDK 21 found.
+# (A JAVA_HOME left pointing at a moved or uninstalled Android Studio is
+# common, and Gradle fails on it with a confusing message.)
+if [ -z "${JAVA_HOME:-}" ] || [ ! -x "$JAVA_HOME/bin/java" ]; then
+  JAVA_HOME=""
+  for candidate in \
+    "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+    /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
+    "$(/usr/libexec/java_home -v 21 2>/dev/null || true)"; do
+    if [ -n "$candidate" ] && [ -x "$candidate/bin/java" ]; then JAVA_HOME="$candidate"; break; fi
+  done
+  if [ -z "$JAVA_HOME" ]; then
+    echo "No JDK 21 found: install one (brew install openjdk@21) or set JAVA_HOME." >&2
+    exit 1
+  fi
+fi
 export JAVA_HOME
 
 if [ ! -f android/keystore.properties ]; then

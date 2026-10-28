@@ -20,7 +20,7 @@ progress storage (Foundation) are done. The Feed/Learn/Quiz app shell is
 built and working: the feed generates endlessly with a designed content mix,
 tones are switchable (acoustic / clean / rock / blues / country), and the
 library spans blues, country, rock, fingerstyle and lead solos. The Songs
-tab ships 26 playable songs with search and difficulty filters, and every
+tab ships 40 playable songs with search and difficulty filters, and every
 feed card and song has a shareable link. Not yet at parity with the original
 design spec — no SRS scheduler, no due-weighted feed, no lessons.
 
