@@ -32,7 +32,7 @@ import type { Riff } from './types';
 
 const MUTOPIA_PIECE = 'https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=';
 
-function mutopia(opts: {
+type MutopiaOptions = {
   composer: string;
   dates: string;
   work: string;
@@ -41,7 +41,20 @@ function mutopia(opts: {
   licence: 'Public Domain' | 'Creative Commons Attribution 4.0';
   edition?: string;
   excerpt: string;
-}): string {
+};
+
+/**
+ * The line for the About sheet when an edition is under a Creative Commons
+ * Attribution licence: that licence wants the credit visible "in any
+ * reasonable manner", and the attribution above is data nobody sees. A Public
+ * Domain edition needs none.
+ */
+function editionCredit(title: string, opts: MutopiaOptions): string | undefined {
+  if (opts.licence === 'Public Domain') return undefined;
+  return `${title} edition: ${opts.maintainer}, Mutopia Project, ${opts.licence.replace('Creative Commons Attribution', 'CC BY')}.`;
+}
+
+function mutopia(opts: MutopiaOptions): string {
   return (
     `${opts.composer} (${opts.dates}), ${opts.work}. ` +
     `Mutopia Project ${opts.edition ?? 'edition'} (maintainer ${opts.maintainer}), ` +
@@ -63,6 +76,7 @@ type MovieSpec = {
   rows: readonly TabRow[];
   source: 'public-domain' | 'original';
   attribution?: string;
+  credit?: string;
   tags: readonly string[];
   about: string;
 };
@@ -94,6 +108,7 @@ function movieSong(spec: MovieSpec): Song {
     bpm: spec.bpm,
     source: spec.source,
     ...(spec.attribution === undefined ? {} : { attribution: spec.attribution }),
+    ...(spec.credit === undefined ? {} : { credit: spec.credit }),
     tags: spec.tags,
     about: spec.about,
     riff,
@@ -155,6 +170,17 @@ export const hallOfTheMountainKing: Song = movieSong({
     'The theme heard in The Social Network (2010). It starts quiet and low, then creeps upward.',
 });
 
+const CANON_EDITION: MutopiaOptions = {
+  composer: 'Johann Pachelbel',
+  dates: '1653–1706',
+  work: 'Canon in D (Canon per 3 Violini e Basso)',
+  id: 2047,
+  maintainer: 'Michael Fischer v. Mollard',
+  licence: 'Creative Commons Attribution 4.0',
+  excerpt:
+    'Bars 1–10: the ground bass of the cello and the melody of the first violin; the end leads straight back to bar 1.',
+};
+
 export const canonInD: Song = movieSong({
   id: 'canon-in-d',
   title: 'Canon in D',
@@ -167,16 +193,8 @@ export const canonInD: Song = movieSong({
   timeSignature: [4, 4],
   rows: CANON_ROWS,
   source: 'public-domain',
-  attribution: mutopia({
-    composer: 'Johann Pachelbel',
-    dates: '1653–1706',
-    work: 'Canon in D (Canon per 3 Violini e Basso)',
-    id: 2047,
-    maintainer: 'Michael Fischer v. Mollard',
-    licence: 'Creative Commons Attribution 4.0',
-    excerpt:
-      'Bars 1–10: the ground bass of the cello and the melody of the first violin; the end leads straight back to bar 1.',
-  }),
+  attribution: mutopia(CANON_EDITION),
+  credit: editionCredit('Canon in D', CANON_EDITION),
   tags: [...MOVIE_TAGS, 'classical', 'baroque', 'public-domain', 'two-voices', 'ground-bass', 'D major'],
   about:
     'Heard in Ordinary People (1980). The same eight bass notes walk round and round under a long, slow melody.',

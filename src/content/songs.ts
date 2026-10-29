@@ -36,6 +36,12 @@ export type Song = {
   bpm: number;
   source: 'public-domain' | 'original';
   attribution?: string;
+  /**
+   * A credit line the app must show to players, not just keep as data: set when
+   * the notes come from an edition whose licence (Creative Commons Attribution)
+   * asks for the credit to be visible. The About sheet lists every one.
+   */
+  credit?: string;
   tags: readonly string[];
   /** One line on why this one is worth your time. */
   about: string;

@@ -220,6 +220,16 @@ describe('the public-domain pieces', () => {
     expect(cc.map((song) => song.id)).toEqual(['canon-in-d']);
   });
 
+  it('show a credit line for every edition whose licence asks for one, and only for those', () => {
+    for (const song of SONGS) {
+      const needsCredit = /Creative Commons Attribution/.test(song.attribution ?? '');
+      expect(song.credit !== undefined, song.id).toBe(needsCredit);
+    }
+    expect(byId('canon-in-d').credit).toBe(
+      'Canon in D edition: Michael Fischer v. Mollard, Mutopia Project, CC BY 4.0.',
+    );
+  });
+
   it('carry a composer who died long enough ago to be out of copyright', () => {
     for (const song of PUBLIC_DOMAIN) {
       const died = /\(\d{4}[–-](\d{4})\)/.exec(song.attribution ?? '')?.[1];
