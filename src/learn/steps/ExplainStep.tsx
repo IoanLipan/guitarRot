@@ -90,7 +90,7 @@ function Callout({ kind, children, order }: { kind: keyof typeof CALLOUTS; child
         <look.Icon size={22} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] leading-none font-extrabold tracking-widest uppercase" style={{ color: look.color }}>
+        <p className="text-xs leading-none font-extrabold tracking-widest uppercase" style={{ color: look.color }}>
           {look.label}
         </p>
         <p className="mt-1.5 text-[16px] leading-[1.45] text-ink short:mt-1 short:text-[15px]">

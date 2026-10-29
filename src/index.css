@@ -7,6 +7,18 @@
  */
 @custom-variant short (@media (max-height: 860px));
 
+/*
+ * The small phones: 320x568, 360x640 and 375x667 all sit under this. `short:`
+ * trims the spacing of an ordinary phone; `tight:` is for the screens where
+ * the tab bar, a header and a footer leave a card barely 320px tall, so a
+ * blurb or a row of chrome has to give. Declared after `short:`, so where
+ * both apply `tight:` wins.
+ */
+@custom-variant tight (@media (max-height: 700px));
+
+/** The same idea sideways: 320, 360 and 375 wide, but not a 412 or a 430. */
+@custom-variant narrow (@media (max-width: 399px));
+
 @theme {
   --color-ground: #0b0b0f;
   --color-surface: #15151c;

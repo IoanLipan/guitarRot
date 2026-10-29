@@ -85,7 +85,7 @@ export function Neck({
   return (
     <div
       ref={scrollerRef}
-      className={bleed ? '-mx-5 overflow-x-auto px-5' : 'overflow-x-auto'}
+      className={bleed ? '-mx-5 overflow-x-auto px-5 narrow:-mx-4 narrow:px-4' : 'overflow-x-auto'}
       data-testid="neck"
     >
       <div

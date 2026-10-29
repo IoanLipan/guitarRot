@@ -205,7 +205,7 @@ export function PlayerPanel({
         </button>
 
         <label className="min-w-0 flex-1">
-          <div className="mb-1.5 flex justify-between text-[11px] font-bold tracking-wider text-ink-dim uppercase">
+          <div className="mb-1.5 flex justify-between text-xs font-bold tracking-wider text-ink-dim uppercase">
             <span>Speed</span>
             <span className="tabular-nums">{Math.round(speed * 100)}%</span>
           </div>
@@ -216,7 +216,7 @@ export function PlayerPanel({
             step={0.1}
             value={speed}
             onChange={(event) => setSpeed(Number(event.target.value))}
-            className="w-full accent-accent"
+            className="-my-3 block h-11 w-full accent-accent"
             aria-label="Playback speed"
           />
         </label>

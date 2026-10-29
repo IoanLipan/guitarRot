@@ -134,3 +134,26 @@ describe('ShareButton in the Android app', () => {
     await waitFor(() => expect(screen.getByTestId('share-button')).toHaveTextContent('Link copied'));
   });
 });
+
+describe('ShareButton as an icon', () => {
+  it('is a 44px circle that still says what it does', () => {
+    render(<ShareButton target={target} title="Blues shuffle in E" iconOnly />);
+
+    const button = screen.getByTestId('share-button');
+    expect(button).toHaveClass('h-11', 'w-11');
+    expect(button).toHaveAccessibleName('Share Blues shuffle in E');
+    // The word is still there for a screen reader, but out of the way.
+    expect(screen.getByText('Share')).toHaveClass('sr-only');
+  });
+
+  it('confirms a copy with a tick, and says so in words for a screen reader', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubNavigator({ share: undefined, clipboard: { writeText } });
+    render(<ShareButton target={target} title="Blues shuffle in E" iconOnly />);
+
+    await userEvent.click(screen.getByTestId('share-button'));
+
+    await waitFor(() => expect(screen.getByText('Link copied')).toHaveClass('sr-only'));
+    expect(screen.getByTestId('share-button').querySelector('svg')).toHaveClass('text-good');
+  });
+});

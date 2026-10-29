@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ShareIcon } from '@/ui/icons';
+import { CheckIcon, ShareIcon } from '@/ui/icons';
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { tapHaptic } from '@/app/haptics';
@@ -13,6 +13,12 @@ export type ShareButtonProps = {
   /** What the card is, for the OS share sheet's preview. */
   title: string;
   className?: string;
+  /**
+   * Just the icon, in a 44px circle like the settings gear it sits beside. For
+   * a corner where the word would crowd what is under it. The word stays for
+   * screen readers, and "Link copied" shows as a tick.
+   */
+  iconOnly?: boolean;
 };
 
 /**
@@ -33,7 +39,7 @@ function isCancellation(error: unknown): boolean {
  * would only ever copy. On the web it uses the browser's share sheet where
  * there is one (mobile browsers) and falls back to the clipboard on desktop.
  */
-export function ShareButton({ target, title, className }: ShareButtonProps) {
+export function ShareButton({ target, title, className, iconOnly = false }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -86,16 +92,20 @@ export function ShareButton({ target, title, className }: ShareButtonProps) {
     }
   }
 
+  const label = copied ? 'Link copied' : 'Share';
+
   return (
     <button
       type="button"
       onClick={() => void handleShare()}
       aria-label={`Share ${title}`}
       data-testid="share-button"
-      className={`press flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1.5 text-xs font-bold tracking-wider text-ink-dim uppercase ${className ?? ''}`}
+      className={`press flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 text-xs font-bold tracking-wider text-ink-dim uppercase ${
+        iconOnly ? 'h-11 w-11 justify-center' : 'px-3 py-1.5'
+      } ${className ?? ''}`}
     >
-      <ShareIcon size={14} />
-      {copied ? 'Link copied' : 'Share'}
+      {iconOnly && copied ? <CheckIcon size={18} className="text-good" /> : <ShareIcon size={iconOnly ? 18 : 14} />}
+      {iconOnly ? <span className="sr-only">{label}</span> : label}
     </button>
   );
 }

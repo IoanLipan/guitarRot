@@ -60,7 +60,8 @@ export function AndroidAppBanner({ floating = false }: { floating?: boolean }) {
         floating ? 'fixed inset-x-0 top-0 z-40 shadow-[0_8px_24px_rgba(0,0,0,0.45)]' : 'shrink-0'
       }`}
     >
-      <LogoMark className="h-9 w-auto shrink-0" />
+      {/* The mark is what goes on a 320px phone, so the name and the line under it are not cut to "Android …". */}
+      <LogoMark className="h-9 w-auto shrink-0 max-[339px]:hidden" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-extrabold">Android app</p>
         <p className="truncate text-xs text-ink-dim">Works offline · no ads</p>
@@ -69,7 +70,7 @@ export function AndroidAppBanner({ floating = false }: { floating?: boolean }) {
         href={ANDROID_APP_URL}
         download
         onClick={() => tapHaptic()}
-        className="press shrink-0 rounded-full bg-accent px-4 py-2 text-sm font-extrabold text-ground"
+        className="press flex min-h-11 shrink-0 items-center rounded-full bg-accent px-4 text-sm font-extrabold text-ground"
       >
         Download
       </a>

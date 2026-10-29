@@ -54,7 +54,7 @@ export function SongList({
                   tapHaptic();
                   onFilterChange({ ...filter, difficulty: level });
                 }}
-                className={`press min-h-11 rounded-full px-4 text-xs font-extrabold tracking-wider uppercase ${
+                className={`press min-h-11 rounded-full px-4 text-xs font-extrabold tracking-wider uppercase narrow:px-3 ${
                   isActive ? 'bg-accent text-ground' : 'bg-surface-2 text-ink-dim'
                 }`}
               >
