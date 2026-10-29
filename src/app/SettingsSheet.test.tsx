@@ -109,6 +109,17 @@ describe('SettingsSheet About section', () => {
     expect(within(screen.getByTestId('about-section')).getByTestId('sample-credit')).toBe(credit);
   });
 
+  it('credits the CC BY song edition, inside About, next to the sample credit', () => {
+    renderSheet();
+
+    const credit = screen.getByTestId('edition-credit');
+    expect(credit).toHaveTextContent(
+      'Canon in D edition: Michael Fischer v. Mollard, Mutopia Project, CC BY 4.0.',
+    );
+    expect(within(screen.getByTestId('about-section')).getByTestId('edition-credit')).toBe(credit);
+    expect(screen.getByTestId('sample-credit').nextElementSibling).toBe(credit);
+  });
+
   it('offers the Android app on the web', () => {
     renderSheet();
 

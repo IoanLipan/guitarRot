@@ -3,13 +3,16 @@ import { ExternalLinkIcon, NoteIcon } from '@/ui/icons';
 import { prefersReducedMotion } from '@/ui/motion';
 import { Capacitor } from '@capacitor/core';
 import { getToneProfile, TONE_PROFILES, type AudioEngine } from '@/audio';
-import { getChord } from '@/content';
+import { SONGS, getChord } from '@/content';
 import { chordStrings, chordVoicing, STANDARD_TUNING } from '@/music';
 import type { ProgressHandle } from './useProgress';
 import { ANDROID_APP_URL, PRIVACY_URL } from './links';
 
 /** Strummed when you audition a tone — an open E, the first chord everyone learns. */
 const PREVIEW_CHORD_ID = 'E-open';
+
+/** Credits that song editions' licences ask the app to show (Creative Commons Attribution). */
+const EDITION_CREDITS = SONGS.flatMap((song) => (song.credit === undefined ? [] : [song.credit]));
 
 /** How long the sheet takes to slide away; it stays mounted that long after `open` goes false (see index.css). */
 export const SHEET_EXIT_MS = 230;
@@ -169,6 +172,14 @@ export function SettingsSheet({
             Guitar samples: tonejs-instruments by Nicholaus Brosowsky, CC BY 3.0 — recorded by
             University of Iowa EMS, quartertone and Karoryfer.
           </p>
+
+          {/* The same duty for song editions under CC BY: each song that needs a
+              credit carries the line (see `credit` in content/songs.ts). */}
+          {EDITION_CREDITS.length > 0 && (
+            <p className="mt-2 text-xs leading-relaxed text-ink-dim/80" data-testid="edition-credit">
+              {EDITION_CREDITS.join(' ')}
+            </p>
+          )}
         </section>
       </div>
     </div>

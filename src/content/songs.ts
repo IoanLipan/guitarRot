@@ -36,6 +36,12 @@ export type Song = {
   bpm: number;
   source: 'public-domain' | 'original';
   attribution?: string;
+  /**
+   * A credit line the app must show to players, not just keep as data: set when
+   * the notes come from an edition whose licence (Creative Commons Attribution)
+   * asks for the credit to be visible. The About sheet lists every one.
+   */
+  credit?: string;
   tags: readonly string[];
   /** One line on why this one is worth your time. */
   about: string;
@@ -43,6 +49,17 @@ export type Song = {
   chart?: SongChart;
   riff?: Riff;
 };
+
+/**
+ * The tag that puts a song in the Movies category: music a famous film used
+ * (public domain, so the notes are ours to ship), or an original written in
+ * the mood of a film score. Never a transcription of a film's own score.
+ */
+export const MOVIES_TAG = 'movies';
+
+export function isMovieSong(song: Song): boolean {
+  return song.tags.includes(MOVIES_TAG);
+}
 
 /** `-` in a chart means "hold whatever was ringing". */
 export const HOLD = '-';
