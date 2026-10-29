@@ -210,9 +210,9 @@ export function SongPlayer({
       : chordByName(chartBars(song.chart)[activeBar]?.chordName ?? '');
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 bg-linear-to-b from-surface to-ground px-5 pt-4 pb-5">
+    <div className="flex h-full min-h-0 flex-col gap-3 bg-linear-to-b from-surface to-ground px-5 pt-3 pb-5 tight:gap-2 tight:pb-3">
       {/* pr-14 keeps the share pill clear of the shell's settings gear,
-          which floats over this pane at the top right. */}
+          which floats over this pane at the top right (pt-3 puts the row level with it). */}
       <div className="flex shrink-0 items-center justify-between gap-3 pr-14">
         <button
           type="button"
@@ -227,12 +227,16 @@ export function SongPlayer({
       </div>
 
       <div className="shrink-0">
-        <h2 className="text-2xl leading-tight font-black">{song.title}</h2>
-        <p className="mt-0.5 text-sm text-ink-dim">{song.artist}</p>
+        {/* Two lines at most: a long title ("Prelude in D minor (BWV 999)") is the first thing to eat a small screen. */}
+        <h2 className="line-clamp-2 text-2xl leading-tight font-black tight:text-xl">{song.title}</h2>
+        <p className="mt-0.5 truncate text-sm text-ink-dim">{song.artist}</p>
       </div>
 
+      {/* On a short phone the chips become one row that slides sideways (they bleed to the
+          screen edges so it is plain they do), instead of wrapping onto a second line;
+          and in the fretboard view of a tight one they go altogether, the board needing the room. */}
       <div
-        className={`flex shrink-0 flex-wrap gap-1.5 ${
+        className={`flex shrink-0 flex-wrap gap-1.5 short:-mx-5 short:flex-nowrap short:overflow-x-auto short:px-5 short:[scrollbar-width:none] short:[&::-webkit-scrollbar]:hidden short:[&>*]:shrink-0 short:[&>*]:whitespace-nowrap ${
           view === 'fretboard' ? '[@media(max-height:700px)]:hidden' : ''
         }`}
       >
@@ -242,12 +246,9 @@ export function SongPlayer({
         <Chip>{song.bpm} BPM</Chip>
       </div>
 
-      {/* On a short phone the fretboard needs the room more than the chips and the blurb do. */}
-      <p
-        className={`shrink-0 text-[13px] leading-relaxed text-ink-dim ${
-          view === 'fretboard' ? '[@media(max-height:700px)]:hidden' : ''
-        }`}
-      >
+      {/* The blurb is the first thing to go: two lines on a short phone, none on a tight one,
+          where the staff and the fretboard need the room more. */}
+      <p className="shrink-0 text-[13px] leading-relaxed text-ink-dim short:line-clamp-2 tight:hidden">
         {song.about}
       </p>
 
@@ -330,7 +331,7 @@ export function SongPlayer({
             <div
               ref={tabScrollerRef}
               data-testid="tab-scroller"
-              className="max-h-full w-full overflow-x-auto rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8"
+              className="max-h-full w-full overflow-x-auto rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8 tight:py-2"
             >
               <TabStaff riff={riff} geometry={geometry} showPlayhead playheadRef={playheadRef} />
             </div>
@@ -364,7 +365,7 @@ export function SongPlayer({
         </button>
 
         <label className="min-w-0 flex-1">
-          <div className="mb-1.5 flex justify-between text-[11px] font-bold tracking-wider text-ink-dim uppercase">
+          <div className="mb-1.5 flex justify-between text-xs font-bold tracking-wider text-ink-dim uppercase">
             <span>Speed</span>
             <span className="tabular-nums">{Math.round(speed * 100)}%</span>
           </div>
@@ -375,14 +376,14 @@ export function SongPlayer({
             step={0.1}
             value={speed}
             onChange={(event) => setSpeed(Number(event.target.value))}
-            className="w-full accent-accent"
+            className="-my-3 block h-11 w-full accent-accent"
             aria-label="Playback speed"
           />
         </label>
 
         {/* The fretboard view already shows where the fingers go. */}
         {currentChord !== undefined && view !== 'fretboard' && (
-          <div className="w-16 shrink-0" data-testid="current-chord">
+          <div className="w-16 shrink-0 max-[339px]:w-12" data-testid="current-chord">
             <Fretboard
               orientation="vertical"
               fretRange={chordShapeToFretboard(currentChord).fretRange}
@@ -399,7 +400,7 @@ export function SongPlayer({
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-bold tracking-wider text-ink-dim uppercase">
+    <span className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-bold tracking-wider text-ink-dim uppercase">
       {children}
     </span>
   );

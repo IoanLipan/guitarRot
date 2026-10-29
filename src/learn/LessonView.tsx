@@ -110,7 +110,7 @@ export function LessonView({
     <div className="flex h-full min-h-0 flex-col bg-ground" data-testid="lesson-view">
       {/* pr-16 keeps the bar clear of the shell's settings gear, which floats
           over the top right of this pane. */}
-      <header className="shrink-0 px-5 pt-4 pr-16">
+      <header className="shrink-0 px-5 pt-3 pr-16 narrow:pl-4">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -140,20 +140,22 @@ export function LessonView({
             {Math.min(index + 1, total)}/{total}
           </span>
         </div>
-        <p className="mt-2.5 truncate text-[11px] font-bold tracking-wider text-ink-dim uppercase">
+        <p className="mt-2.5 truncate text-xs font-bold tracking-wider text-ink-dim uppercase tight:mt-1.5">
           {lesson.title}
         </p>
       </header>
 
       {finished ? (
         <div
-          className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-8 text-center"
+          // Centred with auto margins, not justify-center: a card taller than the pane (a 320px phone)
+          // would otherwise lose its top, where the badge is, above the scroll.
+          className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-y-auto px-6 py-8 text-center tight:gap-4 tight:py-4 [&>:first-child]:mt-auto [&>:last-child]:mb-auto"
           data-testid="lesson-complete"
         >
           <div className="relative" ref={badgeRef} aria-hidden="true">
             <span className="halo" />
             <div
-              className="pop-in relative flex h-20 w-20 items-center justify-center rounded-full bg-good text-ground"
+              className="pop-in relative flex h-20 w-20 items-center justify-center rounded-full bg-good text-ground tight:h-16 tight:w-16"
               style={{ boxShadow: '0 0 40px rgba(53,208,127,0.45)' }}
             >
               <CheckIcon
@@ -169,7 +171,7 @@ export function LessonView({
             <p className="text-base text-ink-dim">{lesson.title}</p>
           </div>
           <div className="scale-in w-full max-w-sm rounded-2xl bg-surface px-5 py-4" style={stagger(3, 90)}>
-            <p className="text-[11px] font-extrabold tracking-widest text-accent uppercase">
+            <p className="text-xs font-extrabold tracking-widest text-accent uppercase">
               Goal reached
             </p>
             <p className="mt-1.5 text-[17px] leading-relaxed">
@@ -212,10 +214,12 @@ export function LessonView({
         <>
           <div
             // Keyed by step so every step starts fresh at the top of its own scroll.
+            // narrow:px-4 here, in the header and in the footer: 16px a side is what lets
+            // three chord tiles or a row of note bubbles fit a 320px phone.
             key={index}
             data-testid="lesson-scroll"
             data-dir={direction}
-            className="lesson-step-in min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-4 short:pt-3 short:pb-3"
+            className="lesson-step-in min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-4 short:pt-3 short:pb-3 narrow:px-4"
           >
             <div className="mx-auto w-full max-w-md">
               {step !== undefined && (
@@ -226,14 +230,14 @@ export function LessonView({
 
           {/* The fade above it is what lets a step scroll under the footer without
               its last line being sliced off mid-letter. */}
-          <footer className="relative flex shrink-0 gap-3 px-5 pt-3 pb-4 before:pointer-events-none before:absolute before:inset-x-0 before:-top-5 before:h-5 before:bg-linear-to-t before:from-ground before:to-transparent">
+          <footer className="relative flex shrink-0 gap-3 px-5 pt-3 pb-4 narrow:px-4 tight:pt-2 tight:pb-3 before:pointer-events-none before:absolute before:inset-x-0 before:-top-5 before:h-5 before:bg-linear-to-t before:from-ground before:to-transparent">
             {index > 0 && (
               <button
                 type="button"
                 onClick={handleBack}
                 aria-label="Previous step"
                 data-testid="lesson-back"
-                className="press flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-dim"
+                className="press flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-dim tight:h-12 tight:w-12"
               >
                 <ArrowLeftIcon size={24} />
               </button>
@@ -243,7 +247,7 @@ export function LessonView({
                 type="button"
                 onClick={handleNext}
                 data-testid="lesson-skip"
-                className="press press-soft flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-surface-2 text-base font-extrabold text-ink"
+                className="press press-soft flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-surface-2 text-base font-extrabold text-ink tight:h-12"
               >
                 Skip
                 <ArrowRightIcon size={20} />
@@ -255,7 +259,7 @@ export function LessonView({
                 disabled={gate === 'required' && !isPassed}
                 data-testid="lesson-next"
                 data-ready={ready ? 'true' : undefined}
-                className={`press press-soft flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-accent text-base font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.25)] disabled:bg-surface-2 disabled:text-ink-dim disabled:shadow-none ${
+                className={`press press-soft flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-accent text-base font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.25)] disabled:bg-surface-2 disabled:text-ink-dim disabled:shadow-none tight:h-12 ${
                   ready ? 'answer-pop' : ''
                 }`}
               >

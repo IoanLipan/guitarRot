@@ -43,7 +43,8 @@ export function TabBar({ active, onChange }: { active: TabId; onChange: (id: Tab
               onChange(tab.id);
             }}
             aria-current={isActive ? 'page' : undefined}
-            className="press press-tile flex h-[78px] flex-1 flex-col items-center justify-center gap-1 pb-1 text-[11px] font-bold"
+            // 78px on an ordinary phone; 64px where every pixel above it counts (see `tight:` in index.css).
+            className="press press-tile flex h-[78px] flex-1 flex-col items-center justify-center gap-1 pb-1 text-xs font-bold tight:h-16 tight:gap-0.5"
             style={{ color: isActive ? 'var(--color-accent)' : INACTIVE_COLOR }}
           >
             {/* Keyed by state: becoming active remounts the icon, which replays its pop. */}

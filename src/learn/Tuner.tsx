@@ -120,7 +120,9 @@ export function Tuner({ engine }: { engine: AudioEngine }) {
           aria-valuenow={Math.round(needle)}
           aria-valuetext={reading === null ? 'No note detected' : formatCents(cents)}
           data-testid="tuner-meter"
-          className="relative mt-2 h-14 w-full"
+          // overflow-x-clip: the needle's rail is slid sideways by up to half the meter, and its box
+          // used to make the whole lesson scroll sideways.
+          className="relative mt-2 h-14 w-full overflow-x-clip"
         >
           <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-surface-2" />
           {/* The target zone lights up green, and softly pulses, once the string is held in tune. */}

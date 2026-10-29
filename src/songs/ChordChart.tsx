@@ -36,7 +36,7 @@ export function ChordChart({
 
         return (
           <section key={`${section.label}-${sectionIndex}`}>
-            <h3 className="mb-1.5 text-[11px] font-extrabold tracking-widest text-ink-dim uppercase">
+            <h3 className="mb-1.5 text-xs font-extrabold tracking-widest text-ink-dim uppercase">
               {sections.filter((label) => label === section.label).length > 1
                 ? `${section.label} ${sectionIndex + 1}`
                 : section.label}

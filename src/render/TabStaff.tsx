@@ -60,7 +60,7 @@ export const TabStaff = forwardRef<SVGSVGElement, TabStaffProps>(function TabSta
               y={line.y1}
               textAnchor="middle"
               dominantBaseline="central"
-              fontSize={11}
+              fontSize={12}
               fill="var(--color-ink-dim)"
             >
               {label}

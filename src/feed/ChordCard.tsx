@@ -57,10 +57,11 @@ export function ChordCard({
       type="button"
       onClick={handleStrum}
       data-testid={`chord-card-${chord.id}`}
-      className="fx-host flex h-full min-h-0 w-full flex-col items-center justify-center gap-5 bg-linear-to-b from-surface-2 to-ground px-6 pt-8 pb-6 text-center"
+      // pt-16: the first 56px belong to the share icon and settings gear (see Feed).
+      className="fx-host flex h-full min-h-0 w-full flex-col items-center justify-center gap-5 bg-linear-to-b from-surface-2 to-ground px-6 pt-16 pb-6 text-center tight:gap-3 tight:pb-4"
     >
       <div className={`${rise} shrink-0`} style={stagger(0)}>
-        <div className="text-6xl leading-none font-black">{chord.name}</div>
+        <div className="text-6xl leading-none font-black tight:text-5xl">{chord.name}</div>
         <div className="mt-1.5 text-sm tracking-wider text-ink-dim uppercase">
           {chordSolfegeName(chord)}
         </div>

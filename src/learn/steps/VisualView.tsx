@@ -194,7 +194,7 @@ function ChordsView({
 
   return (
     <div className="flex flex-col gap-2" data-testid="visual-chords">
-      <div className="flex justify-center gap-2.5 overflow-x-auto">
+      <div className="flex justify-center gap-2.5 overflow-x-auto narrow:gap-1.5">
         {chords.map((chord) => {
           const diagram = chordShapeToFretboard(chord);
           const geometry = createFretboardGeometry({ orientation: 'vertical', fretRange: diagram.fretRange });
@@ -217,7 +217,8 @@ function ChordsView({
                 strumFx(event.currentTarget, { x: event.clientX, y: event.clientY });
                 flash(chord.id);
               }}
-              className={`press press-tile fx-host flex min-w-[6.25rem] max-w-[10.5rem] flex-1 flex-col items-center gap-0.5 rounded-2xl px-2 pt-2.5 pb-2.5 ${
+              // min-w-20, not wider: three tiles have to fit a 320px phone (about 270px of card) without sliding sideways.
+              className={`press press-tile fx-host flex min-w-20 max-w-[10.5rem] flex-1 flex-col items-center gap-0.5 rounded-2xl px-2 pt-2.5 pb-2.5 narrow:px-1 ${
                 playing ? 'scale-[1.02] bg-accent/12 ring-2 ring-accent/70' : 'bg-white/[0.035] ring-2 ring-transparent'
               }`}
             >
@@ -228,7 +229,7 @@ function ChordsView({
               >
                 {chord.name}
               </span>
-              <span aria-hidden="true" className="text-[11px] font-bold tracking-wider text-ink-dim uppercase">
+              <span aria-hidden="true" className="text-center text-xs leading-tight font-bold tracking-wider text-ink-dim uppercase">
                 {chordSolfegeName(chord)}
               </span>
               <span
@@ -250,11 +251,11 @@ function ChordsView({
                   ariaLabel={`${chord.name} chord diagram`}
                 />
               </span>
-              <span aria-hidden="true" className="mt-1.5 flex justify-center gap-1">
+              <span aria-hidden="true" className="mt-1.5 flex flex-wrap justify-center gap-1">
                 {tones.map((tone) => (
                   <span
                     key={tone}
-                    className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1 text-[11px] leading-none font-black text-ground"
+                    className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1 text-xs leading-none font-black text-ground"
                     style={{ background: noteColor(tone) }}
                   >
                     {tone}
@@ -288,7 +289,7 @@ function NotesView({ notes, engine }: { notes: readonly string[]; engine: AudioE
   return (
     <div className="flex flex-col gap-3" data-testid="visual-notes">
       <div
-        className="mx-auto grid w-full max-w-[27rem] gap-x-2 gap-y-4 pt-1"
+        className="mx-auto grid w-full max-w-[27rem] gap-x-0 gap-y-4 pt-1"
         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
       >
         {notes.map((note, index) => {
@@ -311,7 +312,9 @@ function NotesView({ notes, engine }: { notes: readonly string[]; engine: AudioE
                 engine.playNote(midi);
                 flash(index);
               }}
-              className="press press-tile flex min-w-0 flex-col items-center gap-1.5"
+              // The columns touch and the button pads itself in 4px a side: the bubbles keep their
+              // 8px of air but the tap target is the whole column (seven notes on a 360px phone are about 44px each).
+              className="press press-tile flex min-w-0 flex-col items-center gap-1.5 px-1"
               style={{ transition: 'transform 120ms' }}
             >
               <span
@@ -367,7 +370,7 @@ export function VisualCard({ visual, engine }: { visual: Visual; engine: AudioEn
     <div
       data-testid="explain-visual"
       data-visual={visual.kind}
-      className={`explain-pop rounded-3xl ${tight ? 'p-2.5 short:p-2' : 'px-3 py-3.5 short:py-3'}`}
+      className={`explain-pop rounded-3xl ${tight ? 'p-2.5 short:p-2' : 'px-3 py-3.5 short:py-3 narrow:px-2'}`}
       style={{
         background:
           'radial-gradient(120% 90% at 50% 0%, rgba(255,176,32,0.10), rgba(255,176,32,0) 62%), var(--color-surface)',

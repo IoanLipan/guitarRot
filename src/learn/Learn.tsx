@@ -70,7 +70,7 @@ export function Learn({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 flex-col gap-4 px-5 pt-8 pb-4">
+      <header className="flex shrink-0 flex-col gap-4 px-5 pt-8 pb-4 tight:gap-3 tight:pt-4">
         <h1 className="text-3xl font-black">Learn</h1>
         <div
           role="tablist"

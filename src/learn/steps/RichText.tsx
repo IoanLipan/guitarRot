@@ -39,7 +39,7 @@ export function NoteChip({
   return (
     <span
       data-note-chip={name}
-      className={`mx-[0.06em] inline-flex items-baseline gap-[0.38em] rounded-full border px-[0.55em] py-[0.16em] align-baseline text-[0.88em] leading-none whitespace-nowrap ${className}`}
+      className={`mx-[0.06em] inline-flex items-baseline gap-[0.38em] rounded-full border px-[0.55em] py-[0.16em] align-baseline text-[length:max(12px,0.88em)] leading-none whitespace-nowrap ${className}`}
       style={style}
     >
       <span className="font-black">{name}</span>
