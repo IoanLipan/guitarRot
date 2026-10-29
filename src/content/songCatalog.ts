@@ -1,7 +1,8 @@
 import type { Riff, TabEvent } from './types';
-import type { Song, SongSection } from './songs';
+import { MOVIES_TAG, type Song, type SongSection } from './songs';
 import { melodyRiff } from './melody';
 import { HARD_SONGS } from './hardSongs';
+import { MOVIE_SONGS } from './movieSongs';
 
 const TRAD = (where: string) => `Traditional ${where}; melody and harmony are in the public domain.`;
 
@@ -160,9 +161,9 @@ const odeToJoy = melodySong({
   style: 'Classical',
   bpm: 100,
   attribution: 'Ludwig van Beethoven, Symphony No. 9, fourth movement (1824); in the public domain.',
-  tags: [...MELODY_TAGS, 'classical', 'stepwise'],
+  tags: [...MELODY_TAGS, 'classical', 'stepwise', MOVIES_TAG, 'film'],
   about:
-    'The classic first melody. It opens Mi Mi Fa Sol, Sol Fa Mi Re, and almost never leaps, so the fretting hand barely has to travel.',
+    'The classic first melody, heard in Die Hard (1988). It opens Mi Mi Fa Sol, Sol Fa Mi Re, and almost never leaps, so the fretting hand barely has to travel.',
   notes:
     'E4:1 E4:1 F4:1 G4:1 | G4:1 F4:1 E4:1 D4:1 | C4:1 C4:1 D4:1 E4:1 | E4:1.5 D4:0.5 D4:2 | ' +
     'E4:1 E4:1 F4:1 G4:1 | G4:1 F4:1 E4:1 D4:1 | C4:1 C4:1 D4:1 E4:1 | D4:1.5 C4:0.5 C4:2 | ' +
@@ -545,8 +546,9 @@ export const SONGS: readonly Song[] = [
     bpm: 96,
     source: 'public-domain',
     attribution: TRAD('English ballad, collected from the 17th century onward'),
-    tags: ['waltz', 'modal', 'fingerpicking', '3/4'],
-    about: 'Dorian in 3/4. The trick is keeping the picking even while the chords move underneath.',
+    tags: ['waltz', 'modal', 'fingerpicking', '3/4', MOVIES_TAG, 'film'],
+    about:
+      'On the soundtrack of The Graduate (1967), sung by Simon & Garfunkel; this is the old English tune, not their arrangement. Dorian in 3/4.',
     chart: {
       pattern: 'arpeggio',
       timeSignature: [3, 4],
@@ -733,6 +735,9 @@ export const SONGS: readonly Song[] = [
   maryHadALittleLamb,
   jingleBells,
   auClairDeLaLune,
+
+  // --- Movies: public-domain film classics and film-mood originals (movieSongs.ts)
+  ...MOVIE_SONGS,
 
   // --- Hard: classical pieces and advanced studies (hardSongs.ts) --------
   ...HARD_SONGS,

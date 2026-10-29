@@ -44,6 +44,17 @@ export type Song = {
   riff?: Riff;
 };
 
+/**
+ * The tag that puts a song in the Movies category: music a famous film used
+ * (public domain, so the notes are ours to ship), or an original written in
+ * the mood of a film score. Never a transcription of a film's own score.
+ */
+export const MOVIES_TAG = 'movies';
+
+export function isMovieSong(song: Song): boolean {
+  return song.tags.includes(MOVIES_TAG);
+}
+
 /** `-` in a chart means "hold whatever was ringing". */
 export const HOLD = '-';
 

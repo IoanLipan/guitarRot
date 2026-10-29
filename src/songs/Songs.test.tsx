@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { getToneProfile, type AudioEngine } from '@/audio';
-import { SONGS } from '@/content';
+import { SONGS, isMovieSong } from '@/content';
 
 const metronomes: {
   start: ReturnType<typeof vi.fn>;
@@ -89,6 +89,58 @@ describe('Songs', () => {
     const list = screen.getByTestId('song-list');
     const hardCount = SONGS.filter((song) => song.difficulty === 'hard').length;
     expect(within(list).getAllByRole('listitem')).toHaveLength(hardCount);
+  });
+
+  it('has a Movies toggle that narrows the list to the movie songs and switches off again', async () => {
+    render(<SongsHarness />);
+    const movies = screen.getByTestId('filter-movies');
+    const rows = () => within(screen.getByTestId('song-list')).getAllByRole('listitem');
+    expect(movies).toHaveAttribute('aria-pressed', 'false');
+
+    await userEvent.click(movies);
+    expect(movies).toHaveAttribute('aria-pressed', 'true');
+    expect(rows()).toHaveLength(SONGS.filter(isMovieSong).length);
+    expect(screen.getByTestId('song-row-the-entertainer')).toBeInTheDocument();
+    expect(screen.queryByTestId('song-row-tom-dooley')).not.toBeInTheDocument();
+
+    await userEvent.click(movies);
+    expect(movies).toHaveAttribute('aria-pressed', 'false');
+    expect(rows()).toHaveLength(SONGS.length);
+  });
+
+  it('combines the Movies toggle with a difficulty: Movies + Hard shows the hard movie songs', async () => {
+    render(<SongsHarness />);
+
+    await userEvent.click(screen.getByTestId('filter-movies'));
+    await userEvent.click(screen.getByTestId('filter-hard'));
+
+    const list = screen.getByTestId('song-list');
+    const expected = SONGS.filter((song) => isMovieSong(song) && song.difficulty === 'hard');
+    expect(expected.length).toBeGreaterThan(0);
+    expect(within(list).getAllByRole('listitem')).toHaveLength(expected.length);
+    expect(screen.getByTestId('filter-hard')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('filter-movies')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('finds a movie song by the film it was heard in', async () => {
+    render(<SongsHarness />);
+
+    await userEvent.type(screen.getByTestId('song-search'), 'the shining');
+
+    const rows = within(screen.getByTestId('song-list')).getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('Dies Irae');
+  });
+
+  it('keeps the filter chips in one row that scrolls sideways instead of overflowing a small phone', () => {
+    render(<SongsHarness />);
+
+    const row = screen.getByTestId('filter-row');
+    expect(row).toHaveClass('overflow-x-auto', 'overscroll-x-contain');
+    for (const id of ['filter-all', 'filter-easy', 'filter-medium', 'filter-hard', 'filter-movies']) {
+      expect(row).toContainElement(screen.getByTestId(id));
+      // A chip that can shrink is a chip that gets squeezed instead of scrolled to.
+      expect(screen.getByTestId(id)).toHaveClass('shrink-0');
+    }
   });
 
   it('says so when nothing matches instead of showing an empty list', async () => {

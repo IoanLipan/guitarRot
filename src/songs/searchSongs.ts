@@ -1,17 +1,22 @@
-import { DIFFICULTIES, type Difficulty, type Song } from '@/content';
+import { DIFFICULTIES, isMovieSong, type Difficulty, type Song } from '@/content';
 
 export type DifficultyFilter = Difficulty | 'all';
 
 export type SongFilter = {
   query: string;
   difficulty: DifficultyFilter;
+  /** Only the Movies category: songs tagged `movies`. Combines with the difficulty. */
+  movies: boolean;
 };
 
-export const EMPTY_FILTER: SongFilter = { query: '', difficulty: 'all' };
+export const EMPTY_FILTER: SongFilter = { query: '', difficulty: 'all', movies: false };
 
-/** Every word a song can be found by. */
+/**
+ * Every word a song can be found by. The `about` line is in it so a film's
+ * name finds the song that was heard in that film.
+ */
 function haystack(song: Song): string {
-  return [song.title, song.artist, song.style, song.key, song.difficulty, ...song.tags]
+  return [song.title, song.artist, song.style, song.key, song.difficulty, ...song.tags, song.about]
     .join(' ')
     .toLowerCase();
 }
@@ -35,6 +40,7 @@ export function searchSongs(songs: readonly Song[], filter: SongFilter): Song[] 
 
   const matched = songs.filter((song) => {
     if (filter.difficulty !== 'all' && song.difficulty !== filter.difficulty) return false;
+    if (filter.movies && !isMovieSong(song)) return false;
     const text = haystack(song);
     return words.every((word) => text.includes(word));
   });
