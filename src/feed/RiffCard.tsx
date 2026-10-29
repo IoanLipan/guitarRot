@@ -145,14 +145,18 @@ export function RiffCard({
   const rise = isActive ? 'rise-in' : '';
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 bg-linear-to-b from-surface to-ground px-6 pt-8 pb-6">
-      <div className={`${rise} flex flex-wrap gap-2`} style={stagger(0)}>
+    <div className="flex h-full min-h-0 flex-col gap-4 bg-linear-to-b from-surface to-ground px-6 pt-3 pb-6 tight:gap-3 tight:pb-4">
+      {/* The chips take the row the share icon and the settings gear float on
+          (44px tall, 12px down, 120px in from the right): pr-24 keeps them
+          clear of the pair, and a phone too narrow for all three wraps them
+          rather than sliding them under. */}
+      <div className={`${rise} flex min-h-11 flex-wrap content-center gap-1.5 pr-24`} style={stagger(0)}>
         <Chip>{riff.style}</Chip>
         <Chip>Lvl {riff.level}</Chip>
         <Chip>{riff.bpm} BPM</Chip>
       </div>
 
-      <h2 className={`${rise} text-3xl leading-tight font-black`} style={stagger(1)}>
+      <h2 className={`${rise} text-3xl leading-tight font-black tight:text-2xl`} style={stagger(1)}>
         {riff.title}
       </h2>
 
@@ -162,7 +166,7 @@ export function RiffCard({
         <div
           ref={scrollerRef}
           data-testid="tab-scroller"
-          className="max-h-full w-full overflow-x-auto overscroll-x-contain rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8"
+          className="max-h-full w-full overflow-x-auto overscroll-x-contain rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8 tight:py-2"
         >
           <TabStaff riff={riff} geometry={geometry} showPlayhead playheadRef={playheadRef} />
         </div>
@@ -179,7 +183,7 @@ export function RiffCard({
         </button>
 
         <label className="flex-1">
-          <div className="mb-1.5 flex justify-between text-[11px] font-bold tracking-wider text-ink-dim uppercase">
+          <div className="mb-1.5 flex justify-between text-xs font-bold tracking-wider text-ink-dim uppercase">
             <span>Speed</span>
             <span className="tabular-nums">{Math.round(speed * 100)}%</span>
           </div>
@@ -190,7 +194,7 @@ export function RiffCard({
             step={0.1}
             value={speed}
             onChange={(event) => setSpeed(Number(event.target.value))}
-            className="w-full accent-accent"
+            className="-my-3 block h-11 w-full accent-accent"
             aria-label="Playback speed"
           />
         </label>
@@ -201,7 +205,7 @@ export function RiffCard({
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-surface-2 px-3 py-1.5 text-xs font-bold tracking-wider text-ink-dim uppercase">
+    <span className="rounded-full bg-surface-2 px-3 py-1.5 text-xs font-bold tracking-wider text-ink-dim uppercase narrow:px-2.5">
       {children}
     </span>
   );

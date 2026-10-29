@@ -3,7 +3,7 @@ import { RichText } from './RichText';
 /** The small amber label that tells the learner what kind of screen this is. */
 export function StepKicker({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[11px] font-extrabold tracking-widest text-accent uppercase">{children}</p>
+    <p className="text-xs font-extrabold tracking-widest text-accent uppercase">{children}</p>
   );
 }
 

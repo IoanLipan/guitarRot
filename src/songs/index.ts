@@ -4,6 +4,5 @@ export { SongPlayer } from './SongPlayer';
 export { ChordChart } from './ChordChart';
 export { DifficultyPill } from './DifficultyPill';
 export * from './searchSongs';
-export { ShapesView } from './ShapesView';
-export { ShapeCard } from './ShapeCard';
-export * from './shapes';
+export { FretboardView } from './FretboardView';
+export * from './fretboardPlan';

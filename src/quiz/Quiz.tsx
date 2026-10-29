@@ -66,7 +66,7 @@ export function Quiz({ engine, progress }: { engine: AudioEngine; progress: Prog
 
   return (
     <div
-      className="relative flex h-full min-h-0 flex-col items-center gap-5 overflow-y-auto px-6 pt-8 pb-6"
+      className="relative flex h-full min-h-0 flex-col items-center gap-5 overflow-y-auto px-6 pt-8 pb-6 tight:gap-3 tight:pt-6 tight:pb-4"
       style={{
         background: answered
           ? `radial-gradient(circle at 50% 38%, ${
@@ -102,9 +102,12 @@ export function Quiz({ engine, progress }: { engine: AudioEngine; progress: Prog
         />
       </div>
 
-      <div key={`question-${dealt}`} className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-5">
+      <div key={`question-${dealt}`} className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-5 tight:gap-3">
+        {/* The picture takes whatever height the rest leaves, up to its full
+            size: it used to be fixed, and on a 640px phone it spilled over the
+            progress bar above it. */}
         <div
-          className={`rise-in shrink-0 ${question.kind === 'note' ? 'h-48 w-full' : 'h-56 w-48'}`}
+          className={`rise-in min-h-24 flex-1 ${question.kind === 'note' ? 'max-h-48 w-full' : 'max-h-56 w-48'}`}
           style={stagger(0)}
         >
           <QuizVisual question={question} engine={engine} fit />
@@ -152,7 +155,7 @@ export function Quiz({ engine, progress }: { engine: AudioEngine; progress: Prog
               <button
                 type="button"
                 onClick={nextQuestion}
-                className="press flex items-center justify-center gap-2 rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink"
+                className="press flex min-h-11 items-center justify-center gap-2 rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink"
               >
                 Next question
                 <ArrowRightIcon size={18} />

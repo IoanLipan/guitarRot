@@ -17,24 +17,24 @@ import { PlayPauseIcon } from '@/ui/PlayPauseIcon';
 import { DifficultyPill } from './DifficultyPill';
 import { ChordChart } from './ChordChart';
 import { keyLabel } from './keyLabel';
-import { hasShapes, songShapes } from './shapes';
-import { ShapesView } from './ShapesView';
+import { FretboardView } from './FretboardView';
+import { hasFretboard } from './fretboardPlan';
 
 /** A tapped-out practice loop: the bar you tapped first, and the resulting range. */
 type LoopRange = { anchor: number; start: number; end: number };
 
 /**
  * What the song area shows. A strummed chart is only ever its chart; a riff is
- * its tab or its shapes; an arpeggio chart is its chart, the tab that chart
- * plays, or its shapes.
+ * its tab or its fretboard; an arpeggio chart is its chart, the tab that chart
+ * plays, or its fretboard.
  */
-type SongView = 'chart' | 'tab' | 'shapes';
+type SongView = 'chart' | 'tab' | 'fretboard';
 
-const VIEW_LABELS: Record<SongView, string> = { chart: 'Chart', tab: 'Tab', shapes: 'Shapes' };
+const VIEW_LABELS: Record<SongView, string> = { chart: 'Chart', tab: 'Tab', fretboard: 'Fretboard' };
 
 function viewsFor(song: Song): readonly SongView[] {
-  if (!hasShapes(song)) return song.chart !== undefined ? ['chart'] : ['tab'];
-  return song.chart !== undefined ? ['chart', 'tab', 'shapes'] : ['tab', 'shapes'];
+  if (!hasFretboard(song)) return song.chart !== undefined ? ['chart'] : ['tab'];
+  return song.chart !== undefined ? ['chart', 'tab', 'fretboard'] : ['tab', 'fretboard'];
 }
 
 export function SongPlayer({
@@ -74,7 +74,6 @@ export function SongPlayer({
   const views = useMemo(() => viewsFor(song), [song]);
   const [chosenView, setChosenView] = useState<SongView | null>(null);
   const view = chosenView !== null && views.includes(chosenView) ? chosenView : (views[0] ?? 'tab');
-  const shapes = useMemo(() => songShapes(song), [song]);
   const getBeat = useCallback(() => playerRef.current?.currentBeat() ?? null, []);
 
   // Opening a song starts it, the same way opening a feed card does.
@@ -84,12 +83,15 @@ export function SongPlayer({
     const metronome = createMetronome(barLength);
     playerRef.current = player;
     metronomeRef.current = metronome;
-    player.start();
-    setPlaying(true);
+    // start() answers false if the transport would not run; the button must
+    // not claim otherwise. It also clears the transport, so the click goes
+    // back on it straight after (it stays silent until the metronome is on).
+    const started = player.start() !== false;
+    metronome.sync();
+    setPlaying(started);
 
     return () => {
       player.stop();
-      metronome.stop();
       player.dispose();
       metronome.dispose();
       playerRef.current = null;
@@ -157,7 +159,6 @@ export function SongPlayer({
 
     if (playing) {
       player.stop();
-      metronomeRef.current?.stop();
       setPlaying(false);
       return;
     }
@@ -168,23 +169,22 @@ export function SongPlayer({
     }
     // The toggle may have been raced by an unmount while the count-in ran.
     if (playerRef.current === player) {
-      player.start();
-      if (metronomeOn) metronomeRef.current?.start();
-      setPlaying(true);
+      // start() clears the transport, the click with it: put it back, on or off.
+      const started = player.start() !== false;
+      metronomeRef.current?.sync();
+      setPlaying(started);
     }
     startingRef.current = false;
   }
 
+  // The click is already on the transport (see sync above), so turning it on
+  // or off is only a mute: the riff is never touched. The side effect stays
+  // out of the state updater, which React may run twice.
   function handleMetronomeToggle() {
     tapHaptic();
-    setMetronomeOn((prev) => {
-      const next = !prev;
-      if (playing) {
-        if (next) metronomeRef.current?.start();
-        else metronomeRef.current?.stop();
-      }
-      return next;
-    });
+    const next = !metronomeOn;
+    setMetronomeOn(next);
+    metronomeRef.current?.setOn(next);
   }
 
   /**
@@ -210,9 +210,9 @@ export function SongPlayer({
       : chordByName(chartBars(song.chart)[activeBar]?.chordName ?? '');
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 bg-linear-to-b from-surface to-ground px-5 pt-4 pb-5">
+    <div className="flex h-full min-h-0 flex-col gap-3 bg-linear-to-b from-surface to-ground px-5 pt-3 pb-5 tight:gap-2 tight:pb-3">
       {/* pr-14 keeps the share pill clear of the shell's settings gear,
-          which floats over this pane at the top right. */}
+          which floats over this pane at the top right (pt-3 puts the row level with it). */}
       <div className="flex shrink-0 items-center justify-between gap-3 pr-14">
         <button
           type="button"
@@ -227,13 +227,28 @@ export function SongPlayer({
       </div>
 
       <div className="shrink-0">
-        <h2 className="text-2xl leading-tight font-black">{song.title}</h2>
-        <p className="mt-0.5 text-sm text-ink-dim">{song.artist}</p>
+        {/* Two lines at most: a long title ("Prelude in D minor (BWV 999)") is the first thing to eat a small screen.
+            In the fretboard view of a tight one it is one, and the board gets the other line. */}
+        <h2
+          className={`line-clamp-2 text-2xl leading-tight font-black tight:text-xl ${
+            view === 'fretboard' ? 'tight:line-clamp-1' : ''
+          }`}
+        >
+          {song.title}
+        </h2>
+        <p className={`mt-0.5 truncate text-sm text-ink-dim ${view === 'fretboard' ? 'tight:hidden' : ''}`}>
+          {song.artist}
+        </p>
       </div>
 
+      {/* On a short phone the chips become one row that slides sideways (they bleed to the
+          screen edges so it is plain they do), instead of wrapping onto a second line;
+          and in the fretboard view of a tight one they go altogether, as do the artist line and
+          the "Looping bars" row below (the view's own toggle shows it is looping): the board
+          needs the room. */}
       <div
-        className={`flex shrink-0 flex-wrap gap-1.5 ${
-          view === 'shapes' ? '[@media(max-height:700px)]:hidden' : ''
+        className={`flex shrink-0 flex-wrap gap-1.5 short:-mx-5 short:flex-nowrap short:overflow-x-auto short:px-5 short:[scrollbar-width:none] short:[&::-webkit-scrollbar]:hidden short:[&>*]:shrink-0 short:[&>*]:whitespace-nowrap ${
+          view === 'fretboard' ? '[@media(max-height:700px)]:hidden' : ''
         }`}
       >
         <DifficultyPill difficulty={song.difficulty} />
@@ -242,17 +257,18 @@ export function SongPlayer({
         <Chip>{song.bpm} BPM</Chip>
       </div>
 
-      {/* On a short phone the shapes need the room more than the chips and the blurb do. */}
-      <p
-        className={`shrink-0 text-[13px] leading-relaxed text-ink-dim ${
-          view === 'shapes' ? '[@media(max-height:700px)]:hidden' : ''
-        }`}
-      >
+      {/* The blurb is the first thing to go: two lines on a short phone, none on a tight one,
+          where the staff and the fretboard need the room more. */}
+      <p className="shrink-0 text-[13px] leading-relaxed text-ink-dim short:line-clamp-2 tight:hidden">
         {song.about}
       </p>
 
       {loopRange !== null && (
-        <div className="flex shrink-0 items-center gap-2 text-xs font-bold text-ink-dim">
+        <div
+          className={`flex shrink-0 items-center gap-2 text-xs font-bold text-ink-dim ${
+            view === 'fretboard' ? 'tight:hidden' : ''
+          }`}
+        >
           <span data-testid="loop-range-label">
             Looping bars {loopRange.start + 1}–{loopRange.end + 1}
           </span>
@@ -316,10 +332,9 @@ export function SongPlayer({
             loopRange={loopRange}
             onBarTap={handleBarTap}
           />
-        ) : view === 'shapes' ? (
-          <ShapesView
-            shapes={shapes}
-            events={riff.events}
+        ) : view === 'fretboard' ? (
+          <FretboardView
+            riff={riff}
             engine={engine}
             playing={playing}
             getBeat={getBeat}
@@ -331,7 +346,7 @@ export function SongPlayer({
             <div
               ref={tabScrollerRef}
               data-testid="tab-scroller"
-              className="max-h-full w-full overflow-x-auto rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8"
+              className="max-h-full w-full overflow-x-auto rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8 tight:py-2"
             >
               <TabStaff riff={riff} geometry={geometry} showPlayhead playheadRef={playheadRef} />
             </div>
@@ -365,7 +380,7 @@ export function SongPlayer({
         </button>
 
         <label className="min-w-0 flex-1">
-          <div className="mb-1.5 flex justify-between text-[11px] font-bold tracking-wider text-ink-dim uppercase">
+          <div className="mb-1.5 flex justify-between text-xs font-bold tracking-wider text-ink-dim uppercase">
             <span>Speed</span>
             <span className="tabular-nums">{Math.round(speed * 100)}%</span>
           </div>
@@ -376,14 +391,14 @@ export function SongPlayer({
             step={0.1}
             value={speed}
             onChange={(event) => setSpeed(Number(event.target.value))}
-            className="w-full accent-accent"
+            className="-my-3 block h-11 w-full accent-accent"
             aria-label="Playback speed"
           />
         </label>
 
-        {/* The shapes view already enlarges the current chord. */}
-        {currentChord !== undefined && view !== 'shapes' && (
-          <div className="w-16 shrink-0" data-testid="current-chord">
+        {/* The fretboard view already shows where the fingers go. */}
+        {currentChord !== undefined && view !== 'fretboard' && (
+          <div className="w-16 shrink-0 max-[339px]:w-12" data-testid="current-chord">
             <Fretboard
               orientation="vertical"
               fretRange={chordShapeToFretboard(currentChord).fretRange}
@@ -400,7 +415,7 @@ export function SongPlayer({
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-bold tracking-wider text-ink-dim uppercase">
+    <span className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-bold tracking-wider text-ink-dim uppercase">
       {children}
     </span>
   );

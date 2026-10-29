@@ -94,11 +94,17 @@ export function Feed({
       {items.map((item, index) => (
         <div key={item.id} {...cardProps(index)} className="relative h-full snap-start">
           {/* One share control for every kind of card, rather than three.
-              Sits below the settings gear so the two never overlap. */}
+              An icon beside the shell's settings gear, on the same row: stacked
+              under the gear it floated over whatever came next (the title, the
+              chord name, the quiz picture) on a small phone. Every card leaves
+              its first 56px to the pair: the riff's chips and the quiz's pill
+              share the row, the chord card starts below it.
+              The pane is already below the safe area, so no inset here. */}
           <ShareButton
             target={shareTargetOf(item)}
             title={shareTitleOf(item)}
-            className="absolute top-[calc(env(safe-area-inset-top)+3.5rem)] right-4 z-20 bg-ground/55 backdrop-blur-md"
+            iconOnly
+            className="absolute top-3 right-[4.25rem] z-20 bg-ground/55 backdrop-blur-md"
           />
           {item.kind === 'riff' && (
             <RiffCard riff={item.riff} engine={engine} isActive={index === activeIndex} />

@@ -94,7 +94,7 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
           style={stagger(1, 60)}
           className="rise-in press press-soft glow-breathe flex flex-col gap-3 rounded-3xl bg-linear-to-br from-accent to-accent-deep p-5 text-left text-ground shadow-[0_10px_30px_rgba(255,176,32,0.22)]"
         >
-          <span className="text-[11px] font-extrabold tracking-widest uppercase opacity-70">
+          <span className="text-xs font-extrabold tracking-widest uppercase opacity-70">
             {doneCount === 0 ? 'Start here' : 'Continue'} · Lesson {nextNumber}
           </span>
           <span className="flex flex-col gap-1">
@@ -171,7 +171,7 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
                       {status === 'next' && (
                         <span
                           aria-hidden="true"
-                          className="shrink-0 rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-extrabold tracking-wider text-accent uppercase"
+                          className="shrink-0 rounded-full bg-accent/15 px-2.5 py-1 text-xs font-extrabold tracking-wider text-accent uppercase"
                         >
                           Next
                         </span>

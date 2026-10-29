@@ -31,16 +31,13 @@ const ANIMATION_CLASSES = [
   'glow-breathe',
   'morph-icon',
   'fb-dot-pop',
+  'fb-dot-emph',
   'playhead-glow',
   'tuner-needle',
   'tuner-zone',
   'sheet-panel',
   'sheet-backdrop',
   'tab-indicator',
-  'shape-card',
-  'shape-halo',
-  'pluck-line',
-  'pluck-ring',
 ];
 
 function sources(dir: string): string[] {

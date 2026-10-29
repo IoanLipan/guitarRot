@@ -39,7 +39,7 @@ export function AnswerGrid({
         const isCorrectPick = isPicked && option === correctAnswer;
         const isWrongPick = isPicked && option !== correctAnswer;
 
-        const classes = ['press press-tile rounded-2xl border-2 py-5 text-center text-xl font-extrabold'];
+        const classes = ['press press-tile rounded-2xl border-2 py-5 text-center text-xl font-extrabold tight:py-4'];
         if (isCorrectPick) {
           classes.push(
             'answer-pop answer-ring border-[var(--color-good)] bg-[var(--color-good)] text-[var(--color-ground)]',
