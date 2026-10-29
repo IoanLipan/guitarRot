@@ -83,12 +83,15 @@ export function SongPlayer({
     const metronome = createMetronome(barLength);
     playerRef.current = player;
     metronomeRef.current = metronome;
-    player.start();
-    setPlaying(true);
+    // start() answers false if the transport would not run; the button must
+    // not claim otherwise. It also clears the transport, so the click goes
+    // back on it straight after (it stays silent until the metronome is on).
+    const started = player.start() !== false;
+    metronome.sync();
+    setPlaying(started);
 
     return () => {
       player.stop();
-      metronome.stop();
       player.dispose();
       metronome.dispose();
       playerRef.current = null;
@@ -156,7 +159,6 @@ export function SongPlayer({
 
     if (playing) {
       player.stop();
-      metronomeRef.current?.stop();
       setPlaying(false);
       return;
     }
@@ -167,23 +169,22 @@ export function SongPlayer({
     }
     // The toggle may have been raced by an unmount while the count-in ran.
     if (playerRef.current === player) {
-      player.start();
-      if (metronomeOn) metronomeRef.current?.start();
-      setPlaying(true);
+      // start() clears the transport, the click with it: put it back, on or off.
+      const started = player.start() !== false;
+      metronomeRef.current?.sync();
+      setPlaying(started);
     }
     startingRef.current = false;
   }
 
+  // The click is already on the transport (see sync above), so turning it on
+  // or off is only a mute: the riff is never touched. The side effect stays
+  // out of the state updater, which React may run twice.
   function handleMetronomeToggle() {
     tapHaptic();
-    setMetronomeOn((prev) => {
-      const next = !prev;
-      if (playing) {
-        if (next) metronomeRef.current?.start();
-        else metronomeRef.current?.stop();
-      }
-      return next;
-    });
+    const next = !metronomeOn;
+    setMetronomeOn(next);
+    metronomeRef.current?.setOn(next);
   }
 
   /**

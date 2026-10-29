@@ -23,8 +23,8 @@ vi.mock('@/audio', async (importOriginal) => {
       totalBeats: 16,
     })),
     createMetronome: vi.fn(() => ({
-      start: vi.fn(),
-      stop: vi.fn(),
+      sync: vi.fn(),
+      setOn: vi.fn(),
       playCountIn: vi.fn(() => Promise.resolve()),
       dispose: vi.fn(),
     })),

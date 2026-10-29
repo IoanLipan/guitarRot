@@ -14,7 +14,12 @@ type FakePlayer = {
   stop: ReturnType<typeof vi.fn>;
   dispose: ReturnType<typeof vi.fn>;
 };
-type FakeMetronome = FakePlayer & { playCountIn: ReturnType<typeof vi.fn> };
+type FakeMetronome = {
+  sync: ReturnType<typeof vi.fn>;
+  setOn: ReturnType<typeof vi.fn>;
+  dispose: ReturnType<typeof vi.fn>;
+  playCountIn: ReturnType<typeof vi.fn>;
+};
 
 /** Every player ever made, and how many are alive (created, not yet disposed) right now. */
 const audio = vi.hoisted(() => ({
@@ -48,8 +53,8 @@ vi.mock('@/audio', async (importOriginal) => {
     }),
     createMetronome: vi.fn(() => {
       const metronome = {
-        start: vi.fn(),
-        stop: vi.fn(),
+        sync: vi.fn(),
+        setOn: vi.fn(),
         playCountIn: vi.fn(() => Promise.resolve()),
         dispose: vi.fn(),
       };
@@ -489,7 +494,6 @@ describe('LessonView: riff and song steps', () => {
     expect(screen.getByText('Next.')).toBeInTheDocument();
     expect(player.stop).toHaveBeenCalled();
     expect(player.dispose).toHaveBeenCalledTimes(1);
-    expect(metronome.stop).toHaveBeenCalled();
     expect(metronome.dispose).toHaveBeenCalledTimes(1);
     expect(audio.alive).toBe(0);
   });
@@ -548,7 +552,10 @@ describe('LessonView: riff and song steps', () => {
 
     expect(metronome.playCountIn).toHaveBeenCalledTimes(1);
     expect(player.start).toHaveBeenCalledTimes(1);
-    expect(metronome.start).toHaveBeenCalledTimes(1);
+    expect(metronome.setOn).toHaveBeenCalledWith(true);
+    // start() wipes the transport, so the click is put back right after it.
+    expect(metronome.sync).toHaveBeenCalledTimes(1);
+    expect(player.start.mock.invocationCallOrder[0]).toBeLessThan(metronome.sync.mock.invocationCallOrder[0]!);
   });
 });
 
