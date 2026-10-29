@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { getToneProfile, type AudioEngine } from '@/audio';
 
 /** Motion in the Songs tab: what animates, and that the animation helpers are asked to. */
 const playback = vi.hoisted(() => ({ beat: 0 }));
-const motion = vi.hoisted(() => ({ ripple: vi.fn(), strumFx: vi.fn() }));
+const motion = vi.hoisted(() => ({ ripple: vi.fn(), strumFx: vi.fn(), pingAt: vi.fn() }));
 
 vi.mock('@/audio', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/audio')>();
@@ -33,7 +33,7 @@ vi.mock('@/audio', async (importOriginal) => {
 
 vi.mock('@/ui/motion', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/ui/motion')>();
-  return { ...actual, ripple: motion.ripple, strumFx: motion.strumFx };
+  return { ...actual, ripple: motion.ripple, strumFx: motion.strumFx, pingAt: motion.pingAt };
 });
 
 const { Songs } = await import('./Songs');
@@ -63,6 +63,7 @@ beforeEach(() => {
   playback.beat = 0;
   motion.ripple.mockClear();
   motion.strumFx.mockClear();
+  motion.pingAt.mockClear();
 });
 
 afterEach(() => {
@@ -122,13 +123,13 @@ describe('the player', () => {
     const pill = screen.getByTestId('view-pill');
     const at = () => pill.style.transform;
 
-    // Three views (Chart, Tab, Shapes): the pill is a third of the track, and rides over by whole pills.
+    // Three views (Chart, Tab, Fretboard): the pill is a third of the track, and rides over by whole pills.
     expect(pill.style.width).toMatch(/^calc\(0\.3333\d* \* \(100% - 1rem\)\)$/);
     expect(at()).toContain('calc(0 * (100% + 0.25rem))');
 
-    await userEvent.click(screen.getByTestId('view-shapes'));
+    await userEvent.click(screen.getByTestId('view-fretboard'));
     expect(at()).toContain('calc(2 * (100% + 0.25rem))');
-    expect(screen.getByTestId('view-shapes')).toHaveClass('text-ground');
+    expect(screen.getByTestId('view-fretboard')).toHaveClass('text-ground');
     expect(screen.getByTestId('view-chart')).toHaveClass('text-ink-dim');
     expect(pill).toHaveClass('tab-indicator');
   });
@@ -149,50 +150,43 @@ describe('the player', () => {
   });
 });
 
-describe('the shapes strip', () => {
-  it('shivers the strings and ripples the card when a shape is tapped, and still plays it', async () => {
-    render(<Harness initial="slow-burn" />);
-    await userEvent.click(screen.getByTestId('view-shapes'));
-    const card = screen.getByTestId('shape-card-0');
-    const strum = within(card).getByRole('button', { name: /tap to hear/ });
+describe('the fretboard view', () => {
+  const emphasis = (id: string) => screen.getByTestId(id).parentElement;
 
-    await userEvent.click(strum);
-    expect(motion.strumFx).toHaveBeenCalledTimes(1);
-    expect(motion.strumFx.mock.calls[0]?.[0]).toBe(strum);
-    expect(strum).toHaveClass('press', 'fx-host');
-  });
-
-  it('eases the current card up in size and fades its ring in, rather than jumping', async () => {
+  it('eases the lit dot up in size and the rest back, instead of jumping', async () => {
     render(<Harness initial="bach-prelude-bwv999" />);
-    await userEvent.click(screen.getByTestId('view-shapes'));
+    await userEvent.click(screen.getByTestId('view-fretboard'));
 
-    playback.beat = 0.2;
-    await waitFor(() => expect(screen.getByTestId('shape-card-0')).toHaveAttribute('data-active', 'true'));
+    playback.beat = 0.05;
+    await waitFor(() => expect(emphasis('marker-s2f0')).toHaveAttribute('data-emphasis', 'lit'));
 
-    const card = screen.getByTestId('shape-card-0');
-    // Size is the one transform: the scale utility, eased by .shape-card in index.css.
-    expect(card).toHaveClass('shape-card', 'scale-[1.14]');
-    expect(card.className).not.toMatch(/transition-/);
-    // The ring is its own layer that fades, so no box-shadow is animated.
-    expect(screen.getByTestId('shape-halo-0')).toHaveAttribute('data-on', 'true');
-    expect(screen.getByTestId('shape-halo-0')).toHaveClass('shape-halo');
-    expect(screen.getByTestId('shape-halo-1')).toHaveAttribute('data-on', 'false');
-    expect(screen.getByTestId('shape-card-1')).not.toHaveClass('scale-[1.14]');
+    // Size and fade are the only things that move, and the class is what eases them (index.css).
+    expect(emphasis('marker-s2f0')).toHaveClass('fb-dot-emph');
+    expect(emphasis('marker-s2f0')?.style.transform).toBe('scale(1.3)');
+    expect(emphasis('marker-s5f1')?.style.opacity).toBe('0.3');
+    expect(emphasis('marker-s4f3')?.style.opacity).toBe('0.85');
   });
 
-  it('flashes a string again each time it is struck, even twice running', async () => {
-    // Carcassi No. 7 repeats an A on the same string every sixteenth.
-    render(<Harness initial="carcassi-etude-op60-7" />);
-    await userEvent.click(screen.getByTestId('view-shapes'));
-    const card = () => screen.getByTestId('shape-card-0');
-    const lit = () => card().querySelector<SVGElement>('[data-pluck-string="3"][data-lit="true"]');
+  it('pings the dot as its note is struck, and only then', async () => {
+    render(<Harness initial="bach-prelude-bwv999" />);
+    await userEvent.click(screen.getByTestId('view-fretboard'));
 
-    playback.beat = 0.3 * 0.25 + 0.25; // the first A
-    await waitFor(() => expect(lit()).not.toBeNull());
-    const first = lit()?.dataset.pulse;
-    expect(['a', 'b']).toContain(first);
+    playback.beat = 0.05;
+    await waitFor(() => expect(motion.pingAt).toHaveBeenCalled());
+    const struck = motion.pingAt.mock.calls.length;
+    expect(motion.pingAt.mock.calls.at(-1)?.[0]).toBe(screen.getByTestId('fretboard'));
 
-    playback.beat = 0.25 * 2 + 0.05; // the next A, on the same string
-    await waitFor(() => expect(lit()?.dataset.pulse).not.toBe(first));
+    playback.beat = 0.1; // still the same note
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(motion.pingAt).toHaveBeenCalledTimes(struck);
+
+    playback.beat = 0.3; // the next one
+    await waitFor(() => expect(motion.pingAt.mock.calls.length).toBeGreaterThan(struck));
+  });
+
+  it('presses the loop toggle with the shared feel', async () => {
+    render(<Harness initial="bach-prelude-bwv999" />);
+    await userEvent.click(screen.getByTestId('view-fretboard'));
+    expect(screen.getByTestId('fretboard-loop')).toHaveClass('press');
   });
 });

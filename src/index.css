@@ -470,6 +470,19 @@ html[data-motion-dir='back']::view-transition-new(tab-content) {
   animation: dot-pop 340ms var(--motion-pop) backwards;
 }
 
+/*
+ * A dot on a song's board eases between lit (grown), next, and dim. The
+ * emphasis is inline style (see Fretboard's EMPHASIS_STYLE); the dot grows
+ * about its own middle, and only transform and opacity move.
+ */
+.fb-dot-emph {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform 160ms var(--motion-pop),
+    opacity 160ms ease-out;
+}
+
 /* A string is a group the strum helper shakes; it turns about its own middle. */
 .fb-string {
   transform-box: fill-box;
@@ -482,52 +495,6 @@ html[data-motion-dir='back']::view-transition-new(tab-content) {
   transition: opacity 260ms ease-out;
 }
 [data-playing='true'] .playhead-glow { opacity: 1; }
-
-/* ---- Songs: the shapes strip ---- */
-/* The bar being played grows (Tailwind's scale utility sets `scale`) and settles. */
-.shape-card {
-  transition: scale 260ms var(--motion-slide);
-}
-
-/* Its ring and glow are a layer of their own, so only opacity moves. */
-.shape-halo {
-  opacity: 0;
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow:
-    0 0 0 2px var(--color-accent),
-    0 10px 28px rgba(255, 176, 32, 0.22);
-  transition: opacity 220ms ease-out;
-}
-.shape-halo[data-on='true'] { opacity: 1; }
-
-/*
- * A string that is being plucked flashes and settles. ShapesView flips
- * `data-lit`, and `data-pulse` between a and b on each new note: the two
- * animations are identical, and switching between them is how a note struck
- * twice on the same string flashes twice.
- */
-@keyframes pluck-flash-a { from { opacity: 1; } }
-@keyframes pluck-flash-b { from { opacity: 1; } }
-@keyframes pluck-ring-a { from { opacity: 0.2; transform: scale(1.7); } }
-@keyframes pluck-ring-b { from { opacity: 0.2; transform: scale(1.7); } }
-
-.pluck-line {
-  opacity: 0;
-  transition: opacity 140ms ease-out;
-}
-.pluck-line[data-lit='true'] { opacity: 0.6; }
-.pluck-line[data-lit='true'][data-pulse='a'] { animation: pluck-flash-a 260ms ease-out; }
-.pluck-line[data-lit='true'][data-pulse='b'] { animation: pluck-flash-b 260ms ease-out; }
-
-.pluck-ring {
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: opacity 140ms ease-out;
-}
-.pluck-ring[data-lit='true'] { opacity: 1; }
-.pluck-ring[data-lit='true'][data-pulse='a'] { animation: pluck-ring-a 220ms var(--motion-pop); }
-.pluck-ring[data-lit='true'][data-pulse='b'] { animation: pluck-ring-b 220ms var(--motion-pop); }
 
 /* ---- Tuner ---- */
 @keyframes lit-pulse {

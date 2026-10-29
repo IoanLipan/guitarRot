@@ -219,6 +219,69 @@ describe('Fretboard', () => {
     });
   });
 
+  describe('emphasis', () => {
+    const markers = [
+      { stringIndex: 0, fret: 3, emphasis: 'lit' as const },
+      { stringIndex: 1, fret: 3, emphasis: 'next' as const },
+      { stringIndex: 2, fret: 3, emphasis: 'dim' as const },
+      { stringIndex: 3, fret: 3 },
+    ];
+    const group = (id: string) => screen.getByTestId(id).parentElement as HTMLElement;
+
+    it('grows the lit dot with a glow, rings the next one, and fades the rest', () => {
+      render(<Fretboard orientation="horizontal" fretRange={[0, 5]} markers={markers} />);
+
+      expect(group('marker-s0f3')).toHaveAttribute('data-emphasis', 'lit');
+      expect(group('marker-s0f3').style.transform).toBe('scale(1.3)');
+      expect(group('marker-s0f3').querySelectorAll('circle')).toHaveLength(2);
+
+      expect(group('marker-s1f3')).toHaveAttribute('data-emphasis', 'next');
+      const ring = group('marker-s1f3').querySelector('circle[fill="none"]');
+      expect(ring).toHaveAttribute('stroke', 'var(--color-ink)');
+      expect(group('marker-s1f3').querySelectorAll('circle')).toHaveLength(2);
+
+      expect(group('marker-s2f3')).toHaveAttribute('data-emphasis', 'dim');
+      expect(Number(group('marker-s2f3').style.opacity)).toBeLessThan(0.5);
+      expect(group('marker-s2f3').querySelectorAll('circle')).toHaveLength(1);
+    });
+
+    it('lets the dot ease between states, and draws a dot without emphasis exactly as before', () => {
+      render(<Fretboard orientation="horizontal" fretRange={[0, 5]} markers={markers} />);
+      expect(group('marker-s0f3')).toHaveClass('fb-dot-emph');
+      expect(group('marker-s3f3')).not.toHaveClass('fb-dot-emph');
+      expect(group('marker-s3f3')).not.toHaveAttribute('data-emphasis');
+      expect(group('marker-s3f3')).not.toHaveAttribute('style');
+      expect(group('marker-s3f3').querySelectorAll('circle')).toHaveLength(1);
+    });
+
+    it('works on an open string too: the ring is lit, not a solid dot', () => {
+      render(
+        <Fretboard
+          orientation="horizontal"
+          fretRange={[0, 5]}
+          markers={[{ stringIndex: 2, fret: 0, color: '#ff9f43', emphasis: 'lit' }]}
+        />,
+      );
+      expect(group('marker-s2f0')).toHaveAttribute('data-emphasis', 'lit');
+      expect(screen.getByTestId('marker-s2f0').previousElementSibling).toHaveAttribute('fill', 'none');
+    });
+  });
+
+  it('puts the high e string at the top and the low E at the bottom, like the tab', () => {
+    render(
+      <Fretboard
+        orientation="horizontal"
+        fretRange={[0, 5]}
+        markers={[
+          { stringIndex: 0, fret: 1 },
+          { stringIndex: 5, fret: 1 },
+        ]}
+      />,
+    );
+    const y = (id: string) => Number(screen.getByTestId(id).getAttribute('y'));
+    expect(y('marker-s5f1')).toBeLessThan(y('marker-s0f1'));
+  });
+
   it('shrinks a long label so "Sol" still fits inside its dot', () => {
     render(
       <Fretboard
