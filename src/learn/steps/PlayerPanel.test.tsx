@@ -1,9 +1,21 @@
+import { StrictMode } from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getToneProfile, type AudioEngine } from '@/audio';
 import { RIFFS } from '@/content';
 
-const world = vi.hoisted(() => ({ beat: 0 }));
+const world = vi.hoisted(() => ({
+  beat: 0,
+  /** Every player and metronome the panel has made, newest last. */
+  players: [] as { start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn> }[],
+  metronomes: [] as {
+    sync: ReturnType<typeof vi.fn>;
+    setOn: ReturnType<typeof vi.fn>;
+    playCountIn: ReturnType<typeof vi.fn>;
+  }[],
+  /** What the next players' start() answers. */
+  startAnswer: true,
+}));
 
 vi.mock('@capacitor/haptics', () => ({
   Haptics: { impact: vi.fn(), notification: vi.fn() },
@@ -15,23 +27,31 @@ vi.mock('@/audio', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/audio')>();
   return {
     ...actual,
-    createRiffPlayer: vi.fn(() => ({
-      start: vi.fn(() => true),
-      stop: vi.fn(),
-      dispose: vi.fn(),
-      isPlaying: vi.fn(() => true),
-      setSpeed: vi.fn(),
-      progress: vi.fn(() => 0),
-      currentBeat: vi.fn(() => world.beat),
-      setLoopRange: vi.fn(),
-      totalBeats: 8,
-    })),
-    createMetronome: vi.fn(() => ({
-      start: vi.fn(),
-      stop: vi.fn(),
-      playCountIn: vi.fn(() => Promise.resolve()),
-      dispose: vi.fn(),
-    })),
+    createRiffPlayer: vi.fn(() => {
+      const player = {
+        start: vi.fn(() => world.startAnswer),
+        stop: vi.fn(),
+        dispose: vi.fn(),
+        isPlaying: vi.fn(() => true),
+        setSpeed: vi.fn(),
+        progress: vi.fn(() => 0),
+        currentBeat: vi.fn(() => world.beat),
+        setLoopRange: vi.fn(),
+        totalBeats: 8,
+      };
+      world.players.push(player);
+      return player;
+    }),
+    createMetronome: vi.fn(() => {
+      const metronome = {
+        sync: vi.fn(),
+        setOn: vi.fn(),
+        playCountIn: vi.fn(() => Promise.resolve()),
+        dispose: vi.fn(),
+      };
+      world.metronomes.push(metronome);
+      return metronome;
+    }),
   };
 });
 
@@ -147,5 +167,96 @@ describe('PlayerPanel tab staff', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Play' }));
     });
     expect(screen.getByRole('button', { name: 'Stop' }).querySelector('svg')).not.toBeNull();
+  });
+});
+
+describe('PlayerPanel metronome', () => {
+  beforeEach(() => {
+    world.beat = 0;
+    world.players.length = 0;
+    world.metronomes.length = 0;
+    world.startAnswer = true;
+  });
+  afterEach(cleanup);
+
+  const click = async (target: HTMLElement) => {
+    await act(async () => {
+      fireEvent.click(target);
+    });
+  };
+
+  it('puts the click back on the transport right after the player starts', async () => {
+    render(<PlayerPanel riff={riff} title="Warm-up" engine={fakeEngine()} />);
+    const player = world.players[0]!;
+    const metronome = world.metronomes[0]!;
+    // Nothing plays by itself, so nothing is on the transport yet.
+    expect(metronome.sync).not.toHaveBeenCalled();
+
+    await click(screen.getByTestId('player-toggle'));
+
+    expect(player.start).toHaveBeenCalledTimes(1);
+    expect(metronome.sync).toHaveBeenCalledTimes(1);
+    expect(player.start.mock.invocationCallOrder[0]).toBeLessThan(metronome.sync.mock.invocationCallOrder[0]!);
+  });
+
+  it('counts in, then starts the riff and puts the click back, on every play after a stop', async () => {
+    render(<PlayerPanel riff={riff} title="Warm-up" engine={fakeEngine()} />);
+    const player = world.players[0]!;
+    const metronome = world.metronomes[0]!;
+    await click(screen.getByTestId('metronome-toggle'));
+
+    for (let round = 1; round <= 2; round += 1) {
+      await click(screen.getByRole('button', { name: 'Play' }));
+      await click(screen.getByRole('button', { name: 'Stop' }));
+
+      expect(player.start, `round ${round}`).toHaveBeenCalledTimes(round);
+      expect(metronome.sync, `round ${round}`).toHaveBeenCalledTimes(round);
+      expect(metronome.playCountIn, `round ${round}`).toHaveBeenCalledTimes(round);
+      const at = round - 1;
+      expect(metronome.playCountIn.mock.invocationCallOrder[at]).toBeLessThan(player.start.mock.invocationCallOrder[at]!);
+      expect(player.start.mock.invocationCallOrder[at]).toBeLessThan(metronome.sync.mock.invocationCallOrder[at]!);
+    }
+  });
+
+  it('turns the click on and off mid-playback without stopping or restarting the riff', async () => {
+    render(<PlayerPanel riff={riff} title="Warm-up" engine={fakeEngine()} />);
+    const player = world.players[0]!;
+    const metronome = world.metronomes[0]!;
+    await click(screen.getByTestId('player-toggle'));
+
+    await click(screen.getByTestId('metronome-toggle'));
+    await click(screen.getByTestId('metronome-toggle'));
+
+    expect(metronome.setOn.mock.calls).toEqual([[true], [false]]);
+    expect(metronome.playCountIn).not.toHaveBeenCalled();
+    expect(player.start).toHaveBeenCalledTimes(1);
+    expect(player.stop).not.toHaveBeenCalled();
+    expect(metronome.sync).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Stop' })).toBeInTheDocument();
+  });
+
+  it('turns the click on or off once per tap, even where React runs state updaters twice', async () => {
+    render(
+      <StrictMode>
+        <PlayerPanel riff={riff} title="Warm-up" engine={fakeEngine()} />
+      </StrictMode>,
+    );
+    // StrictMode mounts the panel twice; the live metronome is the last made.
+    const metronome = world.metronomes.at(-1)!;
+
+    await click(screen.getByTestId('metronome-toggle'));
+
+    expect(metronome.setOn).toHaveBeenCalledTimes(1);
+    expect(metronome.setOn).toHaveBeenCalledWith(true);
+  });
+
+  it('does not claim to play when the player could not start', async () => {
+    world.startAnswer = false;
+    render(<PlayerPanel riff={riff} title="Warm-up" engine={fakeEngine()} />);
+
+    await click(screen.getByTestId('player-toggle'));
+
+    expect(world.players[0]!.start).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
   });
 });

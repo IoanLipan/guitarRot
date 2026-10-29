@@ -15,6 +15,10 @@ export type RiffPlayer = {
    * Starts the loop from the top. Checks that the transport really is running
    * afterwards and tries once more if it is not; returns whether it is. A
    * `false` has already been reported with `console.warn`.
+   *
+   * Clears everything scheduled on the global transport, so anything else that
+   * lives there (the metronome's click) has to be put back right after:
+   * `metronome.sync()`.
    */
   start(): boolean;
   stop(): void;
@@ -40,7 +44,8 @@ export type RiffPlayer = {
    * Restricts playback to `[startBeat, endBeat)` and jumps there right
    * away — practicing a section means going straight to it, not waiting for
    * the loop to come back around. `null` for both bounds restores the full
-   * riff (also jumping back to its start).
+   * riff (also jumping back to its start). The range outlives a `stop()`: the
+   * next `start()` begins at its start.
    */
   setLoopRange(startBeat: number | null, endBeat: number | null): void;
   readonly totalBeats: number;
@@ -80,6 +85,14 @@ export function createRiffPlayer(
   part.loopEnd = riffLoopEnd(riff);
 
   /**
+   * The range being looped, as the strings handed to Tone: reading it back from
+   * the part would give seconds, which depend on the tempo at that moment.
+   * A restart goes to the start of this range, not to the top of the riff.
+   */
+  let rangeStart: string | number = 0;
+  let rangeEnd: string | number = riffLoopEnd(riff);
+
+  /**
    * Tone's transport keeps its own timeline, and stopping a part at the wrong
    * instant can land microscopically past zero — a real crash seen in the
    * feed was `RangeError: Value must be within [0, Infinity], got:
@@ -105,12 +118,23 @@ export function createRiffPlayer(
   function begin(): void {
     transport.stop();
     transport.cancel();
-    transport.position = 0;
     transport.bpm.value = speedToBpm(riff.bpm, speed);
     transport.loop = true;
-    transport.loopStart = 0;
-    transport.loopEnd = part.loopEnd;
-    part.start(0);
+    transport.loopStart = rangeStart;
+    transport.loopEnd = rangeEnd;
+    transport.position = rangeStart;
+    // A Part only starts if its own state timeline does not already say it is
+    // started at that tick, and stop() leaves the "started at 0" entry behind
+    // (it only adds "stopped at <now>"). Without this the second start(0) is
+    // ignored, transport.cancel() above has already removed the notes, and the
+    // transport runs on in silence: isPlaying() is true, nothing is heard.
+    part.cancel(0);
+    // Offset 0, not the part's default of its loop start: the transport was put
+    // at the start of the range above, so the part's clock has to be the
+    // transport's own, exactly as after setLoopRange() on a running player.
+    // The default would shift the notes by the range's start and wrap them at
+    // the wrong beat.
+    part.start(0, 0);
     transport.start();
   }
 
@@ -120,10 +144,10 @@ export function createRiffPlayer(
     start() {
       // Swallowing a failure here once left a card reading "Pause" over a
       // transport that never ran, so the outcome is checked, not assumed:
-      // one retry from a clean slate, and a loud warning if that fails too.
+      // one retry from a clean slate (begin() resets the part itself), and a
+      // loud warning if that fails too.
       if (quietly('start', begin) && transport.state === 'started') return true;
 
-      quietly('start/reset', () => part.stop());
       if (quietly('start (retry)', begin) && transport.state === 'started') return true;
 
       console.warn(`riffPlayer: the transport did not start for "${riff.id}" (state: ${transport.state})`);
@@ -161,13 +185,13 @@ export function createRiffPlayer(
 
     setLoopRange(startBeat, endBeat) {
       quietly('setLoopRange', () => {
-        const loopStart = startBeat === null ? 0 : beatsToTransportTime(startBeat);
-        const loopEnd = endBeat === null ? riffLoopEnd(riff) : beatsToTransportTime(endBeat);
-        part.loopStart = loopStart;
-        part.loopEnd = loopEnd;
-        transport.loopStart = loopStart;
-        transport.loopEnd = loopEnd;
-        transport.position = loopStart;
+        rangeStart = startBeat === null ? 0 : beatsToTransportTime(startBeat);
+        rangeEnd = endBeat === null ? riffLoopEnd(riff) : beatsToTransportTime(endBeat);
+        part.loopStart = rangeStart;
+        part.loopEnd = rangeEnd;
+        transport.loopStart = rangeStart;
+        transport.loopEnd = rangeEnd;
+        transport.position = rangeStart;
       });
     },
 

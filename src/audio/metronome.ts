@@ -6,9 +6,15 @@ export function isDownbeat(beatIndex: number, beatsPerBar: number): boolean {
 }
 
 export type Metronome = {
-  /** Starts ticking, quantized to the next quarter note so it lands on the beat grid. */
-  start(): void;
-  stop(): void;
+  /**
+   * Puts the click on the transport's beat grid, from tick 0. The riff player
+   * clears the whole transport every time it starts, which takes the click with
+   * it, so call this straight after every `RiffPlayer.start()` — whether the
+   * click is on or not: `setOn` only mutes and un-mutes what is scheduled here.
+   */
+  sync(): void;
+  /** Turns the click on or off from the next beat. Never restarts or reschedules anything. */
+  setOn(on: boolean): void;
   /** Plays a lead-in bar of clicks and resolves once it's finished. */
   playCountIn(bpm: number, beatsPerBar: number): Promise<void>;
   dispose(): void;
@@ -26,23 +32,35 @@ export function createMetronome(beatsPerBar: number): Metronome {
   }).toDestination();
   synth.volume.value = -6;
 
-  let beatIndex = 0;
+  const transport = Tone.getTransport();
+
+  // The accent is read off the transport, not counted: a counter drifts the
+  // moment the transport wraps at the end of a loop, jumps to a practice range
+  // or restarts, whereas the transport's own position is the grid the riff is
+  // played on.
   const loop = new Tone.Loop((time) => {
-    const accent = isDownbeat(beatIndex, beatsPerBar);
+    const beat = Math.round(transport.getTicksAtTime(time) / transport.PPQ);
+    const accent = isDownbeat(beat, beatsPerBar);
     synth.triggerAttackRelease(accent ? 'C6' : 'G5', 0.03, time, accent ? 0.9 : 0.55);
-    beatIndex += 1;
   }, '4n');
 
+  // Scheduled from tick 0 and switched on and off by muting, never started or
+  // stopped mid-playback: the click then always sits on the transport's own beat
+  // grid, and turning it on needs no scheduling that could go wrong while the
+  // riff is playing.
+  loop.mute = true;
+
   return {
-    start() {
-      beatIndex = 0;
-      // Quantized to the next quarter note: whether the transport just
-      // reset to 0 or is already mid-playback, the click lands on the beat.
-      loop.start('@4n');
+    sync() {
+      // The riff player's transport.cancel() removed the Loop's events but not
+      // its record of having been started, and a Loop that thinks it is started
+      // ignores start(). cancel(0) forgets that record (and any events left).
+      loop.cancel(0);
+      loop.start(0);
     },
 
-    stop() {
-      loop.stop();
+    setOn(on) {
+      loop.mute = !on;
     },
 
     playCountIn(bpm, beatsPerBarForCountIn) {
