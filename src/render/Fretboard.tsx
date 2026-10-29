@@ -1,4 +1,4 @@
-import { useId, useMemo } from 'react';
+import { useId, useMemo, type CSSProperties } from 'react';
 import {
   STANDARD_TUNING,
   fretToMidi,
@@ -19,6 +19,14 @@ import {
 
 export type MarkerTone = 'root' | 'accent' | 'ghost' | 'muted' | 'wrong' | 'correct';
 
+/**
+ * How a dot stands out from the others on the board. A song's board plays
+ * through a bar of dots: the note sounding now is `lit` (bigger, with a glow),
+ * the one coming next is `next` (ringed), and the rest sit `dim`. A dot without
+ * one is drawn as it always was.
+ */
+export type MarkerEmphasis = 'lit' | 'next' | 'dim';
+
 export type FretMarker = {
   stringIndex: number;
   fret: number;
@@ -30,6 +38,7 @@ export type FretMarker = {
    * so it reads on any bright fill.
    */
   color?: string;
+  emphasis?: MarkerEmphasis;
 };
 
 export type LabelMode = 'note' | 'interval' | 'custom' | 'none';
@@ -80,6 +89,13 @@ const TONE_FILL: Record<MarkerTone, string> = {
   muted: 'var(--color-ink-dim)',
   wrong: 'var(--color-bad)',
   correct: 'var(--color-good)',
+};
+
+/** What each emphasis does to the dot's `<g>`: `lit` grows about its middle, `dim` fades. */
+const EMPHASIS_STYLE: Record<MarkerEmphasis, CSSProperties> = {
+  lit: { transform: 'scale(1.3)' },
+  next: { opacity: 0.85 },
+  dim: { opacity: 0.3 },
 };
 
 const TONE_TEXT: Record<MarkerTone, string> = {
@@ -309,11 +325,27 @@ export function Fretboard({
         const isOpen = marker.fret === 0;
         // "G" fills a dot; "Sol" or "Fa#" has to shrink to stay inside it.
         const textScale = text.length <= 1 ? 0.95 : text.length === 2 ? 0.8 : 0.62;
+        const { emphasis } = marker;
         return (
           <g
             key={`marker-s${marker.stringIndex}f${marker.fret}`}
-            className={popMarkers ? 'fb-dot-pop' : undefined}
+            className={[popMarkers && 'fb-dot-pop', emphasis !== undefined && 'fb-dot-emph'].filter(Boolean).join(' ') || undefined}
+            style={emphasis === undefined ? undefined : EMPHASIS_STYLE[emphasis]}
+            data-emphasis={emphasis}
           >
+            {emphasis === 'lit' && (
+              <circle cx={point.x} cy={point.y} r={markerRadius * 1.25} fill={fill} opacity={0.3} />
+            )}
+            {emphasis === 'next' && (
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r={markerRadius * 1.38}
+                fill="none"
+                stroke="var(--color-ink)"
+                strokeWidth={2.4}
+              />
+            )}
             <circle
               cx={point.x}
               cy={point.y}

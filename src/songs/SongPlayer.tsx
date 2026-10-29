@@ -17,24 +17,24 @@ import { PlayPauseIcon } from '@/ui/PlayPauseIcon';
 import { DifficultyPill } from './DifficultyPill';
 import { ChordChart } from './ChordChart';
 import { keyLabel } from './keyLabel';
-import { hasShapes, songShapes } from './shapes';
-import { ShapesView } from './ShapesView';
+import { FretboardView } from './FretboardView';
+import { hasFretboard } from './fretboardPlan';
 
 /** A tapped-out practice loop: the bar you tapped first, and the resulting range. */
 type LoopRange = { anchor: number; start: number; end: number };
 
 /**
  * What the song area shows. A strummed chart is only ever its chart; a riff is
- * its tab or its shapes; an arpeggio chart is its chart, the tab that chart
- * plays, or its shapes.
+ * its tab or its fretboard; an arpeggio chart is its chart, the tab that chart
+ * plays, or its fretboard.
  */
-type SongView = 'chart' | 'tab' | 'shapes';
+type SongView = 'chart' | 'tab' | 'fretboard';
 
-const VIEW_LABELS: Record<SongView, string> = { chart: 'Chart', tab: 'Tab', shapes: 'Shapes' };
+const VIEW_LABELS: Record<SongView, string> = { chart: 'Chart', tab: 'Tab', fretboard: 'Fretboard' };
 
 function viewsFor(song: Song): readonly SongView[] {
-  if (!hasShapes(song)) return song.chart !== undefined ? ['chart'] : ['tab'];
-  return song.chart !== undefined ? ['chart', 'tab', 'shapes'] : ['tab', 'shapes'];
+  if (!hasFretboard(song)) return song.chart !== undefined ? ['chart'] : ['tab'];
+  return song.chart !== undefined ? ['chart', 'tab', 'fretboard'] : ['tab', 'fretboard'];
 }
 
 export function SongPlayer({
@@ -74,7 +74,6 @@ export function SongPlayer({
   const views = useMemo(() => viewsFor(song), [song]);
   const [chosenView, setChosenView] = useState<SongView | null>(null);
   const view = chosenView !== null && views.includes(chosenView) ? chosenView : (views[0] ?? 'tab');
-  const shapes = useMemo(() => songShapes(song), [song]);
   const getBeat = useCallback(() => playerRef.current?.currentBeat() ?? null, []);
 
   // Opening a song starts it, the same way opening a feed card does.
@@ -233,7 +232,7 @@ export function SongPlayer({
 
       <div
         className={`flex shrink-0 flex-wrap gap-1.5 ${
-          view === 'shapes' ? '[@media(max-height:700px)]:hidden' : ''
+          view === 'fretboard' ? '[@media(max-height:700px)]:hidden' : ''
         }`}
       >
         <DifficultyPill difficulty={song.difficulty} />
@@ -242,10 +241,10 @@ export function SongPlayer({
         <Chip>{song.bpm} BPM</Chip>
       </div>
 
-      {/* On a short phone the shapes need the room more than the chips and the blurb do. */}
+      {/* On a short phone the fretboard needs the room more than the chips and the blurb do. */}
       <p
         className={`shrink-0 text-[13px] leading-relaxed text-ink-dim ${
-          view === 'shapes' ? '[@media(max-height:700px)]:hidden' : ''
+          view === 'fretboard' ? '[@media(max-height:700px)]:hidden' : ''
         }`}
       >
         {song.about}
@@ -316,10 +315,9 @@ export function SongPlayer({
             loopRange={loopRange}
             onBarTap={handleBarTap}
           />
-        ) : view === 'shapes' ? (
-          <ShapesView
-            shapes={shapes}
-            events={riff.events}
+        ) : view === 'fretboard' ? (
+          <FretboardView
+            riff={riff}
             engine={engine}
             playing={playing}
             getBeat={getBeat}
@@ -381,8 +379,8 @@ export function SongPlayer({
           />
         </label>
 
-        {/* The shapes view already enlarges the current chord. */}
-        {currentChord !== undefined && view !== 'shapes' && (
+        {/* The fretboard view already shows where the fingers go. */}
+        {currentChord !== undefined && view !== 'fretboard' && (
           <div className="w-16 shrink-0" data-testid="current-chord">
             <Fretboard
               orientation="vertical"

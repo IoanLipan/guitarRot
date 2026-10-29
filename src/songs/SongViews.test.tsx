@@ -86,41 +86,39 @@ describe('the view toggle', () => {
     }
   });
 
-  it('offers Tab and Shapes for a riff song, opening on the tab', async () => {
+  it('offers Tab and Fretboard for a riff song, opening on the tab', async () => {
     open('bach-prelude-bwv999');
 
     const toggle = screen.getByTestId('view-toggle');
-    expect(within(toggle).getAllByRole('button').map((button) => button.textContent)).toEqual(['Tab', 'Shapes']);
+    expect(within(toggle).getAllByRole('button').map((button) => button.textContent)).toEqual(['Tab', 'Fretboard']);
     expect(screen.getByTestId('view-tab')).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByTestId('tab-staff')).toBeInTheDocument();
-    expect(screen.queryByTestId('shapes-view')).toBeNull();
+    expect(screen.queryByTestId('fretboard-view')).toBeNull();
   });
 
-  it('swaps the tab for the shapes, and back', async () => {
+  it('swaps the tab for the fretboard, and back', async () => {
     open('bach-prelude-bwv999');
 
-    await userEvent.click(screen.getByTestId('view-shapes'));
-    expect(screen.getByTestId('shapes-view')).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('view-fretboard'));
+    expect(screen.getByTestId('fretboard-view')).toBeInTheDocument();
     expect(screen.queryByTestId('tab-staff')).toBeNull();
-    expect(screen.getByTestId('view-shapes')).toHaveAttribute('aria-pressed', 'true');
-    // Every bar of the 16-bar excerpt has a card; two bars whose halves are different chords have two each.
-    const cards = screen.getAllByTestId(/^shape-card-/);
-    expect(new Set(cards.map((card) => card.dataset.bar)).size).toBe(16);
-    expect(cards).toHaveLength(18);
+    expect(screen.getByTestId('view-fretboard')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('fretboard-bar')).toHaveTextContent('Bar 1 of 16');
+    expect(screen.getByTestId('fretboard')).toBeInTheDocument();
 
     await userEvent.click(screen.getByTestId('view-tab'));
     expect(screen.getByTestId('tab-staff')).toBeInTheDocument();
-    expect(screen.queryByTestId('shapes-view')).toBeNull();
+    expect(screen.queryByTestId('fretboard-view')).toBeNull();
   });
 
-  it('offers Chart, Tab and Shapes for an arpeggio chart, opening on the chart', async () => {
+  it('offers Chart, Tab and Fretboard for an arpeggio chart, opening on the chart', async () => {
     open('slow-burn');
 
     const toggle = screen.getByTestId('view-toggle');
     expect(within(toggle).getAllByRole('button').map((button) => button.textContent)).toEqual([
       'Chart',
       'Tab',
-      'Shapes',
+      'Fretboard',
     ]);
     expect(screen.getByTestId('chord-chart')).toBeInTheDocument();
 
@@ -128,188 +126,130 @@ describe('the view toggle', () => {
     expect(screen.getByTestId('tab-staff')).toBeInTheDocument();
     expect(screen.queryByTestId('chord-chart')).toBeNull();
 
-    await userEvent.click(screen.getByTestId('view-shapes'));
-    // An arpeggio chart's shapes are the chart's own chords, bar by bar.
-    expect(screen.getByTestId('shape-card-0')).toHaveTextContent('Em');
-    expect(screen.getByTestId('shape-card-2')).toHaveTextContent('C');
-    expect(screen.getByTestId('shape-card-2')).toHaveTextContent('Do major');
+    await userEvent.click(screen.getByTestId('view-fretboard'));
+    expect(screen.getByTestId('fretboard-view')).toBeInTheDocument();
+    expect(screen.getByTestId('fretboard-bar')).toHaveTextContent('Bar 1 of 16');
+    expect(screen.queryByTestId('chord-chart')).toBeNull();
   });
 
-  it('names what it can and leaves the rest as a plain shape', async () => {
-    open('sweep-cascade');
-    await userEvent.click(screen.getByTestId('view-shapes'));
-    expect(screen.getByTestId('shape-card-0')).toHaveTextContent('Am');
-    expect(screen.getByTestId('shape-card-1')).toHaveTextContent('F');
-
-    // Back to the song list and into a piece whose chords are not all in the library.
-    await userEvent.click(screen.getByTestId('song-back'));
-    await userEvent.click(screen.getByTestId('song-row-bach-prelude-bwv999'));
-    await userEvent.click(screen.getByTestId('view-shapes'));
-    expect(screen.getByTestId('shape-card-0')).toHaveTextContent('Dm');
-    // Bar 3 is G minor, which the library has no shape for: named from theory.
-    expect(screen.getByTestId('shape-card-2')).toHaveTextContent('Gm');
-    expect(screen.getByTestId('shape-card-2')).toHaveTextContent('Sol minor');
-  });
-
-  it('shows a quiet dash, not a word, when no chord fits', async () => {
-    open('alternate-picking-ladder');
-    await userEvent.click(screen.getByTestId('view-shapes'));
-
-    const card = screen.getByTestId('shape-card-0');
-    expect(within(card).getByTestId('shape-unnamed-0')).toHaveTextContent('—');
-    expect(card).not.toHaveTextContent('shape');
-    // Still a button that plays what is drawn.
-    expect(within(card).getByRole('button', { name: /no chord name, tap to hear/ })).toBeInTheDocument();
-  });
-
-  it('marks a chord that carries an extra note with a melody hint', async () => {
-    open('carcassi-etude-op60-7');
-    await userEvent.click(screen.getByTestId('view-shapes'));
-    // Bar 1 is Am over a walking bass: the F is not an Am tone.
-    expect(screen.getByTestId('shape-card-0')).toHaveTextContent('Am');
-    expect(screen.getByTestId('shape-hint-0')).toHaveTextContent('+ melody');
+  it('gives every hard song the Fretboard, and says nothing about chords or shapes', async () => {
+    for (const id of [
+      'bach-prelude-bwv999',
+      'carcassi-etude-op60-7',
+      'carcassi-etude-op60-3',
+      'mertz-etude-a-minor',
+      'sor-etude-op35-14',
+      'alternate-picking-ladder',
+      'sweep-cascade',
+      'travis-blues-in-e',
+    ]) {
+      const { unmount } = render(<Harness engine={makeEngine()} initial={id} />);
+      await userEvent.click(screen.getByTestId('view-fretboard'));
+      const view = screen.getByTestId('fretboard-view');
+      expect(view, id).toHaveTextContent(/^Bar 1 of \d+/);
+      expect(view.textContent, id).not.toMatch(/melody|shape|\bBar \d+[ab]\b/i);
+      expect(within(view).getAllByTestId(/^marker-/).length, id).toBeGreaterThan(0);
+      unmount();
+    }
   });
 });
 
-describe('following playback in the shapes view', () => {
-  it('highlights the bar the transport is in', async () => {
+describe('following playback in the fretboard view', () => {
+  it('lights the note the transport is on, and names the bar', async () => {
     open('bach-prelude-bwv999'); // 3/4, so a bar is three beats
-    await userEvent.click(screen.getByTestId('view-shapes'));
+    await userEvent.click(screen.getByTestId('view-fretboard'));
 
-    playback.beat = 0.2;
-    await waitFor(() => expect(screen.getByTestId('shape-card-0')).toHaveAttribute('data-active', 'true'));
-    expect(screen.getAllByTestId(/^shape-card-/).filter((card) => card.dataset.active === 'true')).toHaveLength(1);
+    // The first note is the open D string; the next is a D on the B string a sixteenth later.
+    playback.beat = 0.05;
+    await waitFor(() => expect(screen.getByTestId('marker-s2f0').parentElement).toHaveAttribute('data-emphasis', 'lit'));
+    expect(screen.getByTestId('marker-s4f3').parentElement).toHaveAttribute('data-emphasis', 'next');
+    expect(screen.getByTestId('fretboard-note')).toHaveTextContent('D (Re) · 4th string, open');
+
+    playback.beat = 0.3;
+    await waitFor(() => expect(screen.getByTestId('marker-s4f3').parentElement).toHaveAttribute('data-emphasis', 'lit'));
+    expect(screen.getByTestId('marker-s2f0').parentElement).toHaveAttribute('data-emphasis', 'dim');
+    expect(screen.getByTestId('fretboard-note')).toHaveTextContent('D (Re) · 2nd string, fret 3');
 
     playback.beat = 3 * 3 + 0.5; // bar 4
-    await waitFor(() => expect(screen.getByTestId('shape-card-3')).toHaveAttribute('data-active', 'true'));
-    expect(screen.getByTestId('shape-card-0')).not.toHaveAttribute('data-active');
+    await waitFor(() => expect(screen.getByTestId('fretboard-bar')).toHaveTextContent('Bar 4 of 16'));
 
     playback.beat = 15 * 3 + 2; // the last bar
-    await waitFor(() => expect(screen.getByTestId('shape-card-15')).toHaveAttribute('data-active', 'true'));
+    await waitFor(() => expect(screen.getByTestId('fretboard-bar')).toHaveTextContent('Bar 16 of 16'));
   });
 
-  it('follows a half bar when the bar was split in two', async () => {
-    open('carcassi-etude-op60-7'); // 4/4: bar 4 is Am, then E: two cards, 3.1 and 3.2
-    await userEvent.click(screen.getByTestId('view-shapes'));
+  it('follows an arpeggio chart too', async () => {
+    open('slow-burn');
+    await userEvent.click(screen.getByTestId('view-fretboard'));
 
-    playback.beat = 3 * 4 + 0.5;
-    await waitFor(() => expect(screen.getByTestId('shape-card-3.1')).toHaveAttribute('data-active', 'true'));
-    expect(screen.getByTestId('shape-card-3.1')).toHaveTextContent('Am');
-    playback.beat = 3 * 4 + 2.5;
-    await waitFor(() => expect(screen.getByTestId('shape-card-3.2')).toHaveAttribute('data-active', 'true'));
-    expect(screen.getByTestId('shape-card-3.2')).toHaveTextContent('E');
-    expect(screen.getByTestId('shape-card-3.1')).not.toHaveAttribute('data-active');
+    playback.beat = 4 * 4 + 0.1; // bar 5
+    await waitFor(() => expect(screen.getByTestId('fretboard-bar')).toHaveTextContent('Bar 5 of 16'));
+    expect(document.querySelector('[data-emphasis="lit"]')).not.toBeNull();
   });
 
-  it('lights the string being plucked, and only that one', async () => {
+  it('puts the song back at its first bar, nothing lit, while it is paused', async () => {
     open('bach-prelude-bwv999');
-    await userEvent.click(screen.getByTestId('view-shapes'));
-
-    // The first note is the open D string; the next is a B-string note a
-    // sixteenth later.
-    playback.beat = 0.05;
-    await waitFor(() => {
-      const card = screen.getByTestId('shape-card-0');
-      const lit = [...card.querySelectorAll('[data-pluck-string][data-lit="true"]')].map((el) =>
-        el.getAttribute('data-pluck-string'),
-      );
-      expect(lit).toEqual(['2']);
-    });
-
-    playback.beat = 0.3; // the D on the B string, fret 3; the bass is still ringing
-    await waitFor(() => {
-      const card = screen.getByTestId('shape-card-0');
-      const lit = [...card.querySelectorAll('[data-pluck-string][data-lit="true"]')].map((el) =>
-        el.getAttribute('data-pluck-string'),
-      );
-      expect(lit).toEqual(['2', '4']);
-      expect(card.querySelector('[data-pluck-pos="4:3"][data-lit="true"]')).not.toBeNull();
-    });
-
-    // Half a beat on, the long bass note has stopped flashing; the next note is a sixteenth in.
-    playback.beat = 0.6;
-    await waitFor(() => {
-      const card = screen.getByTestId('shape-card-0');
-      const lit = [...card.querySelectorAll('[data-pluck-string][data-lit="true"]')].map((el) =>
-        el.getAttribute('data-pluck-string'),
-      );
-      expect(lit).toEqual(['5']);
-    });
-  });
-
-  it('highlights nothing while the song is paused', async () => {
-    open('bach-prelude-bwv999');
-    await userEvent.click(screen.getByTestId('view-shapes'));
+    await userEvent.click(screen.getByTestId('view-fretboard'));
     playback.beat = 4;
-    await waitFor(() => expect(screen.getByTestId('shape-card-1')).toHaveAttribute('data-active', 'true'));
+    await waitFor(() => expect(screen.getByTestId('fretboard-bar')).toHaveTextContent('Bar 2 of 16'));
 
     await userEvent.click(screen.getByRole('button', { name: 'Pause' }));
-    await waitFor(() => expect(document.querySelector('[data-active="true"]')).toBeNull());
+    await waitFor(() => expect(screen.getByTestId('fretboard-bar')).toHaveTextContent('Bar 1 of 16'));
+    expect(document.querySelector('[data-emphasis]')).toBeNull();
+    expect(screen.getByTestId('fretboard-hint')).toBeInTheDocument();
   });
 });
 
-describe('playing a shape', () => {
-  it('strums the shape when its card is tapped', async () => {
-    const engine = open('slow-burn');
-    await userEvent.click(screen.getByTestId('view-shapes'));
+describe('playing a dot', () => {
+  it('plays the note on that string when a dot is tapped', async () => {
+    const engine = open('bach-prelude-bwv999');
+    await userEvent.click(screen.getByTestId('view-fretboard'));
 
-    await userEvent.click(within(screen.getByTestId('shape-card-0')).getByRole('button', { name: /tap to hear/ }));
+    // The D on the B string at fret 3.
+    await userEvent.click(screen.getByTestId('cell-s4f3'));
+    expect(engine.playNote).toHaveBeenCalledTimes(1);
+    expect(engine.playNote).toHaveBeenCalledWith(fretToMidi(STANDARD_TUNING, 4, 3), { stringIndex: 4 });
 
-    // Em: all six strings, low to high, on the chord's own frets.
-    expect(engine.strum).toHaveBeenCalledTimes(1);
-    expect(engine.strum).toHaveBeenCalledWith(
-      [0, 2, 2, 0, 0, 0].map((fret, string) => fretToMidi(STANDARD_TUNING, string, fret)),
-      { strings: [0, 1, 2, 3, 4, 5] },
-    );
-  });
-
-  it('strums what the tab fretted when the shape came from a riff', async () => {
-    const engine = open('sweep-cascade');
-    await userEvent.click(screen.getByTestId('view-shapes'));
-
-    await userEvent.click(within(screen.getByTestId('shape-card-0')).getByRole('button', { name: /tap to hear/ }));
-
-    // The open-position Am sweep: strings A to e, x02210.
-    expect(engine.strum).toHaveBeenCalledWith(
-      [0, 2, 2, 1, 0].map((fret, i) => fretToMidi(STANDARD_TUNING, i + 1, fret)),
-      { strings: [1, 2, 3, 4, 5] },
-    );
+    // The open D string.
+    await userEvent.click(screen.getByTestId('cell-s2f0'));
+    expect(engine.playNote).toHaveBeenLastCalledWith(fretToMidi(STANDARD_TUNING, 2, 0), { stringIndex: 2 });
   });
 });
 
-describe('looping from the shapes view', () => {
-  it('loops a bar from its badge, with the same two-tap range as the chart', async () => {
+describe('looping from the fretboard view', () => {
+  it('loops the bar shown with the toggle, and clears it with the same toggle', async () => {
     open('bach-prelude-bwv999');
-    await userEvent.click(screen.getByTestId('view-shapes'));
+    await userEvent.click(screen.getByTestId('view-fretboard'));
+    playback.beat = 2 * 3 + 0.5; // bar 3
+    await waitFor(() => expect(screen.getByTestId('fretboard-bar')).toHaveTextContent('Bar 3 of 16'));
 
-    await userEvent.click(screen.getByTestId('shape-loop-2'));
+    await userEvent.click(screen.getByTestId('fretboard-loop'));
     expect(screen.getByTestId('loop-range-label')).toHaveTextContent('Looping bars 3–3');
-    expect(screen.getByTestId('shape-card-2')).toHaveAttribute('data-looped', 'true');
+    expect(screen.getByTestId('fretboard-loop')).toHaveAttribute('aria-pressed', 'true');
     // 3/4: bar index 2 spans beats 6 to 9.
     expect(playback.setLoopRange).toHaveBeenLastCalledWith(6, 9);
 
-    await userEvent.click(screen.getByTestId('shape-loop-4'));
-    expect(screen.getByTestId('loop-range-label')).toHaveTextContent('Looping bars 3–5');
-    expect(screen.getByTestId('shape-card-3')).toHaveAttribute('data-looped', 'true');
-    expect(playback.setLoopRange).toHaveBeenLastCalledWith(6, 15);
-
-    await userEvent.click(screen.getByTestId('loop-clear'));
+    await userEvent.click(screen.getByTestId('fretboard-loop'));
     expect(screen.queryByTestId('loop-range-label')).toBeNull();
+    expect(screen.getByTestId('fretboard-loop')).toHaveAttribute('aria-pressed', 'false');
     expect(playback.setLoopRange).toHaveBeenLastCalledWith(null, null);
   });
 
-  it('keeps the loop when the view changes', async () => {
+  it('keeps a loop made in the chart when the view changes, and rests on its first bar when paused', async () => {
     open('slow-burn');
     await userEvent.click(screen.getByTestId('chart-bar-1'));
-    await userEvent.click(screen.getByTestId('view-shapes'));
+    await userEvent.click(screen.getByTestId('chart-bar-2'));
+    await userEvent.click(screen.getByTestId('view-fretboard'));
 
-    expect(screen.getByTestId('loop-range-label')).toHaveTextContent('Looping bars 2–2');
-    expect(screen.getByTestId('shape-card-1')).toHaveAttribute('data-looped', 'true');
+    expect(screen.getByTestId('loop-range-label')).toHaveTextContent('Looping bars 2–3');
+    expect(screen.getByTestId('fretboard-loop')).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    await waitFor(() => expect(screen.getByTestId('fretboard-bar')).toHaveTextContent('Bar 2 of 16'));
   });
 
   it('keeps the speed control within reach', async () => {
     open('bach-prelude-bwv999');
-    await userEvent.click(screen.getByTestId('view-shapes'));
+    await userEvent.click(screen.getByTestId('view-fretboard'));
     expect(screen.getByRole('slider', { name: 'Playback speed' })).toBeInTheDocument();
     expect(screen.getByTestId('metronome-toggle')).toBeInTheDocument();
   });
@@ -362,55 +302,5 @@ describe('leaving the scrollers alone while they are being touched', () => {
 
     now += 1500;
     await waitFor(() => expect(scroller.scrollLeft).toBeGreaterThan(following));
-  });
-
-  it('carries the shapes strip along with the song, and lets go of it while a finger is on it', async () => {
-    // Cards 130px apart and 112px wide: the strip is laid out by hand, since jsdom has no layout.
-    vi.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockImplementation(function (this: HTMLElement) {
-      const parent = this.parentElement;
-      return parent?.dataset.testid === 'shapes-scroller' ? [...parent.children].indexOf(this) * 130 : 0;
-    });
-    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(112);
-
-    open('bach-prelude-bwv999'); // 3/4
-    await userEvent.click(screen.getByTestId('view-shapes'));
-    const scroller = screen.getByTestId('shapes-scroller');
-    fakeLayout(scroller, { scrollWidth: 2400, clientWidth: 300 });
-
-    // Bar 8 holds the playhead: the strip scrolls to put its card in the middle.
-    const slot = screen.getByTestId('shape-card-7').parentElement as HTMLElement;
-    const centre = [...scroller.children].indexOf(slot) * 130 + 56;
-    playback.beat = 7 * 3 + 1.5;
-    await waitFor(() => expect(scroller.scrollLeft).toBeCloseTo(centre - 150, 0));
-
-    fireEvent.touchStart(scroller);
-    scroller.scrollLeft = 10;
-    playback.beat = 11 * 3 + 1.5; // bar 12
-    await waitFor(() => expect(screen.getByTestId('shape-card-11')).toHaveAttribute('data-active', 'true'));
-    await act(() => new Promise((resolve) => setTimeout(resolve, 80)));
-    expect(scroller.scrollLeft).toBe(10);
-
-    fireEvent.touchEnd(scroller);
-    now += 3100;
-    await waitFor(() => expect(scroller.scrollLeft).toBeGreaterThan(500));
-  });
-
-  it('leaves a paused strip where the player put it', async () => {
-    vi.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockImplementation(function (this: HTMLElement) {
-      const parent = this.parentElement;
-      return parent?.dataset.testid === 'shapes-scroller' ? [...parent.children].indexOf(this) * 130 : 0;
-    });
-    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(112);
-
-    open('bach-prelude-bwv999');
-    await userEvent.click(screen.getByTestId('view-shapes'));
-    const scroller = screen.getByTestId('shapes-scroller');
-    fakeLayout(scroller, { scrollWidth: 2400, clientWidth: 300 });
-
-    await userEvent.click(screen.getByRole('button', { name: 'Pause' }));
-    scroller.scrollLeft = 700;
-    playback.beat = 10;
-    await act(() => new Promise((resolve) => setTimeout(resolve, 80)));
-    expect(scroller.scrollLeft).toBe(700);
   });
 });
