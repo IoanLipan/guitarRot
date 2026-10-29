@@ -227,14 +227,25 @@ export function SongPlayer({
       </div>
 
       <div className="shrink-0">
-        {/* Two lines at most: a long title ("Prelude in D minor (BWV 999)") is the first thing to eat a small screen. */}
-        <h2 className="line-clamp-2 text-2xl leading-tight font-black tight:text-xl">{song.title}</h2>
-        <p className="mt-0.5 truncate text-sm text-ink-dim">{song.artist}</p>
+        {/* Two lines at most: a long title ("Prelude in D minor (BWV 999)") is the first thing to eat a small screen.
+            In the fretboard view of a tight one it is one, and the board gets the other line. */}
+        <h2
+          className={`line-clamp-2 text-2xl leading-tight font-black tight:text-xl ${
+            view === 'fretboard' ? 'tight:line-clamp-1' : ''
+          }`}
+        >
+          {song.title}
+        </h2>
+        <p className={`mt-0.5 truncate text-sm text-ink-dim ${view === 'fretboard' ? 'tight:hidden' : ''}`}>
+          {song.artist}
+        </p>
       </div>
 
       {/* On a short phone the chips become one row that slides sideways (they bleed to the
           screen edges so it is plain they do), instead of wrapping onto a second line;
-          and in the fretboard view of a tight one they go altogether, the board needing the room. */}
+          and in the fretboard view of a tight one they go altogether, as do the artist line and
+          the "Looping bars" row below (the view's own toggle shows it is looping): the board
+          needs the room. */}
       <div
         className={`flex shrink-0 flex-wrap gap-1.5 short:-mx-5 short:flex-nowrap short:overflow-x-auto short:px-5 short:[scrollbar-width:none] short:[&::-webkit-scrollbar]:hidden short:[&>*]:shrink-0 short:[&>*]:whitespace-nowrap ${
           view === 'fretboard' ? '[@media(max-height:700px)]:hidden' : ''
@@ -253,7 +264,11 @@ export function SongPlayer({
       </p>
 
       {loopRange !== null && (
-        <div className="flex shrink-0 items-center gap-2 text-xs font-bold text-ink-dim">
+        <div
+          className={`flex shrink-0 items-center gap-2 text-xs font-bold text-ink-dim ${
+            view === 'fretboard' ? 'tight:hidden' : ''
+          }`}
+        >
           <span data-testid="loop-range-label">
             Looping bars {loopRange.start + 1}–{loopRange.end + 1}
           </span>

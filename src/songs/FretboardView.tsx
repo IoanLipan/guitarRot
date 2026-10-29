@@ -135,17 +135,32 @@ export function FretboardView({
   const looping = loopRange !== null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3" data-testid="fretboard-view">
-      <div className="shrink-0">
-        <p className="text-2xl leading-tight font-black tabular-nums" data-testid="fretboard-bar">
-          Bar {shown.bar + 1} of {plan.bars.length}
-        </p>
+    <div className="flex h-full min-h-0 flex-col gap-3 tight:gap-2" data-testid="fretboard-view">
+      <div className="flex shrink-0 flex-col gap-1.5">
+        {/* The loop toggle shares the row with the bar it loops: stacked under the
+            board it cost a 44px row, which on a 320px phone is a third of the board. */}
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-2xl leading-tight font-black tabular-nums tight:text-xl" data-testid="fretboard-bar">
+            Bar {shown.bar + 1} of {plan.bars.length}
+          </p>
+          <button
+            type="button"
+            onClick={() => onLoopTap(loopRange === null ? shown.bar : loopRange.anchor)}
+            aria-pressed={looping}
+            data-testid="fretboard-loop"
+            className={`press flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full px-4 text-xs font-extrabold tracking-wider uppercase ${
+              looping ? 'bg-accent text-ground' : 'bg-surface-2 text-ink-dim'
+            }`}
+          >
+            <RepeatIcon size={18} /> {looping ? 'Looping' : 'Loop bar'}
+          </button>
+        </div>
         {/* The row keeps its height whether or not a note is sounding, so the board does not jump. */}
-        <div className="mt-1.5 flex min-h-9 items-center">
+        <div className="flex min-h-9 items-center tight:min-h-8">
           {lit !== undefined ? (
             <p
               data-testid="fretboard-note"
-              className="max-w-full truncate rounded-full bg-surface-2 px-3.5 py-1.5 text-[15px] font-bold"
+              className="max-w-full truncate rounded-full bg-surface-2 px-3.5 py-1.5 text-[15px] font-bold tight:py-1"
             >
               {describeNotes(lit.positions)}
             </p>
@@ -172,18 +187,6 @@ export function FretboardView({
           ariaLabel={`Guitar neck for bar ${shown.bar + 1}`}
         />
       </div>
-
-      <button
-        type="button"
-        onClick={() => onLoopTap(loopRange === null ? shown.bar : loopRange.anchor)}
-        aria-pressed={looping}
-        data-testid="fretboard-loop"
-        className={`press flex min-h-11 shrink-0 items-center justify-center gap-2 self-center rounded-full px-5 text-xs font-extrabold tracking-wider uppercase ${
-          looping ? 'bg-accent text-ground' : 'bg-surface-2 text-ink-dim'
-        }`}
-      >
-        <RepeatIcon size={18} /> {looping ? 'Looping' : 'Loop bar'}
-      </button>
     </div>
   );
 }
