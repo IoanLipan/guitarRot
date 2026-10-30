@@ -1,5 +1,6 @@
 import { CHORDS } from '@/content';
 import { STANDARD_TUNING, fretToMidi, noteName, type ChordShape, type FretPosition, type Tuning } from '@/music';
+import type { QuizDifficulty } from '@/progress';
 
 export type NoteQuizQuestion = {
   kind: 'note';
@@ -27,6 +28,36 @@ export const NOTE_QUIZ_FRET_RANGE: [number, number] = [0, 5];
 
 const STRING_COUNT = 6;
 
+/** The far end of the neck any note question reaches (the hard difficulty's). */
+export const QUIZ_MAX_FRET = 12;
+
+/**
+ * What a difficulty asks. Easy stays in open position on natural notes, medium
+ * brings in the sharps and the first seven frets, hard has the whole first
+ * octave of the neck and six answers to pick from.
+ */
+export const DIFFICULTY_PROFILES = {
+  easy: { fretRange: [0, 3], naturalsOnly: true, optionCount: 4 },
+  medium: { fretRange: [0, 7], naturalsOnly: false, optionCount: 4 },
+  hard: { fretRange: [0, QUIZ_MAX_FRET], naturalsOnly: false, optionCount: 6 },
+} as const satisfies Record<
+  QuizDifficulty,
+  { fretRange: readonly [number, number]; naturalsOnly: boolean; optionCount: number }
+>;
+
+/** The fret windows a question can be drawn on, narrowest first. */
+const FRET_WINDOWS: readonly (readonly [number, number])[] = [
+  NOTE_QUIZ_FRET_RANGE,
+  DIFFICULTY_PROFILES.medium.fretRange,
+  DIFFICULTY_PROFILES.hard.fretRange,
+];
+
+/** The narrowest window that shows `fret`, so a question rebuilt from its id still shows its own dot. */
+function windowCovering(fret: number): [number, number] {
+  const [low, high] = FRET_WINDOWS.find(([, end]) => fret <= end) ?? DIFFICULTY_PROFILES.hard.fretRange;
+  return [low, high];
+}
+
 function shuffle<T>(items: readonly T[], random: () => number): T[] {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -40,6 +71,52 @@ function shuffle<T>(items: readonly T[], random: () => number): T[] {
   return copy;
 }
 
+export type NoteQuestionOptions = {
+  tuning?: Tuning;
+  random?: () => number;
+  /** The frets the picture shows, and the generator draws from. Defaults to the Quiz tab's 0 to 5. */
+  fretRange?: readonly [number, number];
+  /** Wrong answers and the asked note are all natural notes: no sharps anywhere. */
+  naturalsOnly?: boolean;
+  /** Answers on offer, the right one among them. Defaults to 4. */
+  optionCount?: number;
+};
+
+const DEFAULT_OPTION_COUNT = 4;
+
+/**
+ * The note names nearest to `midi` in pitch, the plausible wrong answers
+ * (matches the design handoff's F#/G/G#/A example for a correct answer of G).
+ * Gives `count` of them, picked at random from the `count + 1` nearest so the
+ * right answer is not always the one in the middle.
+ */
+function noteDistractors(
+  midi: number,
+  correctAnswer: string,
+  count: number,
+  naturalsOnly: boolean,
+  random: () => number,
+): string[] {
+  const nearest: { offset: number; name: string }[] = [];
+  for (let distance = 1; distance <= 11 && nearest.length < count + 1; distance += 1) {
+    for (const offset of [-distance, distance]) {
+      if (nearest.length > count) break;
+      const name = noteName(midi + offset);
+      if (name === correctAnswer || nearest.some((candidate) => candidate.name === name)) continue;
+      if (naturalsOnly && name.includes('#')) continue;
+      nearest.push({ offset, name });
+    }
+  }
+  if (nearest.length < count) throw new Error(`No ${count} distractors for ${correctAnswer}`);
+
+  // In pitch order before the shuffle, so a plain four-option question draws exactly as it always has.
+  nearest.sort((a, b) => a.offset - b.offset);
+  return shuffle(
+    nearest.map((candidate) => candidate.name),
+    random,
+  ).slice(0, count);
+}
+
 /**
  * Builds the question for one specific fret.
  *
@@ -49,58 +126,83 @@ function shuffle<T>(items: readonly T[], random: () => number): T[] {
 export function noteQuestionAt(
   stringIndex: number,
   fret: number,
-  opts: { tuning?: Tuning; random?: () => number } = {},
+  opts: NoteQuestionOptions = {},
 ): NoteQuizQuestion {
   const tuning = opts.tuning ?? STANDARD_TUNING;
   const random = opts.random ?? Math.random;
   const midi = fretToMidi(tuning, stringIndex, fret);
   const correctAnswer = noteName(midi);
-
-  // Chromatic neighbors read as the most plausible wrong answers (matches
-  // the design handoff's F#/G/G#/A example for a correct answer of G).
-  const distractors: string[] = [];
-  for (const offset of shuffle([-2, -1, 1, 2], random)) {
-    if (distractors.length === 3) break;
-    const name = noteName(midi + offset);
-    if (name !== correctAnswer && !distractors.includes(name)) distractors.push(name);
-  }
+  const distractors = noteDistractors(
+    midi,
+    correctAnswer,
+    (opts.optionCount ?? DEFAULT_OPTION_COUNT) - 1,
+    opts.naturalsOnly ?? false,
+    random,
+  );
 
   return {
     kind: 'note',
     id: `note-s${stringIndex}f${fret}`,
     prompt: 'Name this note',
     position: { stringIndex, fret },
-    fretRange: NOTE_QUIZ_FRET_RANGE,
+    // The Quiz tab's own window when the fret fits it, so its questions are exactly what they were.
+    fretRange: opts.fretRange === undefined ? windowCovering(fret) : [opts.fretRange[0], opts.fretRange[1]],
     correctAnswer,
     options: shuffle([correctAnswer, ...distractors], random),
   };
 }
 
-export function generateNoteQuestion(
-  opts: { tuning?: Tuning; random?: () => number } = {},
-): NoteQuizQuestion {
+/** Every position in the window whose note is a natural one. */
+function naturalPositions(tuning: Tuning, [lowFret, highFret]: readonly [number, number]): FretPosition[] {
+  const found: FretPosition[] = [];
+  for (let stringIndex = 0; stringIndex < STRING_COUNT; stringIndex += 1) {
+    for (let fret = lowFret; fret <= highFret; fret += 1) {
+      if (!noteName(fretToMidi(tuning, stringIndex, fret)).includes('#')) found.push({ stringIndex, fret });
+    }
+  }
+  return found;
+}
+
+export function generateNoteQuestion(opts: NoteQuestionOptions = {}): NoteQuizQuestion {
   const random = opts.random ?? Math.random;
-  const [lowFret, highFret] = NOTE_QUIZ_FRET_RANGE;
+  const range = opts.fretRange ?? NOTE_QUIZ_FRET_RANGE;
+  const [lowFret, highFret] = range;
+
+  if (opts.naturalsOnly === true) {
+    // Drawn from the positions that qualify, because most of an open-position
+    // neck is natural but a quarter of it is not, and "redraw until natural"
+    // would burn an unbounded number of random calls.
+    const pool = naturalPositions(opts.tuning ?? STANDARD_TUNING, range);
+    const pick = pool[Math.floor(random() * pool.length)];
+    if (pick === undefined) throw new Error('No natural notes in that fret range');
+    return noteQuestionAt(pick.stringIndex, pick.fret, { ...opts, random });
+  }
+
   const stringIndex = Math.floor(random() * STRING_COUNT);
   const fret = lowFret + Math.floor(random() * (highFret - lowFret + 1));
   return noteQuestionAt(stringIndex, fret, { ...opts, random });
 }
 
+export type ChordQuestionOptions = {
+  chords?: readonly ChordShape[];
+  random?: () => number;
+  /** Answers on offer, the right one among them. Defaults to 4. */
+  optionCount?: number;
+};
+
 /** Builds the question for one specific chord, so it can be rebuilt from its id. */
-export function chordQuestionFor(
-  correct: ChordShape,
-  opts: { chords?: readonly ChordShape[]; random?: () => number } = {},
-): ChordQuizQuestion {
+export function chordQuestionFor(correct: ChordShape, opts: ChordQuestionOptions = {}): ChordQuizQuestion {
   const pool = opts.chords ?? CHORDS;
   const random = opts.random ?? Math.random;
-  if (pool.length < 4) {
-    throw new Error('chordQuestionFor needs a pool of at least 4 chords');
+  const optionCount = opts.optionCount ?? DEFAULT_OPTION_COUNT;
+  if (pool.length < optionCount) {
+    throw new Error(`chordQuestionFor needs a pool of at least ${optionCount} chords`);
   }
 
   const distractors = shuffle(
     pool.filter((chord) => chord.id !== correct.id),
     random,
-  ).slice(0, 3);
+  ).slice(0, optionCount - 1);
 
   return {
     kind: 'chord',
@@ -112,13 +214,12 @@ export function chordQuestionFor(
   };
 }
 
-export function generateChordQuestion(
-  opts: { chords?: readonly ChordShape[]; random?: () => number } = {},
-): ChordQuizQuestion {
+export function generateChordQuestion(opts: ChordQuestionOptions = {}): ChordQuizQuestion {
   const pool = opts.chords ?? CHORDS;
   const random = opts.random ?? Math.random;
-  if (pool.length < 4) {
-    throw new Error('generateChordQuestion needs a pool of at least 4 chords');
+  const optionCount = opts.optionCount ?? DEFAULT_OPTION_COUNT;
+  if (pool.length < optionCount) {
+    throw new Error(`generateChordQuestion needs a pool of at least ${optionCount} chords`);
   }
 
   const [correct] = shuffle(pool, random);
@@ -126,20 +227,57 @@ export function generateChordQuestion(
   return chordQuestionFor(correct, { ...opts, random });
 }
 
+/**
+ * The chords a difficulty asks about. Easy is the open major and minor chords
+ * a beginner meets first; medium adds the sevenths and suspended chords that
+ * are still open shapes; hard is everything in the library, barres and power
+ * chords included.
+ */
+export function chordPoolFor(difficulty: QuizDifficulty, library: readonly ChordShape[] = CHORDS): ChordShape[] {
+  switch (difficulty) {
+    case 'easy':
+      return library.filter((chord) => (chord.quality === 'maj' || chord.quality === 'min') && chord.difficulty <= 2);
+    case 'medium':
+      return library.filter((chord) => chord.quality !== 'power' && chord.difficulty <= 2);
+    case 'hard':
+      return [...library];
+  }
+}
+
+/**
+ * One question for a quiz run at this difficulty: a note on the neck or a
+ * chord diagram, an even toss up between them. Everything a question carries
+ * is as for the free-practice Quiz tab (the right answer among the options,
+ * an id the spaced-repetition schedule can use); only the pool and the number
+ * of answers change.
+ */
+export function generateQuestion(
+  difficulty: QuizDifficulty,
+  opts: { random?: () => number } = {},
+): QuizQuestion {
+  const random = opts.random ?? Math.random;
+  const { fretRange, naturalsOnly, optionCount } = DIFFICULTY_PROFILES[difficulty];
+  return random() < 0.5
+    ? generateNoteQuestion({ random, fretRange, naturalsOnly, optionCount })
+    : generateChordQuestion({ random, chords: chordPoolFor(difficulty), optionCount });
+}
+
 const NOTE_QUESTION_ID = /^note-s(\d+)f(\d+)$/;
 
 /**
  * Rebuilds the question a given quiz id names. Ids are deterministic
  * (fret position or chord id), so this is the one place both sharing and
- * SRS scheduling go to turn a stored id back into a real question.
+ * SRS scheduling go to turn a stored id back into a real question. It is
+ * not told which difficulty the question was first asked at, so it comes
+ * back as the plain four-answer question on the narrowest window that
+ * shows its fret.
  */
 export function questionForId(id: string): QuizQuestion | null {
   const note = NOTE_QUESTION_ID.exec(id);
   if (note !== null) {
     const stringIndex = Number(note[1]);
     const fret = Number(note[2]);
-    const [lowFret, highFret] = NOTE_QUIZ_FRET_RANGE;
-    if (stringIndex >= STRING_COUNT || fret < lowFret || fret > highFret) return null;
+    if (stringIndex >= STRING_COUNT || fret > QUIZ_MAX_FRET) return null;
     return noteQuestionAt(stringIndex, fret);
   }
 

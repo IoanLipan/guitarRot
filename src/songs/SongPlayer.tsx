@@ -19,6 +19,7 @@ import { ChordChart } from './ChordChart';
 import { keyLabel } from './keyLabel';
 import { FretboardView } from './FretboardView';
 import { hasFretboard } from './fretboardPlan';
+import { useHeardFor } from './useHeardFor';
 
 /** A tapped-out practice loop: the bar you tapped first, and the resulting range. */
 type LoopRange = { anchor: number; start: number; end: number };
@@ -37,14 +38,23 @@ function viewsFor(song: Song): readonly SongView[] {
   return song.chart !== undefined ? ['chart', 'tab', 'fretboard'] : ['tab', 'fretboard'];
 }
 
+/**
+ * How long a song has to be heard before it counts as played. Opening one
+ * starts it, so merely landing here (or a quick look at a tab) must not.
+ */
+const SONG_PLAYED_AFTER_MS = 20_000;
+
 export function SongPlayer({
   song,
   engine,
   onBack,
+  onPlayed,
 }: {
   song: Song;
   engine: AudioEngine;
   onBack: () => void;
+  /** Called once per visit, when the song has really been heard for 20 seconds. */
+  onPlayed?: (songId: string) => void;
 }) {
   const riff = useMemo(() => songToRiff(song), [song]);
   const barLength = beatsPerBar(riff.timeSignature);
@@ -102,6 +112,16 @@ export function SongPlayer({
       setLoopRange(null);
     };
   }, [riff, engine, barLength]);
+
+  // Asks the player, not just the button: after the app has been backgrounded the
+  // button still reads "playing", but the audio is suspended and nobody is hearing it.
+  useHeardFor({
+    resetKey: song.id,
+    active: playing,
+    isAudible: () => playerRef.current?.isPlaying() ?? false,
+    ms: SONG_PLAYED_AFTER_MS,
+    onReached: () => onPlayed?.(song.id),
+  });
 
   useEffect(() => {
     playerRef.current?.setSpeed(speed);

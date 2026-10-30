@@ -36,11 +36,14 @@ export function StepView({
   step,
   engine,
   onDone,
+  onTunedAll,
 }: {
   step: LessonStep;
   engine: AudioEngine;
   /** A gated step calls this when it has been satisfied. */
   onDone: () => void;
+  /** The tuner step calls this when all six strings have been tuned. */
+  onTunedAll?: () => void;
 }) {
   switch (step.kind) {
     case 'explain':
@@ -56,7 +59,7 @@ export function StepView({
     case 'listen':
       return <ListenStep step={step} engine={engine} onDone={onDone} />;
     case 'tuner':
-      return <TunerStep engine={engine} />;
+      return <TunerStep engine={engine} onTunedAll={onTunedAll} />;
     case 'drill':
       return <DrillStep step={step} engine={engine} onDone={onDone} />;
     case 'check':

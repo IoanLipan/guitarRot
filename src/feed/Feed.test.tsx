@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { getToneProfile, type AudioEngine } from '@/audio';
 import { RIFFS } from '@/content';
-import { emptyProgressState } from '@/progress';
+import { fakeProgressHandle } from '@/app/testkit';
 import type { ProgressHandle } from '@/app/useProgress';
 
 const startedPlayers: { start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn> }[] = [];
@@ -47,14 +47,7 @@ function fakeEngine(): AudioEngine {
 }
 
 function fakeProgress(): ProgressHandle {
-  return {
-    state: emptyProgressState(),
-    loaded: true,
-    recordAnswer: vi.fn(),
-    updateSettings: vi.fn(),
-    completeLesson: vi.fn(),
-    flush: vi.fn(),
-  };
+  return fakeProgressHandle();
 }
 
 describe('Feed', () => {

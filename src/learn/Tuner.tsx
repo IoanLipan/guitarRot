@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeftIcon, ArrowRightIcon, MicIcon, SpeakerIcon, StopIcon } from '@/ui/icons';
 import { tapHaptic } from '@/app/haptics';
 import { useMicPitch, type MicReading } from '@/app/useMicPitch';
 import type { AudioEngine } from '@/audio';
 import { fretToMidi, noteLabel, noteName, STANDARD_TUNING, stringNumber } from '@/music';
+import { allStringsTuned, openStringOf, withTuned } from './tunedStrings';
 
 /** Within this many cents of the note counts as dead on. */
 const IN_TUNE_CENTS = 5;
@@ -36,20 +37,50 @@ function formatCents(cents: number): string {
   return `${rounded > 0 ? '+' : ''}${rounded} cents`;
 }
 
-export function Tuner({ engine }: { engine: AudioEngine }) {
+export function Tuner({
+  engine,
+  onTunedAll,
+}: {
+  engine: AudioEngine;
+  /** Called once, when all six open strings have been heard in tune since this tuner opened. */
+  onTunedAll?: () => void;
+}) {
   const { status, reading, start, stop } = useMicPitch();
 
   const inZone = reading !== null && Math.abs(reading.cents) < IN_TUNE_CENTS;
-  const [held, setHeld] = useState(false);
+  // Which note has been held in the zone, not just whether one has: playing the next
+  // string straight after the last, with no silence between, has to be held in tune
+  // in its own right, and must not borrow the last one's hold for even a frame.
+  const zoneMidi = inZone ? reading.midi : null;
+  const [heldMidi, setHeldMidi] = useState<number | null>(null);
   useEffect(() => {
-    if (!inZone) {
-      setHeld(false);
+    if (zoneMidi === null) {
+      setHeldMidi(null);
       return;
     }
-    const timer = setTimeout(() => setHeld(true), IN_TUNE_HOLD_MS);
+    const timer = setTimeout(() => setHeldMidi(zoneMidi), IN_TUNE_HOLD_MS);
     return () => clearTimeout(timer);
-  }, [inZone]);
-  const inTune = inZone && held;
+  }, [zoneMidi]);
+  const inTune = zoneMidi !== null && heldMidi === zoneMidi;
+
+  // A session is this screen being open: tune the strings in any order, stop and
+  // start the microphone between them, and it still counts. Refs, because nothing
+  // is drawn from it; the only output is the one call when the sixth is in.
+  const tunedRef = useRef<ReadonlySet<number>>(new Set());
+  const reportedRef = useRef(false);
+  const onTunedAllRef = useRef(onTunedAll);
+  onTunedAllRef.current = onTunedAll;
+  const tunedMidi = inTune && reading !== null ? reading.midi : null;
+  useEffect(() => {
+    if (tunedMidi === null || reportedRef.current) return;
+    const stringIndex = openStringOf(tunedMidi);
+    if (stringIndex === null) return;
+    tunedRef.current = withTuned(tunedRef.current, stringIndex);
+    if (allStringsTuned(tunedRef.current)) {
+      reportedRef.current = true;
+      onTunedAllRef.current?.();
+    }
+  }, [tunedMidi]);
 
   const closest = reading === null ? null : closestStringIndex(reading);
   const cents = reading?.cents ?? 0;

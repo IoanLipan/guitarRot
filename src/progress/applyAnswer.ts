@@ -7,6 +7,8 @@ export function applyAnswer(
   correct: boolean,
   today: string,
   itemId?: string,
+  /** The clock the review is scheduled from; a parameter so game events stay deterministic. */
+  nowMs: number = Date.now(),
 ): ProgressState {
   const current = correct ? state.streak.current + 1 : 0;
   const streak = {
@@ -32,7 +34,7 @@ export function applyAnswer(
   const srs =
     itemId === undefined
       ? state.srs
-      : { ...state.srs, [itemId]: reviewSrsItem(itemId, state.srs[itemId], correct, Date.now()) };
+      : { ...state.srs, [itemId]: reviewSrsItem(itemId, state.srs[itemId], correct, nowMs) };
 
   return { ...state, streak, daily, srs };
 }
