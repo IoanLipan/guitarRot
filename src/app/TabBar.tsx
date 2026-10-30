@@ -1,12 +1,13 @@
 import { tapHaptic } from './haptics';
 
-export type TabId = 'feed' | 'songs' | 'learn' | 'quiz';
+export type TabId = 'feed' | 'songs' | 'learn' | 'quiz' | 'you';
 
 const TABS: readonly { id: TabId; label: string }[] = [
   { id: 'feed', label: 'Feed' },
   { id: 'songs', label: 'Songs' },
   { id: 'learn', label: 'Learn' },
   { id: 'quiz', label: 'Quiz' },
+  { id: 'you', label: 'You' },
 ];
 
 const INACTIVE_COLOR = '#5f5f6b';
@@ -27,7 +28,7 @@ export function TabBar({ active, onChange }: { active: TabId; onChange: (id: Tab
       <span
         aria-hidden="true"
         data-testid="tab-indicator"
-        className="tab-indicator pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+7px)] left-0 flex w-1/4 justify-center"
+        className="tab-indicator pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+7px)] left-0 flex w-1/5 justify-center"
         style={{ transform: `translateX(${activeIndex * 100}%)` }}
       >
         <span className="h-1 w-6 rounded-full bg-accent shadow-[0_0_10px_rgba(255,176,32,0.7)]" />
@@ -85,6 +86,17 @@ function TabIcon({ id, active }: { id: TabId; active: boolean }) {
       )}
       {id === 'learn' && (
         <path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z" fill={fill} {...common} />
+      )}
+      {id === 'you' && (
+        <>
+          {/* The guitar pick (the logo's shape), with a peak in it: where you stand, and the way up. */}
+          <path
+            d="M12 3.2c3.9 0 7.5 1.1 7.5 4.7 0 4.6-4.1 9.5-6.2 11.7q-1.3 1.3-2.6 0C8.6 17.4 4.5 12.5 4.5 7.9 4.5 4.3 8.1 3.2 12 3.2Z"
+            fill={fill}
+            {...common}
+          />
+          <path d="M9.2 12.4 12 9.6l2.8 2.8" fill="none" stroke={knockout} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        </>
       )}
       {id === 'quiz' && (
         <>

@@ -28,14 +28,23 @@ function LearnHarness({
   progress,
   lessons,
   initial = START_PLACE,
+  onOpenYou,
 }: {
   progress: Pick<ProgressHandle, 'state' | 'completeLesson'>;
   lessons: readonly Lesson[];
   initial?: LearnPlace;
+  onOpenYou?: () => void;
 }) {
   const [place, setPlace] = useState<LearnPlace>(initial);
   return (
-    <Learn engine={fakeEngine()} progress={progress} lessons={lessons} place={place} onPlaceChange={setPlace} />
+    <Learn
+      engine={fakeEngine()}
+      progress={progress}
+      lessons={lessons}
+      place={place}
+      onPlaceChange={setPlace}
+      onOpenYou={onOpenYou}
+    />
   );
 }
 
@@ -54,6 +63,33 @@ function finishLesson() {
 
 describe('Learn', () => {
   beforeEach(() => vi.clearAllMocks());
+
+  describe('the level and streak chip', () => {
+    it('sits in the header beside the title when the shell can open the You tab, and opens it', () => {
+      const onOpenYou = vi.fn();
+      render(<LearnHarness progress={progressWith()} lessons={FIXTURE_COURSE} onOpenYou={onOpenYou} />);
+
+      const chip = screen.getByTestId('level-chip');
+      expect(chip).toHaveAccessibleName(/^Level 1, 0 days in a row/);
+      expect(screen.getByRole('heading', { level: 1, name: 'Learn' }).parentElement).toContainElement(chip);
+
+      fireEvent.click(chip);
+      expect(onOpenYou).toHaveBeenCalledTimes(1);
+    });
+
+    it('is left out where there is nowhere for it to lead', () => {
+      renderLearn();
+      expect(screen.queryByTestId('level-chip')).toBeNull();
+    });
+
+    it('is not shown over an open lesson, which takes the whole pane', () => {
+      render(<LearnHarness progress={progressWith()} lessons={FIXTURE_COURSE} onOpenYou={vi.fn()} />);
+      fireEvent.click(screen.getByTestId('lesson-row-alpha'));
+
+      expect(screen.getByTestId('lesson-view')).toBeInTheDocument();
+      expect(screen.queryByTestId('level-chip')).toBeNull();
+    });
+  });
 
   it('opens on the Course, with Course, Tuner and Explore to choose from', () => {
     renderLearn(['alpha']);

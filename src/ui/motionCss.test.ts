@@ -38,6 +38,17 @@ const ANIMATION_CLASSES = [
   'sheet-panel',
   'sheet-backdrop',
   'tab-indicator',
+  // The game's moments: results, unlocks, level-ups.
+  'pick-drop',
+  'pick-flip',
+  'stamp-in',
+  'float-points',
+  'toast-enter',
+  'xp-pill',
+  'level-draw',
+  'level-fade',
+  'level-punch',
+  'level-disc',
 ];
 
 function sources(dir: string): string[] {
@@ -97,5 +108,24 @@ describe('index.css motion', () => {
       .filter((path) => !path.endsWith('.test.tsx'))
       .filter((path) => /active:scale-/.test(readFileSync(path, 'utf8')));
     expect(stragglers).toEqual([]);
+  });
+
+  it('has the game moments finish where the element is: its own style is the end state, the keyframes only the start', () => {
+    // So with the animations switched off (reduced motion, an old WebView) the picks are on screen, the badge is stamped and the toast is shown.
+    for (const name of ['pick-drop', 'pick-flip', 'level-draw', 'level-fade', 'level-punch', 'level-disc']) {
+      const rule = css.match(new RegExp(`\\.${name}\\s*\\{[^}]*\\}`))?.[0] ?? '';
+      expect(rule, name).toMatch(/backwards/);
+      expect(rule, name).not.toMatch(/forwards|both/);
+    }
+    // The two that leave on their own are visible when still: a toast shown, a pill shown.
+    expect(css).toMatch(/\.toast-enter\s*\{[^}]*backwards/);
+  });
+
+  it('keeps the game celebrations under the 900ms the file promises, apart from the level-up sequence and the pill', () => {
+    for (const name of ['pick-drop', 'pick-flip', 'stamp-in']) {
+      const rule = css.match(new RegExp(`\\.${name}\\s*\\{[^}]*\\}`))?.[0] ?? '';
+      const ms = [...rule.matchAll(/(\d+)ms/g)].map((match) => Number(match[1]));
+      expect(Math.max(...ms), name).toBeLessThanOrEqual(900);
+    }
   });
 });

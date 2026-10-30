@@ -8,8 +8,13 @@ export type BackAction =
   | 'close-settings'
   | 'close-lesson'
   | 'close-song'
+  | 'close-pick'
+  | 'quiz-back'
   | 'go-to-feed'
   | 'minimize';
+
+/** What the Quiz tab is showing: its mode select, the free practice, a run in progress, or a run's results. */
+export type QuizLayer = 'select' | 'practice' | 'run' | 'results';
 
 export type BackState = {
   settingsOpen: boolean;
@@ -18,19 +23,32 @@ export type BackState = {
   lessonOpen: boolean;
   /** A song is open in the Songs tab (it need not be the tab on screen). */
   songOpen: boolean;
+  /** A pick is open in the You tab (it need not be the tab on screen). */
+  pickOpen?: boolean;
+  /** Where the Quiz tab is, if it is mounted. */
+  quizLayer?: QuizLayer;
 };
 
 /**
  * Back peels one layer off the screen you are looking at: the Settings sheet
- * first, then the lesson or song you are inside, then the tab itself (back to
- * the Feed), and only from the Feed does it leave the app. A lesson open in
- * the Learn tab does not count while another tab is showing: closing
- * something you cannot see would look like Back did nothing.
+ * first, then the lesson, song, pick or quiz run you are inside, then the tab
+ * itself (back to the Feed), and only from the Feed does it leave the app. A
+ * lesson open in the Learn tab does not count while another tab is showing:
+ * closing something you cannot see would look like Back did nothing.
  */
-export function backAction({ settingsOpen, tab, lessonOpen, songOpen }: BackState): BackAction {
+export function backAction({
+  settingsOpen,
+  tab,
+  lessonOpen,
+  songOpen,
+  pickOpen = false,
+  quizLayer = 'select',
+}: BackState): BackAction {
   if (settingsOpen) return 'close-settings';
   if (tab === 'learn' && lessonOpen) return 'close-lesson';
   if (tab === 'songs' && songOpen) return 'close-song';
+  if (tab === 'you' && pickOpen) return 'close-pick';
+  if (tab === 'quiz' && quizLayer !== 'select') return 'quiz-back';
   if (tab !== 'feed') return 'go-to-feed';
   return 'minimize';
 }

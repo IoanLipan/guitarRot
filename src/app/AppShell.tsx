@@ -4,9 +4,12 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { Style, StatusBar } from '@capacitor/status-bar';
 import { getToneProfile } from '@/audio';
 import { Feed } from '@/feed/Feed';
+import { AwardLayer } from '@/game/AwardLayer';
+import type { AwardPhase } from '@/game/awardState';
+import { YouTab } from '@/game/YouTab';
 import { Learn } from '@/learn/Learn';
 import { placeAtLesson, placeWithoutLesson, START_PLACE, type LearnPlace } from '@/learn/learnPlace';
-import { Quiz } from '@/quiz/Quiz';
+import { Quiz, type QuizApi } from '@/quiz/Quiz';
 import { readShareTarget, resolveShareTarget, type SharedContent } from '@/share';
 import { Songs } from '@/songs';
 import { SettingsSheet } from './SettingsSheet';
@@ -15,7 +18,7 @@ import { planStart } from './startPlan';
 import { TabBar, tabDirection, type TabId } from './TabBar';
 import { useAppLifecycle } from './useAppLifecycle';
 import { useAudioEngine } from './useAudioEngine';
-import { backAction, minimizeApp, useBackButton } from './useBackButton';
+import { backAction, minimizeApp, useBackButton, type QuizLayer } from './useBackButton';
 import { useProgress } from './useProgress';
 import { useWakeAudio } from './useWakeAudio';
 import { GearIcon } from '@/ui/icons';
@@ -34,6 +37,11 @@ export function AppShell() {
   // step and song, and Back knows what there is to close.
   const [learnPlace, setLearnPlace] = useState<LearnPlace>(START_PLACE);
   const [openSongId, setOpenSongId] = useState<string | null>(null);
+  // The pick open in the You tab. Owned here because an unlock toast can send you to it.
+  const [openPickId, setOpenPickId] = useState<string | null>(null);
+  // Where the Quiz tab is (its mode select, a run, a run's results), and its handle for Back and for leaving mid-run.
+  const [quizLayer, setQuizLayer] = useState<QuizLayer>('select');
+  const quizApiRef = useRef<QuizApi | null>(null);
 
   // Moving between tabs slides the content the way you moved, as a View
   // Transition where the browser has them (the tab unmounts, so the old
@@ -42,8 +50,20 @@ export function AppShell() {
   const transition = useViewTransition();
   function changeTab(next: TabId) {
     if (next === tab) return;
-    transition(() => setTab(next), { element: paneRef.current, direction: tabDirection(tab, next) });
+    const go = () => transition(() => setTab(next), { element: paneRef.current, direction: tabDirection(tab, next) });
+    // A quiz run in progress is not thrown away by a stray tap on a tab: the Quiz tab asks first.
+    if (tab === 'quiz' && quizApiRef.current?.guardLeave(go) === true) return;
+    go();
   }
+
+  /** An unlock toast was tapped: the You tab, open on that pick. */
+  function showPick(achievementId: string) {
+    setOpenPickId(achievementId);
+    changeTab('you');
+  }
+
+  // A run holds the game's toasts back while it is on; its results show what it earned.
+  const awardPhase: AwardPhase = quizLayer === 'run' ? 'running' : quizLayer === 'results' ? 'results' : 'idle';
 
   // A shared link (`/?p=riff:blues-shuffle-e`) opens on the card it names.
   // The parameter is stripped once read, so a later reload is an ordinary
@@ -99,6 +119,8 @@ export function AppShell() {
         tab,
         lessonOpen: learnPlace.lessonId !== null,
         songOpen: openSongId !== null,
+        pickOpen: openPickId !== null,
+        quizLayer,
       })
     ) {
       case 'close-settings':
@@ -109,6 +131,12 @@ export function AppShell() {
         break;
       case 'close-song':
         setOpenSongId(null);
+        break;
+      case 'close-pick':
+        setOpenPickId(null);
+        break;
+      case 'quiz-back':
+        quizApiRef.current?.back();
         break;
       case 'go-to-feed':
         changeTab('feed');
@@ -185,9 +213,13 @@ export function AppShell() {
               place={learnPlace}
               onPlaceChange={setLearnPlace}
               onTunedAll={() => progress.record({ type: 'tuned-all' })}
+              onOpenYou={() => changeTab('you')}
             />
           )}
-          {tab === 'quiz' && <Quiz engine={engine} progress={progress} />}
+          {tab === 'quiz' && (
+            <Quiz engine={engine} progress={progress} onLayerChange={setQuizLayer} apiRef={quizApiRef} />
+          )}
+          {tab === 'you' && <YouTab progress={progress} openPickId={openPickId} onOpenPickChange={setOpenPickId} />}
         </div>
 
         <button
@@ -202,6 +234,8 @@ export function AppShell() {
       </main>
 
       <TabBar active={tab} onChange={changeTab} />
+
+      <AwardLayer progress={progress} phase={awardPhase} onOpenPick={showPick} />
 
       <SettingsSheet
         open={settingsOpen}

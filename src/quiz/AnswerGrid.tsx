@@ -13,6 +13,10 @@ export type AnswerGridProps = {
    * they are printed.
    */
   formatOption?: (option: string) => string;
+  /** Six answers instead of four: shorter buttons, so three rows fit where two used to. */
+  dense?: boolean;
+  /** Text that floats up from the right answer once it is picked, like "+20". */
+  floatLabel?: string;
 };
 
 /** The 2x2 answer grid shared by the Feed's quiz cards and the Quiz tab. */
@@ -22,6 +26,8 @@ export function AnswerGrid({
   picked,
   onPick,
   formatOption = (option) => option,
+  dense = false,
+  floatLabel,
 }: AnswerGridProps) {
   const answered = picked !== null;
   const pickedRef = useRef<HTMLButtonElement>(null);
@@ -33,13 +39,17 @@ export function AnswerGrid({
   }, [rightPick]);
 
   return (
-    <div className="grid w-full grid-cols-2 gap-3" data-testid="answer-grid">
+    <div className={`grid w-full grid-cols-2 ${dense ? 'gap-2.5 tight:gap-2' : 'gap-3'}`} data-testid="answer-grid">
       {options.map((option) => {
         const isPicked = option === picked;
         const isCorrectPick = isPicked && option === correctAnswer;
         const isWrongPick = isPicked && option !== correctAnswer;
 
-        const classes = ['press press-tile rounded-2xl border-2 py-5 text-center text-xl font-extrabold tight:py-4'];
+        const classes = [
+          dense
+            ? 'press press-tile rounded-2xl border-2 py-3.5 text-center text-lg font-extrabold tight:py-2'
+            : 'press press-tile rounded-2xl border-2 py-5 text-center text-xl font-extrabold tight:py-4',
+        ];
         if (isCorrectPick) {
           classes.push(
             'answer-pop answer-ring border-[var(--color-good)] bg-[var(--color-good)] text-[var(--color-ground)]',
@@ -65,6 +75,16 @@ export function AnswerGrid({
             className={classes.join(' ')}
           >
             {formatOption(option)}
+            {isCorrectPick && floatLabel !== undefined && (
+              // Over the button's edge, not inside it: it climbs out of the answer that earned it.
+              <span
+                aria-hidden="true"
+                data-testid="float-points"
+                className="float-points font-display pointer-events-none absolute top-0 left-1/2 text-4xl leading-none font-black text-ink [text-shadow:0_2px_12px_rgba(0,0,0,0.6)]"
+              >
+                {floatLabel}
+              </span>
+            )}
           </button>
         );
       })}

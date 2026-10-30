@@ -39,6 +39,27 @@ describe('backAction', () => {
     expect(backAction({ ...nothingOpen, tab: 'quiz' })).toBe('go-to-feed');
   });
 
+  it('closes a pick that is open on the You tab, and ignores one on a tab you are not looking at', () => {
+    expect(backAction({ ...nothingOpen, tab: 'you', pickOpen: true })).toBe('close-pick');
+    expect(backAction({ ...nothingOpen, tab: 'you' })).toBe('go-to-feed');
+    expect(backAction({ ...nothingOpen, tab: 'quiz', pickOpen: true })).toBe('go-to-feed');
+    expect(backAction({ ...nothingOpen, tab: 'feed', pickOpen: true })).toBe('minimize');
+  });
+
+  it('leaves a quiz run, its practice or its results one step at a time, before leaving the Quiz tab', () => {
+    for (const quizLayer of ['run', 'practice', 'results'] as const) {
+      expect(backAction({ ...nothingOpen, tab: 'quiz', quizLayer })).toBe('quiz-back');
+    }
+    expect(backAction({ ...nothingOpen, tab: 'quiz', quizLayer: 'select' })).toBe('go-to-feed');
+    // A run is nothing to Back on another tab.
+    expect(backAction({ ...nothingOpen, tab: 'learn', quizLayer: 'run' })).toBe('go-to-feed');
+  });
+
+  it('puts the Settings sheet above a pick and a run', () => {
+    expect(backAction({ ...nothingOpen, settingsOpen: true, tab: 'quiz', quizLayer: 'run' })).toBe('close-settings');
+    expect(backAction({ ...nothingOpen, settingsOpen: true, tab: 'you', pickOpen: true })).toBe('close-settings');
+  });
+
   it('minimizes from the Feed', () => {
     expect(backAction(nothingOpen)).toBe('minimize');
   });

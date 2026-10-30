@@ -1,6 +1,13 @@
 import { useId } from 'react';
 
 /**
+ * The outline of the guitarRot pick on a 1024 grid. The game's picks (src/game)
+ * are struck from the same shape, so every badge looks like it belongs to the logo.
+ */
+export const PICK_PATH =
+  'M512 180 C680 180 812 232 812 384 C812 560 646 752 566 838 Q512 892 458 838 C378 752 212 560 212 384 C212 232 344 180 512 180 Z';
+
+/**
  * The guitarRot mark: an amber pick with "play" cut out of it. Same geometry
  * as assets/brand/mark.svg, which the launcher icon, splash and store graphics
  * are rendered from, so the app and its icon can't drift apart.
@@ -10,8 +17,7 @@ export function LogoMark({ className }: { className?: string }) {
   const id = useId();
   const pick = `${id}-pick`;
   const shine = `${id}-shine`;
-  const shape =
-    'M512 180 C680 180 812 232 812 384 C812 560 646 752 566 838 Q512 892 458 838 C378 752 212 560 212 384 C212 232 344 180 512 180 Z';
+  const shape = PICK_PATH;
   return (
     <svg viewBox="160 150 704 760" className={className} aria-hidden="true">
       <defs>

@@ -34,6 +34,56 @@
   --color-fret: #8f8f9c;
 }
 
+/*
+ * The pick case (src/game): every achievement is a guitar pick struck in a
+ * material. `static` because the picks read these from inline styles in SVG,
+ * where Tailwind sees no utility using them and would otherwise leave them out.
+ * src/game/materials.ts holds the same values for the code that mixes shades
+ * from them; a test keeps the two in step.
+ */
+@theme static {
+  --font-display: "Big Shoulders Display", "Arial Narrow", "Roboto Condensed", ui-sans-serif, system-ui, sans-serif;
+
+  /* Celluloid: the colour of the pick, by what it was earned for. */
+  --color-learn: #3ddc84;
+  --color-quiz: #5b8cff;
+  --color-songs: #ff6b6b;
+  --color-streak: #ffb020;
+  --color-milestone: #b17cff;
+
+  /* Steel: a brushed sweep from bright to dark and back, glyph engraved. */
+  --color-steel-1: #f1f3f7;
+  --color-steel-2: #9aa3b2;
+  --color-steel-3: #dfe4ea;
+  --color-steel-4: #6e7787;
+  --color-steel-engrave: #3b404a;
+
+  --color-gold-1: #fff1b8;
+  --color-gold-2: #e2b13c;
+  --color-gold-3: #a8701a;
+  --color-gold-4: #f7d774;
+  --color-gold-engrave: #6b4410;
+
+  /* Not earned yet: a smoked, empty pick. */
+  --color-locked: #1a1a22;
+  --color-locked-rim: #2c2c38;
+  --color-locked-glyph: #3a3a48;
+}
+
+/*
+ * Big Shoulders Display (SIL OFL, public/fonts/OFL.txt), for the numbers and
+ * titles of the game surfaces only. Self-hosted so the APK has it offline; one
+ * variable file covers 800 and 900.
+ */
+@font-face {
+  font-family: "Big Shoulders Display";
+  font-style: normal;
+  font-weight: 800 900;
+  font-display: swap;
+  src: url("/fonts/BigShouldersDisplay-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 html, body, #root {
   height: 100%;
 }
@@ -536,6 +586,77 @@ html[data-motion-dir='back']::view-transition-new(tab-content) {
   opacity: 0.8;
   animation: lit-pulse 1.4s ease-in-out infinite;
 }
+
+/* ---- The game: results, picks, toasts, level-up ---- */
+@keyframes pick-drop {
+  0% { opacity: 0; transform: translateY(-46px) scale(1.5) rotate(-16deg); }
+  60% { opacity: 1; transform: translateY(5px) scale(0.94) rotate(3deg); }
+  100% { transform: none; }
+}
+
+@keyframes pick-flip {
+  from { opacity: 0; transform: perspective(520px) rotateY(-100deg) scale(0.8); }
+  to { opacity: 1; transform: perspective(520px) rotateY(0deg) scale(1); }
+}
+
+@keyframes stamp-in {
+  0% { opacity: 0; transform: scale(2.1) rotate(-9deg); }
+  70% { opacity: 1; transform: scale(0.94) rotate(-3deg); }
+  100% { transform: rotate(-2deg); }
+}
+
+@keyframes float-points {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(0.7); }
+  22% { opacity: 1; transform: translate(-50%, -14px) scale(1.12); }
+  100% { opacity: 0; transform: translate(-50%, -64px) scale(1); }
+}
+
+@keyframes toast-in { from { opacity: 0; transform: translateY(-130%); } }
+@keyframes toast-out { to { opacity: 0; transform: translateY(-130%); } }
+@keyframes pill-life {
+  0% { opacity: 0; transform: translateY(14px) scale(0.85); }
+  14% { opacity: 1; transform: none; }
+  82% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+
+@keyframes level-draw { from { stroke-dashoffset: 1; } }
+@keyframes level-fade { from { opacity: 0; } }
+@keyframes level-punch {
+  0% { opacity: 0; transform: scale(2.8); }
+  60% { opacity: 1; transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+@keyframes level-disc {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.pick-drop { animation: pick-drop 520ms var(--motion-pop) backwards; animation-delay: var(--delay, 0ms); }
+.pick-flip { animation: pick-flip 560ms var(--motion-slide) backwards; animation-delay: var(--delay, 0ms); }
+.stamp-in {
+  transform: rotate(-2deg);
+  animation: stamp-in 420ms var(--motion-pop) backwards;
+  animation-delay: var(--delay, 0ms);
+}
+.float-points {
+  opacity: 0;
+  animation: float-points 900ms var(--motion-slide) backwards;
+}
+
+.toast-enter { animation: toast-in 340ms var(--motion-slide) backwards; }
+.toast-enter[data-state='leaving'] { animation: toast-out 220ms cubic-bezier(0.5, 0, 0.9, 0.4) forwards; }
+.xp-pill { animation: pill-life 1900ms var(--motion-slide) forwards; }
+
+/* The level-up pick draws its own outline, then fills, then the number lands. */
+.level-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: level-draw 780ms ease-in-out backwards;
+}
+.level-fade { animation: level-fade 360ms ease-out 640ms backwards; }
+.level-punch { transform-origin: 50% 50%; transform-box: fill-box; animation: level-punch 460ms var(--motion-pop) 820ms backwards; }
+.level-disc { animation: level-disc 900ms var(--motion-slide) 300ms backwards; }
 
 /* ---- Settings sheet ---- */
 @keyframes sheet-up { from { transform: translateY(100%); } }
