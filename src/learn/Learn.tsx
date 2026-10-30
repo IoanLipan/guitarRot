@@ -3,6 +3,7 @@ import { tapHaptic } from '@/app/haptics';
 import type { ProgressHandle } from '@/app/useProgress';
 import type { AudioEngine } from '@/audio';
 import { COURSE, type Lesson } from '@/content';
+import { LevelChip } from '@/game/LevelChip';
 import { Course } from './Course';
 import { Explore } from './Explore';
 import { placeAtLesson, placeWithoutLesson, type LearnPlace, type LearnSection } from './learnPlace';
@@ -30,6 +31,7 @@ export function Learn({
   place,
   onPlaceChange,
   onTunedAll,
+  onOpenYou,
   lessons = COURSE,
 }: {
   engine: AudioEngine;
@@ -38,6 +40,8 @@ export function Learn({
   onPlaceChange: Dispatch<SetStateAction<LearnPlace>>;
   /** Told when the tuner, here or in a lesson, has seen all six strings tuned. */
   onTunedAll?: () => void;
+  /** Opens the You tab. When given, the header carries the level and streak chip that does it. */
+  onOpenYou?: () => void;
   /** Defaults to the shipped course; tests hand in their own. */
   lessons?: readonly Lesson[];
 }) {
@@ -75,7 +79,11 @@ export function Learn({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex shrink-0 flex-col gap-4 px-5 pt-8 pb-4 tight:gap-3 tight:pt-4">
-        <h1 className="text-3xl font-black">Learn</h1>
+        {/* The gear button floats over this corner (see AppShell), so the chip stops short of it. */}
+        <div className="flex items-center justify-between gap-3 pr-12">
+          <h1 className="text-3xl font-black">Learn</h1>
+          {onOpenYou !== undefined && <LevelChip state={progress.state} onOpen={onOpenYou} />}
+        </div>
         <div
           role="tablist"
           aria-label="Learn sections"

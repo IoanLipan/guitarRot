@@ -18,6 +18,11 @@ const world = vi.hoisted(() => ({
   minimizeApp: vi.fn(() => Promise.resolve()),
   /** Stands in for waking a suspended audio context. */
   wakeAudio: vi.fn(),
+  /** The shell's listener for awards, once it has subscribed: call it to make something happen in the game. */
+  awards: null as null | ((notice: unknown) => void),
+  /** What the stand-in Quiz tab answers when the shell asks whether leaving would throw a run away. */
+  quizGuard: vi.fn((_proceed: () => void) => false),
+  quizBack: vi.fn(),
 }));
 
 vi.mock('@/audio', async (importOriginal) => ({
@@ -73,7 +78,37 @@ vi.mock('@capacitor/haptics', () => ({
 
 // Tabs that are not under test, and pieces owned by other screens.
 vi.mock('@/feed/Feed', () => ({ Feed: () => <div data-testid="feed-screen" /> }));
-vi.mock('@/quiz/Quiz', () => ({ Quiz: () => <div data-testid="quiz-screen" /> }));
+// The Quiz tab is its own screen with its own tests; the shell only cares where it says it is, and what it answers to Back.
+vi.mock('@/quiz/Quiz', async () => {
+  const { useEffect: useEffectInMock } = await import('react');
+  type Layer = 'select' | 'practice' | 'run' | 'results';
+  return {
+    Quiz: ({
+      onLayerChange,
+      apiRef,
+    }: {
+      onLayerChange?: (layer: Layer) => void;
+      apiRef?: { current: unknown };
+    }) => {
+      useEffectInMock(() => {
+        if (apiRef === undefined) return;
+        apiRef.current = { back: world.quizBack, guardLeave: world.quizGuard };
+        return () => {
+          apiRef.current = null;
+        };
+      }, [apiRef]);
+      return (
+        <div data-testid="quiz-screen">
+          {(['run', 'results', 'select'] as const).map((layer) => (
+            <button key={layer} type="button" data-testid={`quiz-layer-${layer}`} onClick={() => onLayerChange?.(layer)}>
+              {layer}
+            </button>
+          ))}
+        </div>
+      );
+    },
+  };
+});
 vi.mock('./SettingsSheet', () => ({
   SettingsSheet: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
     open ? (
@@ -161,6 +196,8 @@ describe('AppShell', () => {
     vi.clearAllMocks();
     world.engine = fakeEngine();
     world.backButton = null;
+    world.awards = null;
+    world.quizGuard.mockReturnValue(false);
     setProgress();
     window.history.replaceState(null, '', '/');
   });
@@ -541,6 +578,153 @@ describe('AppShell', () => {
 
       expect(world.progress.record).toHaveBeenCalledTimes(1);
       expect(world.progress.record).toHaveBeenCalledWith({ type: 'tuned-all' });
+    });
+  });
+
+
+  describe('the You tab', () => {
+    it('is the fifth tab, and shows where you stand', async () => {
+      world.progress = fakeProgressHandle({ state: { ...emptyProgressState(), xp: 340 } });
+      await openOnFeed();
+
+      fireEvent.click(tab('You'));
+
+      expect(tab('You')).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByTestId('you-tab')).toBeInTheDocument();
+      expect(screen.getByTestId('you-rank')).toHaveTextContent('Riff Apprentice');
+    });
+
+    it('Back closes the pick that is open first, then goes to the Feed', async () => {
+      vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+      await openOnFeed();
+      fireEvent.click(tab('You'));
+      fireEvent.click(screen.getByTestId('pick-first-song'));
+      expect(screen.getByTestId('pick-sheet')).toBeInTheDocument();
+
+      pressBack();
+      expect(screen.getByTestId('pick-sheet')).toHaveAttribute('data-state', 'closing');
+      expect(tab('You')).toHaveAttribute('aria-current', 'page');
+
+      pressBack();
+      expect(tab('Feed')).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('is where the level and streak chip on the Learn tab leads', async () => {
+      await openOnFeed();
+      fireEvent.click(tab('Learn'));
+
+      fireEvent.click(screen.getByTestId('level-chip'));
+
+      expect(tab('You')).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByTestId('you-tab')).toBeInTheDocument();
+    });
+  });
+
+  describe('the game layer', () => {
+    function listenForAwards() {
+      world.progress = fakeProgressHandle({
+        subscribeAwards: vi.fn((listener) => {
+          world.awards = listener as (notice: unknown) => void;
+          return () => {};
+        }),
+      });
+    }
+    const unlock = (id: string) => ({
+      id: 1,
+      event: { type: 'song-played', songId: 'tom-dooley' },
+      award: { xp: 20, levelBefore: 1, levelAfter: 1, unlocked: [id], dayStreak: 1, firstOfDay: false },
+    });
+
+    it('is mounted once the app is running, and listening for awards', async () => {
+      listenForAwards();
+      await openOnFeed();
+
+      expect(world.progress.subscribeAwards).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows an unlock as a toast over whatever is on screen, and a tap on it opens that pick in the You tab', async () => {
+      listenForAwards();
+      await openOnFeed();
+
+      act(() => world.awards?.(unlock('first-song')));
+      expect(screen.getByTestId('unlock-toast')).toHaveTextContent('Unlocked: First song');
+      expect(tab('Feed')).toHaveAttribute('aria-current', 'page');
+
+      fireEvent.click(screen.getByTestId('unlock-toast'));
+
+      expect(tab('You')).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByTestId('pick-sheet')).toHaveTextContent('First song');
+    });
+
+    it('holds toasts back while a quiz run is on, and gives them up when the run is quit', async () => {
+      listenForAwards();
+      await openOnFeed();
+      fireEvent.click(tab('Quiz'));
+      fireEvent.click(screen.getByTestId('quiz-layer-run'));
+
+      act(() => world.awards?.(unlock('first-song')));
+      expect(screen.queryByTestId('unlock-toast')).toBeNull();
+
+      // Leaving it (quit, or a tab) puts the Quiz tab back on its choice of difficulty.
+      fireEvent.click(screen.getByTestId('quiz-layer-select'));
+      expect(screen.getByTestId('unlock-toast')).toHaveTextContent('Unlocked: First song');
+    });
+
+    it('does not repeat at the end of a run what the results screen showed', async () => {
+      listenForAwards();
+      await openOnFeed();
+      fireEvent.click(tab('Quiz'));
+      fireEvent.click(screen.getByTestId('quiz-layer-run'));
+      act(() => world.awards?.(unlock('first-song')));
+      fireEvent.click(screen.getByTestId('quiz-layer-results'));
+
+      fireEvent.click(screen.getByTestId('quiz-layer-select'));
+
+      expect(screen.queryByTestId('unlock-toast')).toBeNull();
+    });
+  });
+
+  describe('leaving a quiz run', () => {
+    it('asks the Quiz tab before another tab replaces it, and stays put until it says yes', async () => {
+      await openOnFeed();
+      fireEvent.click(tab('Quiz'));
+      fireEvent.click(screen.getByTestId('quiz-layer-run'));
+      world.quizGuard.mockReturnValue(true);
+
+      fireEvent.click(tab('Feed'));
+
+      expect(world.quizGuard).toHaveBeenCalledTimes(1);
+      expect(tab('Quiz')).toHaveAttribute('aria-current', 'page');
+
+      const proceed = world.quizGuard.mock.calls[0]![0];
+      act(() => proceed());
+      expect(tab('Feed')).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('lets other tabs through when no run is on', async () => {
+      await openOnFeed();
+      fireEvent.click(tab('Quiz'));
+
+      fireEvent.click(tab('Learn'));
+
+      expect(tab('Learn')).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('sends Back to the Quiz tab itself while it is on a run, practice or results', async () => {
+      vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+      await openOnFeed();
+      fireEvent.click(tab('Quiz'));
+      fireEvent.click(screen.getByTestId('quiz-layer-run'));
+
+      pressBack();
+
+      expect(world.quizBack).toHaveBeenCalledTimes(1);
+      expect(tab('Quiz')).toHaveAttribute('aria-current', 'page');
+
+      // Back on the choice of difficulty it is an ordinary tab again.
+      fireEvent.click(screen.getByTestId('quiz-layer-select'));
+      pressBack();
+      expect(tab('Feed')).toHaveAttribute('aria-current', 'page');
     });
   });
 

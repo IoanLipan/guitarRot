@@ -14,10 +14,12 @@ import { generateQuestion } from '@/quiz';
 import { useProgress, type AwardNotice } from './useProgress';
 
 /**
- * A whole quiz run, driven the way the difficulty quiz will drive it: questions
- * from `generateQuestion`, each answer scored with `scoreAnswer`, recorded as
- * a quiz-answer event, and the run's end recorded as a quiz-run. There is no
- * run screen yet; this is what shows the engine holds together without one.
+ * A whole quiz run, driven the way the run screen drives it: questions from
+ * `generateQuestion`, each answer scored with `scoreAnswer`, recorded as a
+ * quiz-answer event, and the run's end recorded as a quiz-run. It goes through
+ * the real hook and storage with no screen in between, which is what shows
+ * the engine holds together on its own (the screen's own tests are in
+ * src/quiz/QuizRun.test.tsx).
  */
 async function playRun(difficulty: QuizDifficulty, wrongAt: readonly number[] = []) {
   const hook = renderHook(() => useProgress());

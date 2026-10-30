@@ -33,7 +33,14 @@ function fakeEngine(): AudioEngine {
   };
 }
 
-describe('Quiz', () => {
+/** The Quiz tab opens on its mode select; these tests are of the free practice behind its last button. */
+function renderPractice(progress: ProgressHandle = fakeProgress()) {
+  const view = render(<Quiz engine={fakeEngine()} progress={progress} />);
+  fireEvent.click(screen.getByRole('button', { name: /Free practice/ }));
+  return view;
+}
+
+describe('Quiz free practice', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.spyOn(Math, 'random').mockReturnValue(0.4);
@@ -48,14 +55,14 @@ describe('Quiz', () => {
     const progress = fakeProgress({
       state: { ...emptyProgressState(), streak: { current: 6, longest: 9, lastActiveDate: null } },
     });
-    render(<Quiz engine={fakeEngine()} progress={progress} />);
+    renderPractice(progress);
     expect(screen.getByText('Streak 6')).toBeInTheDocument();
   });
 
   it('bumps the streak counter when it goes up, and keeps just the one counter on screen', () => {
     const at = (current: number) =>
       fakeProgress({ state: { ...emptyProgressState(), streak: { current, longest: current, lastActiveDate: null } } });
-    const { rerender } = render(<Quiz engine={fakeEngine()} progress={at(0)} />);
+    const { rerender } = renderPractice(at(0));
     // Not on first render.
     expect(screen.getByTestId('streak')).not.toHaveClass('bump');
 
@@ -70,7 +77,7 @@ describe('Quiz', () => {
   });
 
   it('offers four options before answering', () => {
-    render(<Quiz engine={fakeEngine()} progress={fakeProgress()} />);
+    renderPractice();
     expect(screen.getByRole('button', { name: CORRECT })).toBeInTheDocument();
     // Scoped to the grid: the prompt's fretboard tap targets are buttons too.
     expect(within(screen.getByTestId('answer-grid')).getAllByRole('button')).toHaveLength(4);
@@ -78,7 +85,7 @@ describe('Quiz', () => {
 
   it('records a correct answer, flashes PERFECT, and advances on its own', () => {
     const progress = fakeProgress();
-    render(<Quiz engine={fakeEngine()} progress={progress} />);
+    renderPractice(progress);
 
     fireEvent.click(screen.getByRole('button', { name: CORRECT }));
 
@@ -96,7 +103,7 @@ describe('Quiz', () => {
 
   it('explains a wrong answer and waits instead of auto-advancing', () => {
     const progress = fakeProgress();
-    render(<Quiz engine={fakeEngine()} progress={progress} />);
+    renderPractice(progress);
 
     fireEvent.click(screen.getByRole('button', { name: WRONG }));
 
@@ -116,7 +123,7 @@ describe('Quiz', () => {
   });
 
   it('moves on from a wrong answer when the user asks for the next question', () => {
-    render(<Quiz engine={fakeEngine()} progress={fakeProgress()} />);
+    renderPractice();
 
     fireEvent.click(screen.getByRole('button', { name: WRONG }));
     fireEvent.click(screen.getByRole('button', { name: /Next question/ }));

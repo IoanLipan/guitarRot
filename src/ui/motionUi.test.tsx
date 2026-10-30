@@ -384,7 +384,7 @@ describe('tab bar', () => {
     expect(pill().style.transform).toBe('translateX(200%)');
     expect(pill()).toHaveAttribute('aria-hidden', 'true');
     // The pill is not a control.
-    expect(screen.getAllByRole('button')).toHaveLength(4);
+    expect(screen.getAllByRole('button')).toHaveLength(5);
   });
 
   it('the active tab icon pops, and only the active one', () => {

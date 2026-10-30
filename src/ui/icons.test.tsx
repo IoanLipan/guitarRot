@@ -104,3 +104,82 @@ describe('no text glyphs as icons', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * The game surfaces (src/game, and the run screens in src/quiz) have no icon
+ * font and no emoji: every mark in them is an SVG drawn in the app's own style.
+ * The scan above already walks them (`game` is not on its skip list); this is
+ * the stricter one for new directories. It also rejects the things the design
+ * plan rules out there: pictographs and dingbats (stars, ticks, flames),
+ * arrows typed as characters, middle-dot "A · B · C" strings, and tracked
+ * all-caps labels.
+ */
+describe('the game surfaces', () => {
+  const ROOT = join(__dirname, '..');
+  /** Every directory that holds only game surfaces. */
+  const GAME_DIRS = ['game'];
+  /** Files of other directories that are game surfaces too (the rest of those directories is older code). */
+  const GAME_FILES = [
+    join('quiz', 'ModeSelect.tsx'),
+    join('quiz', 'QuizRun.tsx'),
+    join('quiz', 'RunHeader.tsx'),
+    join('quiz', 'RunResults.tsx'),
+    join('quiz', 'difficultyCopy.ts'),
+  ];
+  const PICTOGRAPHS = /[\p{Extended_Pictographic}←-⇿⌀-⏿■-➿⬀-⯿·•★☆]/u;
+  const TRACKED_CAPS = /\buppercase\b|\btracking-(wide|wider|widest)\b/;
+
+  function sources(dir: string): string[] {
+    return readdirSync(dir).flatMap((entry) => {
+      const path = join(dir, entry);
+      if (statSync(path).isDirectory()) return sources(path);
+      return /\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry) ? [path] : [];
+    });
+  }
+
+  const files = [...GAME_DIRS.flatMap((dir) => sources(join(ROOT, dir))), ...GAME_FILES.map((file) => join(ROOT, file))];
+
+  /** The code of a file, without the lines that only talk. */
+  function codeLines(file: string): { line: number; code: string }[] {
+    return readFileSync(file, 'utf8')
+      .split('\n')
+      .flatMap((text, index) => {
+        const code = text.trim();
+        return /^(\/\/|\/?\*|\{\/\*)/.test(code) ? [] : [{ line: index + 1, code }];
+      });
+  }
+
+  it('actually reaches the files it is about', () => {
+    expect(files.length).toBeGreaterThan(15);
+    for (const name of ['Pick.tsx', 'glyphs.ts', 'YouTab.tsx', 'AwardLayer.tsx']) {
+      expect(files.some((file) => file.endsWith(name)), name).toBe(true);
+    }
+    expect(GAME_DIRS.every((dir) => readdirSync(join(ROOT, dir)).length > 0)).toBe(true);
+  });
+
+  it('draws no emoji, dingbat, typed arrow, middle dot or bullet in any of them', () => {
+    const offenders = files.flatMap((file) =>
+      codeLines(file)
+        .filter(({ code }) => PICTOGRAPHS.test(code) || /[←→↑↓×▶▸▾▴♪♩♫↻↺✓✔✕✗✖⏸⏹↗⚙]/.test(code))
+        .map(({ line, code }) => `${relative(ROOT, file)}:${line}: ${code}`),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it('sets no label in tracked all-caps: sentence case everywhere', () => {
+    const offenders = files.flatMap((file) =>
+      codeLines(file)
+        .filter(({ code }) => TRACKED_CAPS.test(code))
+        .map(({ line, code }) => `${relative(ROOT, file)}:${line}: ${code}`),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it('is a scan that would catch one, if there were one', () => {
+    for (const bad of ['Flawless ★', 'Streak \u{1F525}', 'A · B', 'Go →', 'tick ✓']) {
+      expect(PICTOGRAPHS.test(bad) || /[←→↑↓×▶▸▾▴♪♩♫↻↺✓✔✕✗✖⏸⏹↗⚙]/.test(bad), bad).toBe(true);
+    }
+    expect(TRACKED_CAPS.test('text-xs font-bold tracking-wider uppercase')).toBe(true);
+    expect(PICTOGRAPHS.test('Natural notes on the first 3 frets, open chords')).toBe(false);
+  });
+});
