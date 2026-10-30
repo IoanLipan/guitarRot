@@ -5,6 +5,7 @@ import { CHORDS } from '@/content';
 import { emptyProgressState } from '@/progress';
 import type { NoteQuizQuestion } from '@/quiz';
 import { FIXTURE_COURSE, CHECK, card, lesson } from '@/learn/testkit';
+import { fakeProgressHandle } from '@/app/testkit';
 
 /**
  * What the screens do with the motion helpers, checked without pixels: which
@@ -403,14 +404,7 @@ describe('tab bar', () => {
 
 describe('settings sheet', () => {
   const engine = fakeEngine();
-  const progress = {
-    state: emptyProgressState(),
-    loaded: true,
-    recordAnswer: vi.fn(),
-    updateSettings: vi.fn(),
-    completeLesson: vi.fn(),
-    flush: vi.fn(),
-  };
+  const progress = fakeProgressHandle();
   const sheet = (open: boolean) => <SettingsSheet open={open} onClose={vi.fn()} engine={engine} progress={progress} />;
 
   beforeEach(() => vi.useFakeTimers());

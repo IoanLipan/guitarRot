@@ -3,10 +3,8 @@ import {
   PROGRESS_VERSION,
   addLessonDone,
   emptyProgressState,
-  migrate,
   pruneDaily,
   pushSeen,
-  type ProgressState,
 } from './types';
 
 describe('emptyProgressState', () => {
@@ -21,71 +19,27 @@ describe('emptyProgressState', () => {
     expect(state.streak).toEqual({ current: 0, longest: 0, lastActiveDate: null });
   });
 
+  it('starts the game at zero: no xp, no practice days, nothing unlocked', () => {
+    const state = emptyProgressState();
+    expect(state.xp).toBe(0);
+    expect(state.practiceDays).toEqual([]);
+    expect(state.dayStreak).toEqual({ current: 0, longest: 0, lastDate: null });
+    expect(state.achievements).toEqual({});
+    expect(state.songsPlayed).toEqual([]);
+    expect(state.tunedAllDate).toBeNull();
+    for (const difficulty of ['easy', 'medium', 'hard'] as const) {
+      expect(state.quizBests[difficulty]).toEqual({ best: 0, stars: 0, runs: 0 });
+    }
+  });
+
   it('returns a fresh object each time', () => {
     const a = emptyProgressState();
     a.seenContent.push('x');
+    a.quizBests.easy.runs = 3;
+    a.songsToday.ids.push('s');
     expect(emptyProgressState().seenContent).toEqual([]);
-  });
-});
-
-describe('migrate', () => {
-  it('turns null into an empty state', () => {
-    expect(migrate(null)).toEqual(emptyProgressState());
-  });
-
-  it('turns a string into an empty state', () => {
-    expect(migrate('corrupted')).toEqual(emptyProgressState());
-  });
-
-  it('turns an unknown version into an empty state', () => {
-    expect(migrate({ version: 999, srs: {} })).toEqual(emptyProgressState());
-  });
-
-  it('fills in fields missing from an otherwise valid state', () => {
-    const partial = { version: PROGRESS_VERSION, srs: {} };
-    const migrated = migrate(partial);
-    expect(migrated.settings.defaultSpeed).toBe(1);
-    expect(migrated.daily).toEqual({});
-  });
-
-  it('preserves scheduling data it recognises', () => {
-    const state: ProgressState = {
-      ...emptyProgressState(),
-      srs: {
-        'fret:s0f5': { id: 'fret:s0f5', dueAt: 123, intervalDays: 3, ease: 2.3, reps: 4, lapses: 1 },
-      },
-    };
-    expect(migrate(JSON.parse(JSON.stringify(state))).srs['fret:s0f5']?.reps).toBe(4);
-  });
-
-  it('drops srs entries that are not well formed', () => {
-    const broken = { version: PROGRESS_VERSION, srs: { bad: { id: 'bad' } } };
-    expect(migrate(broken).srs).toEqual({});
-  });
-});
-
-describe('lessonsDone', () => {
-  it('starts empty', () => {
-    expect(emptyProgressState().lessonsDone).toEqual([]);
-  });
-
-  it('defaults to empty for a state saved before the course existed', () => {
-    const { lessonsDone: _omitted, ...beforeTheCourse } = emptyProgressState();
-    expect(migrate(beforeTheCourse).lessonsDone).toEqual([]);
-  });
-
-  it('keeps the finished lesson ids it is given, in order', () => {
-    const saved = { ...emptyProgressState(), lessonsDone: ['strings', 'tuning'] };
-    expect(migrate(JSON.parse(JSON.stringify(saved))).lessonsDone).toEqual(['strings', 'tuning']);
-  });
-
-  it('keeps only strings, once each', () => {
-    const saved = { ...emptyProgressState(), lessonsDone: ['strings', 7, null, 'strings', 'tab'] };
-    expect(migrate(saved).lessonsDone).toEqual(['strings', 'tab']);
-  });
-
-  it('ignores a lessonsDone that is not a list', () => {
-    expect(migrate({ ...emptyProgressState(), lessonsDone: 'strings' }).lessonsDone).toEqual([]);
+    expect(emptyProgressState().quizBests.easy.runs).toBe(0);
+    expect(emptyProgressState().songsToday.ids).toEqual([]);
   });
 });
 

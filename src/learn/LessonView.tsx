@@ -25,6 +25,8 @@ export type LessonViewProps = {
   onClose: () => void;
   /** Called once, when the learner taps through the last step. */
   onComplete: (lessonId: string) => void;
+  /** Called when a tuner step has seen all six strings tuned. */
+  onTunedAll?: () => void;
   onOpenNext?: () => void;
 };
 
@@ -45,6 +47,7 @@ export function LessonView({
   onStepChange,
   onClose,
   onComplete,
+  onTunedAll,
   onOpenNext,
 }: LessonViewProps) {
   const total = lesson.steps.length;
@@ -223,7 +226,7 @@ export function LessonView({
           >
             <div className="mx-auto w-full max-w-md">
               {step !== undefined && (
-                <StepView step={step} engine={engine} onDone={markPassed} />
+                <StepView step={step} engine={engine} onDone={markPassed} onTunedAll={onTunedAll} />
               )}
             </div>
           </div>

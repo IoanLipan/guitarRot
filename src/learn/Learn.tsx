@@ -29,12 +29,15 @@ export function Learn({
   progress,
   place,
   onPlaceChange,
+  onTunedAll,
   lessons = COURSE,
 }: {
   engine: AudioEngine;
   progress: Pick<ProgressHandle, 'state' | 'completeLesson'>;
   place: LearnPlace;
   onPlaceChange: Dispatch<SetStateAction<LearnPlace>>;
+  /** Told when the tuner, here or in a lesson, has seen all six strings tuned. */
+  onTunedAll?: () => void;
   /** Defaults to the shipped course; tests hand in their own. */
   lessons?: readonly Lesson[];
 }) {
@@ -61,6 +64,7 @@ export function Learn({
         }
         onClose={() => onPlaceChange(placeWithoutLesson)}
         onComplete={progress.completeLesson}
+        onTunedAll={onTunedAll}
         onOpenNext={
           nextLesson === undefined ? undefined : () => onPlaceChange(placeAtLesson(nextLesson.id))
         }
@@ -120,7 +124,7 @@ export function Learn({
         )}
         {section === 'tuner' && (
           <div className="rise-in px-5 pt-1 pb-8">
-            <Tuner engine={engine} />
+            <Tuner engine={engine} onTunedAll={onTunedAll} />
           </div>
         )}
         {section === 'explore' && <Explore engine={engine} />}

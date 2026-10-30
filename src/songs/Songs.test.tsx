@@ -31,6 +31,7 @@ vi.mock('@/audio', async (importOriginal) => {
         setSpeed: vi.fn(),
         progress: vi.fn(() => 0),
         currentBeat: vi.fn(() => 0),
+        isPlaying: vi.fn(() => true),
         setLoopRange: vi.fn(),
         totalBeats: 16,
       };

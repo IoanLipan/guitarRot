@@ -1,7 +1,12 @@
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
-import { emptyProgressState, migrate, type ProgressState } from './types';
+import { migrate } from './migrate';
+import { emptyProgressState, type ProgressState } from './types';
 
+/**
+ * The "v1" predates the `version` field inside the blob and is not that
+ * version: it stays, because renaming the key would orphan everybody's progress.
+ */
 export const STORAGE_KEY = 'guitarrot.progress.v1';
 
 export interface ProgressRepo {

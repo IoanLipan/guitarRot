@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { getToneProfile, type AudioEngine } from '@/audio';
-import { emptyProgressState } from '@/progress';
+import { fakeProgressHandle } from './testkit';
 import type { ProgressHandle } from './useProgress';
 
 const isNative = vi.hoisted(() => vi.fn(() => false));
@@ -34,14 +34,7 @@ function fakeEngine(): AudioEngine {
 }
 
 function fakeProgress(): ProgressHandle {
-  return {
-    state: emptyProgressState(),
-    loaded: true,
-    recordAnswer: vi.fn(),
-    updateSettings: vi.fn(),
-    completeLesson: vi.fn(),
-    flush: vi.fn(),
-  };
+  return fakeProgressHandle();
 }
 
 function renderSheet(progress = fakeProgress(), engine = fakeEngine()) {

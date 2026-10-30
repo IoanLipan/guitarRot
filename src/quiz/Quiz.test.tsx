@@ -2,19 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { getToneProfile, type AudioEngine } from '@/audio';
 import { emptyProgressState } from '@/progress';
+import { fakeProgressHandle } from '@/app/testkit';
 import type { ProgressHandle } from '@/app/useProgress';
 import { Quiz } from './Quiz';
 
 function fakeProgress(overrides: Partial<ProgressHandle> = {}): ProgressHandle {
-  return {
-    state: emptyProgressState(),
-    loaded: true,
-    recordAnswer: vi.fn(),
-    updateSettings: vi.fn(),
-    completeLesson: vi.fn(),
-    flush: vi.fn(),
-    ...overrides,
-  };
+  return fakeProgressHandle(overrides);
 }
 
 /**

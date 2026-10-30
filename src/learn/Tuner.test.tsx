@@ -308,5 +308,141 @@ describe('Tuner', () => {
       rerender(<Tuner engine={fakeEngine()} />);
       expect(screen.queryByTestId('tuner-in-tune')).not.toBeInTheDocument();
     });
+
+    it('makes the next string earn In tune for itself, even when it follows the last without a break', () => {
+      setMic('listening', reading(52, 0));
+      const { rerender } = render(<Tuner engine={fakeEngine()} />);
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(screen.getByTestId('tuner-in-tune')).toBeInTheDocument();
+
+      setMic('listening', reading(57, 0));
+      rerender(<Tuner engine={fakeEngine()} />);
+      expect(screen.queryByTestId('tuner-in-tune')).not.toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(450);
+      });
+      expect(screen.getByTestId('tuner-in-tune')).toBeInTheDocument();
+    });
+  });
+
+  describe('tuning all six strings', () => {
+    /** Plays one reading into a mounted tuner and holds it long enough to be in tune. */
+    function hold(rerender: (ui: React.ReactElement) => void, ui: () => React.ReactElement, midi: number, cents = 0) {
+      setMic('listening', reading(midi, cents));
+      rerender(ui());
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+    }
+
+    it('reports once, on the sixth open string heard in tune', () => {
+      const onTunedAll = vi.fn();
+      const ui = () => <Tuner engine={fakeEngine()} onTunedAll={onTunedAll} />;
+      const { rerender } = render(ui());
+
+      STANDARD_TUNING.slice(0, 5).forEach((midi) => hold(rerender, ui, midi));
+      expect(onTunedAll).not.toHaveBeenCalled();
+
+      hold(rerender, ui, STANDARD_TUNING[5]!);
+      expect(onTunedAll).toHaveBeenCalledTimes(1);
+    });
+
+    it('takes the strings in any order and a pause between them', () => {
+      const onTunedAll = vi.fn();
+      const ui = () => <Tuner engine={fakeEngine()} onTunedAll={onTunedAll} />;
+      const { rerender } = render(ui());
+
+      [64, 40, 59, 45, 55, 50].forEach((midi) => {
+        hold(rerender, ui, midi);
+        setMic('listening', null);
+        rerender(ui());
+      });
+
+      expect(onTunedAll).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not report again however much more is tuned', () => {
+      const onTunedAll = vi.fn();
+      const ui = () => <Tuner engine={fakeEngine()} onTunedAll={onTunedAll} />;
+      const { rerender } = render(ui());
+
+      for (const midi of [...STANDARD_TUNING, ...STANDARD_TUNING]) hold(rerender, ui, midi);
+
+      expect(onTunedAll).toHaveBeenCalledTimes(1);
+    });
+
+    it('needs the six different strings: one string, again and again, is one', () => {
+      const onTunedAll = vi.fn();
+      const ui = () => <Tuner engine={fakeEngine()} onTunedAll={onTunedAll} />;
+      const { rerender } = render(ui());
+
+      for (let i = 0; i < 8; i += 1) {
+        hold(rerender, ui, 40);
+        setMic('listening', null);
+        rerender(ui());
+      }
+
+      expect(onTunedAll).not.toHaveBeenCalled();
+    });
+
+    it('does not count a note held in tune that is not an open string', () => {
+      const onTunedAll = vi.fn();
+      const ui = () => <Tuner engine={fakeEngine()} onTunedAll={onTunedAll} />;
+      const { rerender } = render(ui());
+
+      // Five open strings, and a steady B2: a fret on the A string, not the sixth string.
+      STANDARD_TUNING.slice(0, 5).forEach((midi) => hold(rerender, ui, midi));
+      hold(rerender, ui, 47);
+
+      expect(onTunedAll).not.toHaveBeenCalled();
+    });
+
+    it('does not count a string that is not yet in tune', () => {
+      const onTunedAll = vi.fn();
+      const ui = () => <Tuner engine={fakeEngine()} onTunedAll={onTunedAll} />;
+      const { rerender } = render(ui());
+
+      STANDARD_TUNING.slice(0, 5).forEach((midi) => hold(rerender, ui, midi));
+      hold(rerender, ui, STANDARD_TUNING[5]!, 12);
+
+      expect(onTunedAll).not.toHaveBeenCalled();
+    });
+
+    it('does not count a string that was only passed through, not held', () => {
+      const onTunedAll = vi.fn();
+      const ui = () => <Tuner engine={fakeEngine()} onTunedAll={onTunedAll} />;
+      const { rerender } = render(ui());
+
+      STANDARD_TUNING.slice(0, 5).forEach((midi) => hold(rerender, ui, midi));
+      setMic('listening', reading(STANDARD_TUNING[5]!, 0));
+      rerender(ui());
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+
+      expect(onTunedAll).not.toHaveBeenCalled();
+    });
+
+    it('starts again when the tuner is opened afresh', () => {
+      const onTunedAll = vi.fn();
+      const ui = () => <Tuner engine={fakeEngine()} onTunedAll={onTunedAll} />;
+      const first = render(ui());
+      STANDARD_TUNING.slice(0, 5).forEach((midi) => hold(first.rerender, ui, midi));
+      first.unmount();
+
+      const second = render(ui());
+      hold(second.rerender, ui, STANDARD_TUNING[5]!);
+
+      expect(onTunedAll).not.toHaveBeenCalled();
+    });
+
+    it('works without anyone listening', () => {
+      const ui = () => <Tuner engine={fakeEngine()} />;
+      const { rerender } = render(ui());
+      expect(() => STANDARD_TUNING.forEach((midi) => hold(rerender, ui, midi))).not.toThrow();
+    });
   });
 });

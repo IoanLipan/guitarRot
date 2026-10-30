@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { getToneProfile, type AudioEngine } from '@/audio';
 import { COURSE } from '@/content';
 import { emptyProgressState } from '@/progress';
+import { fakeProgressHandle } from './testkit';
 import type { ProgressHandle } from './useProgress';
 
 const world = vi.hoisted(() => ({
@@ -87,17 +88,35 @@ vi.mock('@/songs', () => ({
   Songs: ({
     openSongId,
     onOpenSongChange,
+    onSongPlayed,
   }: {
     openSongId: string | null;
     onOpenSongChange: (id: string | null) => void;
+    onSongPlayed?: (id: string) => void;
   }) =>
     openSongId === null ? (
       <button type="button" data-testid="pick-song" onClick={() => onOpenSongChange('tom-dooley')}>
         Pick a song
       </button>
     ) : (
-      <div data-testid="song-screen">{openSongId}</div>
+      <div data-testid="song-screen">
+        {openSongId}
+        <button type="button" data-testid="song-heard" onClick={() => onSongPlayed?.(openSongId)}>
+          Heard for 20 seconds
+        </button>
+      </div>
     ),
+}));
+// The microphone is out of reach in a test, so the tuner stands in for itself: it is
+// the shell's job to turn "all six strings tuned" into a recorded event, not the tuner's.
+vi.mock('@/learn/Tuner', () => ({
+  Tuner: ({ onTunedAll }: { onTunedAll?: () => void }) => (
+    <div data-testid="tuner">
+      <button type="button" data-testid="all-tuned" onClick={() => onTunedAll?.()}>
+        All six tuned
+      </button>
+    </div>
+  ),
 }));
 
 const { AppShell } = await import('./AppShell');
@@ -118,14 +137,7 @@ function fakeEngine(): AudioEngine {
 }
 
 function setProgress(lessonsDone: string[] = [], loaded = true) {
-  world.progress = {
-    state: { ...emptyProgressState(), lessonsDone },
-    loaded,
-    recordAnswer: vi.fn(),
-    updateSettings: vi.fn(),
-    completeLesson: vi.fn(),
-    flush: vi.fn(),
-  };
+  world.progress = fakeProgressHandle({ state: { ...emptyProgressState(), lessonsDone }, loaded });
 }
 
 function setVisibility(state: 'hidden' | 'visible') {
@@ -504,6 +516,31 @@ describe('AppShell', () => {
 
       expect(world.engine.stopAll).toHaveBeenCalled();
       expect(world.progress.flush).toHaveBeenCalled();
+    });
+  });
+
+  describe('game events', () => {
+    it('records a song as played when the song screen says it has been heard', async () => {
+      await openOnFeed();
+      fireEvent.click(tab('Songs'));
+      fireEvent.click(screen.getByTestId('pick-song'));
+      expect(world.progress.record).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByTestId('song-heard'));
+
+      expect(world.progress.record).toHaveBeenCalledTimes(1);
+      expect(world.progress.record).toHaveBeenCalledWith({ type: 'song-played', songId: 'tom-dooley' });
+    });
+
+    it('records the tuner having tuned all six strings, from the Tuner section', async () => {
+      await openOnFeed();
+      fireEvent.click(tab('Learn'));
+      fireEvent.click(screen.getByTestId('learn-tab-tuner'));
+
+      fireEvent.click(screen.getByTestId('all-tuned'));
+
+      expect(world.progress.record).toHaveBeenCalledTimes(1);
+      expect(world.progress.record).toHaveBeenCalledWith({ type: 'tuned-all' });
     });
   });
 

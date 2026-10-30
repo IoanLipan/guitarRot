@@ -171,10 +171,21 @@ export function AppShell() {
             />
           )}
           {tab === 'songs' && (
-            <Songs engine={engine} openSongId={openSongId} onOpenSongChange={setOpenSongId} />
+            <Songs
+              engine={engine}
+              openSongId={openSongId}
+              onOpenSongChange={setOpenSongId}
+              onSongPlayed={(songId) => progress.record({ type: 'song-played', songId })}
+            />
           )}
           {tab === 'learn' && (
-            <Learn engine={engine} progress={progress} place={learnPlace} onPlaceChange={setLearnPlace} />
+            <Learn
+              engine={engine}
+              progress={progress}
+              place={learnPlace}
+              onPlaceChange={setLearnPlace}
+              onTunedAll={() => progress.record({ type: 'tuned-all' })}
+            />
           )}
           {tab === 'quiz' && <Quiz engine={engine} progress={progress} />}
         </div>

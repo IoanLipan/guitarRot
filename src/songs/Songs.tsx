@@ -15,10 +15,13 @@ export function Songs({
   engine,
   openSongId,
   onOpenSongChange,
+  onSongPlayed,
 }: {
   engine: AudioEngine;
   openSongId: string | null;
   onOpenSongChange: (songId: string | null) => void;
+  /** Told when a song has been heard long enough to count as played; see `SongPlayer`. */
+  onSongPlayed?: (songId: string) => void;
 }) {
   const [filter, setFilter] = useState<SongFilter>(EMPTY_FILTER);
 
@@ -26,7 +29,14 @@ export function Songs({
   const selected = openSongId === null ? undefined : getSong(openSongId);
 
   if (selected !== undefined) {
-    return <SongPlayer song={selected} engine={engine} onBack={() => onOpenSongChange(null)} />;
+    return (
+      <SongPlayer
+        song={selected}
+        engine={engine}
+        onBack={() => onOpenSongChange(null)}
+        onPlayed={onSongPlayed}
+      />
+    );
   }
 
   return (
