@@ -37,7 +37,7 @@ export function LevelChip({
         <span className="font-display text-2xl leading-none font-black tabular-nums">{level}</span>
       </span>
       <span className="flex items-center gap-1" aria-hidden="true">
-        <StreakMark size={16} className={days > 0 ? 'text-accent' : 'text-[#5f5f6b]'} />
+        <StreakMark size={16} className={days > 0 ? 'text-accent' : 'text-ink-faint'} />
         <span className="font-display text-2xl leading-none font-black tabular-nums">{days}</span>
       </span>
     </button>

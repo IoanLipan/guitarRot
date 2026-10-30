@@ -63,7 +63,7 @@ export function YouTab({
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <StreakMark size={30} className={streak > 0 ? 'text-accent' : 'text-[#5f5f6b]'} />
+              <StreakMark size={30} className={streak > 0 ? 'text-accent' : 'text-ink-faint'} />
               <p className="flex items-baseline gap-2">
                 <span className="font-display text-6xl leading-none font-black tabular-nums" data-testid="you-streak-days">
                   {streak}
