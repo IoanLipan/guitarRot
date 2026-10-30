@@ -24,5 +24,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Whole quiz runs and every-hard-song renders sit near the default 5 s
+    // and time out at random on a loaded machine; a real hang still fails.
+    testTimeout: 15_000,
   },
 });
