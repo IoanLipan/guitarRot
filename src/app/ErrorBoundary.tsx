@@ -32,16 +32,21 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return (
       <main className="flex h-dvh flex-col items-center justify-center gap-4 bg-ground p-8 text-center">
-        <h1 className="text-2xl font-black">That went sideways.</h1>
-        <p className="max-w-xs text-sm text-ink-dim">
-          Something broke mid-session. Your progress is saved — picking up where you left off
+        <h1 className="text-title font-extrabold">That went sideways.</h1>
+        <p className="max-w-xs text-meta text-ink-dim">
+          Something broke mid-session. Your progress is saved, so picking up where you left off
           should work.
         </p>
-        <p className="max-w-xs font-mono text-xs break-words text-[#5f5f6b]">{error.message}</p>
+        {/* The error text is for whoever reports it: the same face as everything else, and readable. */}
+        {error.message !== '' && (
+          <p className="max-w-xs rounded-2xl bg-surface-2 px-4 py-3 text-meta break-words text-ink-dim">
+            {error.message}
+          </p>
+        )}
         <button
           type="button"
           onClick={this.handleReset}
-          className="press rounded-full bg-accent px-8 py-4 text-lg font-extrabold text-ground"
+          className="press min-h-12 rounded-full bg-accent px-8 py-3 text-lesson font-extrabold text-ground"
         >
           Keep going
         </button>

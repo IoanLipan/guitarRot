@@ -3,6 +3,7 @@ import { ArrowRightIcon } from '@/ui/icons';
 import type { AudioEngine } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
 import { strumFx } from '@/ui/motion';
+import { ScrollFade } from '@/ui/ScrollFade';
 import { CHORDS } from '@/content';
 import {
   chordSolfegeName,
@@ -78,10 +79,10 @@ export function Explore({ engine }: { engine: AudioEngine }) {
   return (
     <div className="rise-in flex flex-col gap-9 px-5 pt-2 pb-8">
       <section className="flex flex-col gap-3">
-        <h2 className="text-[13px] font-bold tracking-wider text-ink-dim uppercase">
-          Fretboard explorer
-        </h2>
-        <div className="-mx-5 overflow-x-auto px-5">
+        <h2 className="label">Fretboard explorer</h2>
+        {/* The board is wider than a small phone. It scrolls inside the page's own gutters (the same
+            20px both sides) and the edge with more beyond it fades, so it never looks cut off. */}
+        <ScrollFade className="rounded-2xl">
           <Fretboard
             orientation="horizontal"
             fretRange={EXPLORER_FRET_RANGE}
@@ -90,8 +91,8 @@ export function Explore({ engine }: { engine: AudioEngine }) {
             popMarkers
             ariaLabel="Fretboard explorer"
           />
-        </div>
-        <p className="min-h-6 text-center text-sm text-ink-dim">
+        </ScrollFade>
+        <p className="min-h-6 text-center text-meta text-ink-dim" aria-live="polite">
           {tapped === null ? (
             'Tap any fret to hear it.'
           ) : (
@@ -108,10 +109,28 @@ export function Explore({ engine }: { engine: AudioEngine }) {
 
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-[13px] font-bold tracking-wider text-ink-dim uppercase">
-            Chord library
-          </h2>
-          <span className="text-xs text-[#5f5f6b]">{CHORDS.length} shapes</span>
+          <h2 className="label">Chord library</h2>
+          <span className="text-label text-ink-faint">{CHORDS.length} shapes</span>
+        </div>
+
+        {/* Above the grid, and stuck to the top of the scroll while the grid goes by: the grid is
+            ten rows tall, so a caption under it was off screen from any tile but the last. */}
+        <div className="sticky top-0 z-10 -mx-5 bg-ground px-5 py-2">
+          <p
+            className="flex min-h-12 items-center justify-center rounded-2xl bg-surface-2 px-4 py-2 text-center text-meta text-ink-dim"
+            data-testid="chord-caption"
+            aria-live="polite"
+          >
+            {playedChord === null ? (
+              'Tap a shape to hear it strummed.'
+            ) : (
+              <span>
+                <strong className="text-accent">{playedChord.name}</strong> —{' '}
+                {chordSolfegeName(playedChord)} —{' '}
+                {chordToneNames(playedChord, STANDARD_TUNING).map(withSolfege).join(' · ')}
+              </span>
+            )}
+          </p>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
@@ -126,7 +145,7 @@ export function Explore({ engine }: { engine: AudioEngine }) {
                 onClick={(event) => handleChordTap(chord, event)}
                 aria-pressed={isPlaying}
                 className={`press press-tile fx-host flex flex-col items-center gap-1.5 rounded-2xl px-2 py-2.5 ${
-                  isPlaying ? 'bg-accent/12 ring-2 ring-accent' : 'bg-surface ring-2 ring-transparent'
+                  isPlaying ? 'bg-surface-3 ring-2 ring-accent' : 'bg-surface ring-2 ring-transparent'
                 }`}
               >
                 <div className="h-24 w-full">
@@ -145,7 +164,7 @@ export function Explore({ engine }: { engine: AudioEngine }) {
                   />
                 </div>
                 <span
-                  className="text-sm font-extrabold transition-colors"
+                  className="text-meta font-bold transition-colors"
                   style={{ color: isPlaying ? 'var(--color-accent)' : 'var(--color-ink)' }}
                 >
                   {chord.name}
@@ -155,23 +174,10 @@ export function Explore({ engine }: { engine: AudioEngine }) {
           })}
         </div>
 
-        <p className="min-h-10 text-center text-sm text-ink-dim" data-testid="chord-caption">
-          {playedChord === null ? (
-            'Tap a shape to hear it strummed.'
-          ) : (
-            <>
-              <strong className="text-accent">{playedChord.name}</strong> —{' '}
-              {chordSolfegeName(playedChord)} —{' '}
-              {chordToneNames(playedChord, STANDARD_TUNING).map(withSolfege).join(' · ')}
-            </>
-          )}
-        </p>
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-[13px] font-bold tracking-wider text-ink-dim uppercase">
-          Scale positions — E (Mi) minor pentatonic, box 1
-        </h2>
+        <h2 className="label">Scale positions — E (Mi) minor pentatonic, box 1</h2>
         <div className="h-40 w-full">
           <Fretboard
             orientation="horizontal"

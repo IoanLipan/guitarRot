@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from 'react';
+import { useId, useRef, type Dispatch, type KeyboardEvent, type SetStateAction } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import type { ProgressHandle } from '@/app/useProgress';
 import type { AudioEngine } from '@/audio';
@@ -46,6 +46,38 @@ export function Learn({
   lessons?: readonly Lesson[];
 }) {
   const { section, lessonId: openId } = place;
+  // The switch is a tab list: ids tie each tab to the one panel under it, and the arrow
+  // keys move along it (see `handleSectionKey`). Hooks come before the lesson branch below.
+  const baseId = useId();
+  const tabId = (id: LearnSection) => `${baseId}-tab-${id}`;
+  const panelId = `${baseId}-panel`;
+  const tabRefs = useRef<Partial<Record<LearnSection, HTMLButtonElement | null>>>({});
+
+  function chooseSection(id: LearnSection) {
+    tapHaptic();
+    onPlaceChange((current) => ({ ...current, section: id }));
+  }
+
+  /** Left and Right (and Home and End) move to a section and open it; only the open tab is a Tab stop. */
+  function handleSectionKey(event: KeyboardEvent<HTMLDivElement>) {
+    const from = SECTIONS.findIndex((candidate) => candidate.id === section);
+    const last = SECTIONS.length - 1;
+    const to =
+      event.key === 'ArrowRight'
+        ? (from + 1) % SECTIONS.length
+        : event.key === 'ArrowLeft'
+          ? (from - 1 + SECTIONS.length) % SECTIONS.length
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? last
+              : -1;
+    const target = SECTIONS[to];
+    if (target === undefined) return;
+    event.preventDefault();
+    chooseSection(target.id);
+    tabRefs.current[target.id]?.focus();
+  }
 
   const openIndex = openId === null ? -1 : lessons.findIndex((lesson) => lesson.id === openId);
   const open = openIndex === -1 ? undefined : lessons[openIndex];
@@ -78,22 +110,25 @@ export function Learn({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 flex-col gap-4 px-5 pt-8 pb-4 tight:gap-3 tight:pt-4">
-        {/* The gear button floats over this corner (see AppShell), so the chip stops short of it. */}
+      <header className="flex shrink-0 flex-col gap-4 px-5 pt-8 pb-4 tight:gap-3 tight:pt-5">
+        {/* The gear button floats over this corner (see AppShell), so the chip stops short of it.
+            The title is the one every tab has: display face, 48px, the same padding above. */}
         <div className="flex items-center justify-between gap-3 pr-12">
-          <h1 className="text-3xl font-black">Learn</h1>
+          <h1 className="font-display text-display font-black">Learn</h1>
           {onOpenYou !== undefined && <LevelChip state={progress.state} onOpen={onOpenYou} />}
         </div>
         <div
           role="tablist"
           aria-label="Learn sections"
+          onKeyDown={handleSectionKey}
           className="relative grid grid-cols-3 gap-1 rounded-full bg-surface p-1"
         >
-          {/* One pill that slides to the chosen section; the buttons sit above it. */}
+          {/* One pill that slides to the chosen section; the buttons sit above it. It is a tone step,
+              not amber: on the Course tab the amber is the Continue card's alone. */}
           <span
             aria-hidden="true"
             data-testid="learn-tab-pill"
-            className="tab-indicator pointer-events-none absolute top-1 bottom-1 left-1 w-[calc((100%-1rem)/3)] rounded-full bg-accent"
+            className="tab-indicator pointer-events-none absolute top-1 bottom-1 left-1 w-[calc((100%-1rem)/3)] rounded-full bg-surface-3"
             style={{
               transform: `translateX(calc(${Math.max(0, SECTIONS.findIndex((candidate) => candidate.id === section))} * (100% + 0.25rem)))`,
             }}
@@ -103,16 +138,19 @@ export function Learn({
             return (
               <button
                 key={id}
+                ref={(node) => {
+                  tabRefs.current[id] = node;
+                }}
+                id={tabId(id)}
                 type="button"
                 role="tab"
                 aria-selected={selected}
+                aria-controls={panelId}
+                tabIndex={selected ? 0 : -1}
                 data-testid={`learn-tab-${id}`}
-                onClick={() => {
-                  tapHaptic();
-                  onPlaceChange((current) => ({ ...current, section: id }));
-                }}
-                className={`press relative z-10 h-11 rounded-full text-sm font-extrabold ${
-                  selected ? 'text-ground' : 'text-ink-dim'
+                onClick={() => chooseSection(id)}
+                className={`press relative z-10 h-11 rounded-full text-meta font-bold ${
+                  selected ? 'text-ink' : 'text-ink-dim'
                 }`}
               >
                 {label}
@@ -122,7 +160,12 @@ export function Learn({
         </div>
       </header>
 
-      <div role="tabpanel" className="min-h-0 flex-1 overflow-y-auto">
+      <div
+        role="tabpanel"
+        id={panelId}
+        aria-labelledby={tabId(section)}
+        className="min-h-0 flex-1 overflow-y-auto"
+      >
         {section === 'course' && (
           <Course
             lessons={lessons}

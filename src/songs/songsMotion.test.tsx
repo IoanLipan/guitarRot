@@ -72,7 +72,7 @@ afterEach(() => {
 });
 
 describe('the song list', () => {
-  it('rises in row by row, a little later each, and stops counting after twelve', () => {
+  it('rises in row by row, a little later each, for the first eight rows and no further', () => {
     render(<Harness />);
     const rows = within(screen.getByTestId('song-list')).getAllByRole('listitem');
 
@@ -80,9 +80,13 @@ describe('the song list', () => {
     expect(rows[0]).toHaveStyle({ '--delay': '0ms' });
     expect(rows[1]).toHaveStyle({ '--delay': '38ms' });
     expect(rows[5]).toHaveStyle({ '--delay': '190ms' });
-    // Past the twelfth row they all arrive together, so a long list never makes you wait.
-    expect(rows[12]).toHaveStyle({ '--delay': '456ms' });
-    expect(rows[30]).toHaveStyle({ '--delay': '456ms' });
+    expect(rows[7]).toHaveClass('rise-in');
+    expect(rows[7]).toHaveStyle({ '--delay': '266ms' });
+    // The rest are below the first screen: they are simply there, so a long list never animates a tail nobody sees.
+    for (const row of [rows[8], rows[12], rows[30]]) {
+      expect(row).not.toHaveClass('rise-in');
+      expect(row?.style.getPropertyValue('--delay')).toBe('');
+    }
   });
 
   it('uses the shared press feel, not a one-off scale', () => {

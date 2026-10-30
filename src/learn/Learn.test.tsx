@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { MicPitchHandle } from '@/app/useMicPitch';
 import type { ProgressHandle } from '@/app/useProgress';
 import type { Lesson } from '@/content';
@@ -222,5 +223,81 @@ describe('Learn: keeping your place', () => {
     fireEvent.click(screen.getByTestId('lesson-row-alpha'));
 
     expect(screen.getByRole('progressbar', { name: 'Lesson progress' })).toHaveAttribute('aria-valuenow', '0');
+  });
+});
+
+describe('Learn section switch', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('is a tab list whose tabs control the one panel under it, and the panel is named by the open tab', () => {
+    renderLearn();
+
+    const panel = screen.getByRole('tabpanel');
+    for (const tab of screen.getAllByRole('tab')) {
+      expect(tab).toHaveAttribute('aria-controls', panel.id);
+      expect(tab.id).not.toBe('');
+    }
+    expect(panel).toHaveAccessibleName('Course');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Explore' }));
+    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Explore');
+  });
+
+  it('is one Tab stop, the open tab, with the others reached by the arrow keys', () => {
+    renderLearn();
+
+    const stops = screen.getAllByRole('tab').filter((tab) => tab.tabIndex === 0);
+    expect(stops).toEqual([screen.getByRole('tab', { name: 'Course' })]);
+  });
+
+  it('moves along the tabs with Right and Left, opening each, and wraps round at the ends', async () => {
+    renderLearn();
+    screen.getByRole('tab', { name: 'Course' }).focus();
+
+    await userEvent.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Tuner' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Tuner' })).toHaveFocus();
+    expect(screen.getByTestId('tuner')).toBeInTheDocument();
+
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Course' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Course' })).toHaveFocus();
+
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('tab', { name: 'Explore' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Explore' })).toHaveFocus();
+  });
+
+  it('jumps to the first and last tab with Home and End', async () => {
+    renderLearn();
+    screen.getByRole('tab', { name: 'Course' }).focus();
+
+    await userEvent.keyboard('{End}');
+    expect(screen.getByRole('tab', { name: 'Explore' })).toHaveFocus();
+    await userEvent.keyboard('{Home}');
+    expect(screen.getByRole('tab', { name: 'Course' })).toHaveFocus();
+  });
+
+  it('keeps a key it does not use for the page', async () => {
+    renderLearn();
+    screen.getByRole('tab', { name: 'Course' }).focus();
+
+    await userEvent.keyboard('{ArrowDown}');
+
+    expect(screen.getByRole('tab', { name: 'Course' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('titles the tab the way every tab is titled: a level-one heading in the display face, 48px', () => {
+    renderLearn();
+
+    const title = screen.getByRole('heading', { level: 1, name: 'Learn' });
+    expect(title).toHaveClass('font-display', 'text-display', 'font-black');
+  });
+
+  it('shows the open section as a tone step, not in amber: the Course keeps the one amber thing for Continue', () => {
+    renderLearn();
+
+    expect(screen.getByTestId('learn-tab-pill')).toHaveClass('bg-surface-3');
+    expect(screen.getByTestId('learn-tab-pill')).not.toHaveClass('bg-accent');
   });
 });

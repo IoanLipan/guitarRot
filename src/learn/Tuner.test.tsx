@@ -13,7 +13,7 @@ vi.mock('@/app/useMicPitch', () => ({
   useMicPitch: () => mic.current,
 }));
 
-const { Tuner } = await import('./Tuner');
+const { Tuner, ANNOUNCE_GAP_MS } = await import('./Tuner');
 
 function fakeEngine(): AudioEngine {
   return {
@@ -145,7 +145,7 @@ describe('Tuner', () => {
       setMic('unsupported');
       render(<Tuner engine={fakeEngine()} />);
 
-      expect(screen.getByTestId('tuner-unsupported')).toHaveTextContent(/can't|cannot|doesn't/i);
+      expect(screen.getByTestId('tuner-unsupported')).toHaveTextContent(/can’t|cannot|doesn’t/i);
       expect(screen.getByTestId('tuner-unsupported')).toHaveTextContent(/by ear/i);
       expect(screen.queryByTestId('tuner-start')).not.toBeInTheDocument();
     });
@@ -444,5 +444,169 @@ describe('Tuner', () => {
       const { rerender } = render(ui());
       expect(() => STANDARD_TUNING.forEach((midi) => hold(rerender, ui, midi))).not.toThrow();
     });
+  });
+
+  describe('before there is a note', () => {
+    it('says what to do, at title size, instead of a dash that reads as loading', () => {
+      render(<Tuner engine={fakeEngine()} />);
+
+      const note = screen.getByTestId('tuner-note');
+      expect(note).toHaveTextContent('Play a string');
+      expect(note.textContent).not.toContain('—');
+      expect(note).toHaveClass('text-title');
+      expect(note).not.toHaveClass('text-display');
+    });
+
+    it('shows the note itself, large, once there is one', () => {
+      setMic('listening', reading(40, 2));
+      render(<Tuner engine={fakeEngine()} />);
+
+      expect(screen.getByTestId('tuner-note')).toHaveClass('text-display');
+      expect(screen.getByTestId('tuner-note')).not.toHaveTextContent('Play a string');
+    });
+  });
+
+  describe('where things sit on a short phone', () => {
+    it('puts Start tuner above the meter, and Hear each string after it, so none needs a scroll', () => {
+      render(<Tuner engine={fakeEngine()} />);
+
+      const before = (a: HTMLElement, b: HTMLElement) =>
+        Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(before(screen.getByTestId('tuner-start'), screen.getByTestId('tuner-meter'))).toBe(true);
+      expect(before(screen.getByTestId('tuner-meter'), screen.getByTestId('hear-string-0'))).toBe(true);
+      expect(screen.getByRole('heading', { name: 'Hear each string' })).toHaveClass('label');
+    });
+
+    it('keeps Stop tuner in the same place while it listens', () => {
+      setMic('listening');
+      render(<Tuner engine={fakeEngine()} />);
+
+      const before = Boolean(
+        screen.getByTestId('tuner-stop').compareDocumentPosition(screen.getByTestId('tuner-meter')) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      expect(before).toBe(true);
+    });
+  });
+
+  describe('what a screen reader is told', () => {
+    it('has one live region, and it is the verdict only: not the note, the hertz or the cents', () => {
+      setMic('listening', reading(45, -22));
+      const { container } = render(<Tuner engine={fakeEngine()} />);
+
+      const live = container.querySelectorAll('[aria-live]');
+      expect(live).toHaveLength(1);
+      expect(live[0]).toBe(screen.getByTestId('tuner-live'));
+      expect(screen.getByTestId('tuner-live')).toHaveClass('sr-only');
+      // The readings themselves are outside it.
+      for (const id of ['tuner-note', 'tuner-detail', 'tuner-cents', 'tuner-hint', 'tuner-meter']) {
+        expect(screen.getByTestId('tuner-live')).not.toContainElement(screen.getByTestId(id));
+      }
+    });
+
+    it('says the verdict, in the words on screen', () => {
+      setMic('listening', reading(45, -22));
+      render(<Tuner engine={fakeEngine()} />);
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+
+      expect(screen.getByTestId('tuner-live')).toHaveTextContent('Tighten (too low)');
+      expect(screen.getByTestId('tuner-live').textContent).not.toMatch(/\d/);
+    });
+
+    it('says nothing while nothing is heard, and nothing about a bare note', () => {
+      setMic('listening');
+      render(<Tuner engine={fakeEngine()} />);
+      act(() => {
+        vi.advanceTimersByTime(ANNOUNCE_GAP_MS * 2);
+      });
+      expect(screen.getByTestId('tuner-live')).toBeEmptyDOMElement();
+    });
+
+    it('does not follow every reading: the cents moving inside one verdict say nothing new', () => {
+      setMic('listening', reading(45, -22));
+      const { rerender } = render(<Tuner engine={fakeEngine()} />);
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      const text = () => screen.getByTestId('tuner-live').textContent;
+      expect(text()).toBe('Tighten (too low)');
+
+      for (const cents of [-20, -18, -15, -11]) {
+        setMic('listening', reading(45, cents));
+        rerender(<Tuner engine={fakeEngine()} />);
+        act(() => {
+          vi.advanceTimersByTime(100);
+        });
+        expect(text()).toBe('Tighten (too low)');
+      }
+    });
+
+    it('holds a change of verdict back until the last announcement is a few seconds old, then says the latest', () => {
+      setMic('listening', reading(45, -22));
+      const { rerender } = render(<Tuner engine={fakeEngine()} />);
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      const text = () => screen.getByTestId('tuner-live').textContent;
+
+      // Over to the high side, and back and forth: none of it is read out inside the gap...
+      for (const cents of [22, -22, 22]) {
+        setMic('listening', reading(45, cents));
+        rerender(<Tuner engine={fakeEngine()} />);
+        act(() => {
+          vi.advanceTimersByTime(300);
+        });
+        expect(text()).toBe('Tighten (too low)');
+      }
+
+      // ...and when the gap is over, it is the verdict now that is said, not the ones skipped.
+      act(() => {
+        vi.advanceTimersByTime(ANNOUNCE_GAP_MS);
+      });
+      expect(text()).toBe('Loosen (too high)');
+    });
+
+    it('clears at once when the string goes quiet, so the next verdict is a change', () => {
+      setMic('listening', reading(45, -22));
+      const { rerender } = render(<Tuner engine={fakeEngine()} />);
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(screen.getByTestId('tuner-live')).toHaveTextContent('Tighten');
+
+      setMic('listening', null);
+      rerender(<Tuner engine={fakeEngine()} />);
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(screen.getByTestId('tuner-live')).toBeEmptyDOMElement();
+    });
+
+    it('announces In tune once the string is held', () => {
+      setMic('listening', reading(52, 1));
+      render(<Tuner engine={fakeEngine()} />);
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      act(() => {
+        vi.advanceTimersByTime(ANNOUNCE_GAP_MS);
+      });
+
+      expect(screen.getByTestId('tuner-live')).toHaveTextContent('In tune');
+    });
+  });
+
+  it('writes its messages with curly apostrophes', () => {
+    setMic('denied');
+    const denied = render(<Tuner engine={fakeEngine()} />);
+    expect(screen.getByTestId('tuner-denied').textContent).toContain('couldn’t');
+    expect(screen.getByTestId('tuner-denied').textContent).not.toContain("'");
+    denied.unmount();
+
+    setMic('unsupported');
+    render(<Tuner engine={fakeEngine()} />);
+    expect(screen.getByTestId('tuner-unsupported').textContent).not.toContain("'");
   });
 });

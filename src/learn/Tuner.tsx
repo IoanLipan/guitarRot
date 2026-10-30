@@ -10,6 +10,11 @@ import { allStringsTuned, openStringOf, withTuned } from './tunedStrings';
 const IN_TUNE_CENTS = 5;
 /** How long the string must stay in tune before we say so; a flicker through zero is not tuned. */
 const IN_TUNE_HOLD_MS = 400;
+/**
+ * A screen reader hears the tuner's verdict (in tune, too low, too high) no more often than this.
+ * A reading changes many times a second; speech takes seconds, and one that keeps starting over is noise.
+ */
+export const ANNOUNCE_GAP_MS = 2500;
 /** The meter shows this far either side of the note. A half step is 100 cents, so this is the nearest note's whole catchment. */
 const METER_RANGE_CENTS = 50;
 
@@ -30,6 +35,26 @@ function closestStringIndex(reading: MicReading): number {
     }
   });
   return best;
+}
+
+/**
+ * What the live region says, given what the tuner is saying now: it follows the message, at most once
+ * per `ANNOUNCE_GAP_MS`, and always with the latest one (a flicker between two verdicts inside the gap
+ * is skipped, not read out). Silence clears it at once, so the next string's verdict is a change to hear.
+ */
+function useThrottledAnnouncement(message: string): string {
+  const [announced, setAnnounced] = useState('');
+  const lastRef = useRef(Number.NEGATIVE_INFINITY);
+  useEffect(() => {
+    if (message === announced) return;
+    const wait = message === '' ? 0 : Math.max(0, lastRef.current + ANNOUNCE_GAP_MS - Date.now());
+    const timer = setTimeout(() => {
+      if (message !== '') lastRef.current = Date.now();
+      setAnnounced(message);
+    }, wait);
+    return () => clearTimeout(timer);
+  }, [message, announced]);
+  return announced;
 }
 
 function formatCents(cents: number): string {
@@ -108,40 +133,100 @@ export function Tuner({
   if (reading === null) {
     if (status === 'listening') prompt = 'Listening… play one string at a time.';
     else if (status === 'starting') prompt = 'Waiting for the microphone…';
-    else prompt = 'Tap Start tuner, then play one string at a time.';
+    else prompt = 'Tap Start tuner to listen.';
   }
 
+  // The one thing spoken: the verdict on the string, in the words on screen. Not the note, not the cents.
+  const verdict =
+    reading === null
+      ? ''
+      : inTune
+        ? 'In tune'
+        : inZone
+          ? 'Almost, hold it steady'
+          : cents < 0
+            ? 'Tighten (too low)'
+            : 'Loosen (too high)';
+  const announcement = useThrottledAnnouncement(verdict);
+
   return (
-    <div className="flex flex-col gap-6" data-testid="tuner">
-      <section
-        className="flex flex-col items-center gap-4 rounded-3xl bg-surface px-5 py-6"
-        aria-live="polite"
-      >
+    <div className="flex flex-col gap-4 tight:gap-3" data-testid="tuner">
+      {/* The button comes first: on a short phone it must be on screen without a scroll, above the meter. */}
+      {status !== 'unsupported' &&
+        (status === 'listening' ? (
+          <button
+            type="button"
+            data-testid="tuner-stop"
+            onClick={handleStop}
+            className="press flex min-h-12 items-center justify-center gap-2.5 rounded-full bg-surface-2 px-6 py-3 text-body font-extrabold text-ink"
+          >
+            <StopIcon size={20} />
+            Stop tuner
+          </button>
+        ) : (
+          <button
+            type="button"
+            data-testid="tuner-start"
+            disabled={status === 'starting'}
+            onClick={handleStart}
+            className="press flex min-h-12 items-center justify-center gap-2.5 rounded-full bg-accent px-6 py-3 text-body font-extrabold text-ground disabled:opacity-60"
+          >
+            <MicIcon size={20} />
+            {status === 'starting' ? 'Starting…' : 'Start tuner'}
+          </button>
+        ))}
+
+      {status === 'denied' && (
+        <p
+          role="status"
+          data-testid="tuner-denied"
+          className="rounded-2xl bg-surface-2 px-4 py-3 text-meta leading-relaxed text-ink-dim"
+        >
+          guitarRot couldn’t open your microphone. If you blocked it, allow microphone access for
+          the app in your browser or phone settings, then tap Start tuner again. You can always tune
+          by ear with the buttons below.
+        </p>
+      )}
+      {status === 'unsupported' && (
+        <p
+          role="status"
+          data-testid="tuner-unsupported"
+          className="rounded-2xl bg-surface-2 px-4 py-3 text-meta leading-relaxed text-ink-dim"
+        >
+          This device doesn’t let the app use a microphone, so the tuner can’t listen. You can
+          still tune by ear: tap a string below and match your guitar to it.
+        </p>
+      )}
+
+      <section className="flex flex-col items-center gap-2 rounded-3xl bg-surface px-5 py-4 tight:gap-1.5 tight:py-2.5">
+        {/* No reading is not a note: it says what to do, at title size, instead of a dash that reads as loading. */}
         <p
           data-testid="tuner-note"
-          className="min-h-[1.1em] text-center text-6xl font-black tracking-tight transition-colors duration-200"
+          className={`flex h-10 items-center text-center transition-colors duration-200 ${
+            reading === null ? 'text-title font-extrabold' : 'text-display leading-10 font-black tracking-tight'
+          }`}
           style={{ color: inTune ? 'var(--color-good)' : 'var(--color-ink)' }}
         >
-          {reading === null ? '—' : noteLabel(reading.midi)}
+          {reading === null ? 'Play a string' : noteLabel(reading.midi)}
         </p>
 
-        {reading === null ? (
-          <p data-testid="tuner-prompt" className="text-center text-sm text-ink-dim">
-            {prompt}
-          </p>
-        ) : (
-          <div className="flex flex-col items-center gap-1 text-center text-sm text-ink-dim">
-            <p data-testid="tuner-detail">
-              {noteName(reading.midi, { withOctave: true })} · {reading.hz.toFixed(1)} Hz
-            </p>
-            <p data-testid="tuner-string">
-              Closest string:{' '}
-              <span className="font-bold text-ink">
-                String {stringNumber(closest ?? 0)}
-              </span>
-            </p>
-          </div>
-        )}
+        {/* One line either way (a prompt, or the reading's detail), so the card does not change height
+            when the first note arrives. */}
+        <div className="flex min-h-5 flex-wrap items-center justify-center gap-x-2 text-center text-meta text-ink-dim">
+          {reading === null ? (
+            <p data-testid="tuner-prompt">{prompt}</p>
+          ) : (
+            <>
+              <p data-testid="tuner-detail">
+                {noteName(reading.midi, { withOctave: true })} · {reading.hz.toFixed(1)} Hz
+              </p>
+              <span aria-hidden="true">·</span>
+              <p data-testid="tuner-string">
+                Closest: <span className="font-bold text-ink">String {stringNumber(closest ?? 0)}</span>
+              </p>
+            </>
+          )}
+        </div>
 
         <div
           role="meter"
@@ -153,14 +238,14 @@ export function Tuner({
           data-testid="tuner-meter"
           // overflow-x-clip: the needle's rail is slid sideways by up to half the meter, and its box
           // used to make the whole lesson scroll sideways.
-          className="relative mt-2 h-14 w-full overflow-x-clip"
+          className="relative mt-1 h-12 w-full overflow-x-clip tight:h-10"
         >
           <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-surface-2" />
-          {/* The target zone lights up green, and softly pulses, once the string is held in tune. */}
+          {/* The target zone lights up green once the string is held in tune, and holds still. */}
           <div
             data-testid="tuner-zone"
             data-lit={inTune ? 'true' : 'false'}
-            className="tuner-zone absolute top-1/2 h-10 -translate-y-1/2 rounded-lg bg-good/20 ring-1 ring-good/60"
+            className="tuner-zone absolute top-1/2 h-9 -translate-y-1/2 rounded-lg bg-good/20 ring-1 ring-good/60 tight:h-8"
             style={{ left: `${50 - zonePercent / 2}%`, width: `${zonePercent}%` }}
           />
           {/* The needle rides a full-width rail that is slid across, so it moves by transform (the
@@ -173,14 +258,11 @@ export function Tuner({
             <div
               data-testid="tuner-needle"
               className="absolute top-1 bottom-1 left-0 w-1.5 -translate-x-1/2 rounded-full transition-colors duration-200"
-              style={{
-                background: needleColor,
-                boxShadow: inZone ? '0 0 14px rgba(53,208,127,0.8)' : undefined,
-              }}
+              style={{ background: needleColor }}
             />
           </div>
         </div>
-        <div className="-mt-2 flex w-full justify-between text-xs font-bold text-ink-dim">
+        <div className="flex w-full justify-between text-label font-semibold text-ink-dim">
           <span className="flex items-center gap-1">
             <ArrowLeftIcon size={14} />
             Flat
@@ -191,88 +273,38 @@ export function Tuner({
           </span>
         </div>
 
-        <div className="flex min-h-14 flex-col items-center justify-center gap-1">
+        {/* The verdict and how far off, on one line: not live, so a screen reader is not read every change of it. */}
+        <div className="flex min-h-7 flex-wrap items-baseline justify-center gap-x-3">
           {reading !== null && (
             <>
               {inTune ? (
-                <p
-                  data-testid="tuner-in-tune"
-                  className="pop-in text-2xl font-black text-good"
-                  style={{ textShadow: '0 0 24px rgba(53,208,127,0.5)' }}
-                >
+                <p data-testid="tuner-in-tune" className="pop-in text-title font-extrabold text-good">
                   In tune
                 </p>
               ) : (
-                <p data-testid="tuner-hint" className="text-lg font-extrabold text-accent">
-                  {inZone
-                    ? 'Almost — hold it steady'
-                    : cents < 0
-                      ? 'Tighten (too low)'
-                      : 'Loosen (too high)'}
+                <p data-testid="tuner-hint" className="text-lesson font-extrabold text-accent">
+                  {verdict}
                 </p>
               )}
-              <p data-testid="tuner-cents" className="text-sm text-ink-dim">
+              <p data-testid="tuner-cents" className="text-meta text-ink-dim">
                 {formatCents(cents)}
               </p>
             </>
           )}
         </div>
+
+        {/* The one live region: the verdict only, throttled (see useThrottledAnnouncement). */}
+        <p aria-live="polite" aria-atomic="true" data-testid="tuner-live" className="sr-only">
+          {announcement}
+        </p>
       </section>
 
-      {status === 'denied' && (
-        <p
-          role="status"
-          data-testid="tuner-denied"
-          className="rounded-2xl bg-surface-2 px-4 py-3 text-sm leading-relaxed text-ink-dim"
-        >
-          guitarRot couldn't open your microphone. If you blocked it, allow microphone access for
-          the app in your browser or phone settings, then tap Start tuner again. You can always tune
-          by ear with the buttons below.
-        </p>
-      )}
-      {status === 'unsupported' && (
-        <p
-          role="status"
-          data-testid="tuner-unsupported"
-          className="rounded-2xl bg-surface-2 px-4 py-3 text-sm leading-relaxed text-ink-dim"
-        >
-          This device doesn't let the app use a microphone, so the tuner can't listen. You can
-          still tune by ear: tap a string below and match your guitar to it.
-        </p>
-      )}
-
-      {status !== 'unsupported' &&
-        (status === 'listening' ? (
-          <button
-            type="button"
-            data-testid="tuner-stop"
-            onClick={handleStop}
-            className="press flex items-center justify-center gap-2.5 rounded-full bg-surface-2 px-6 py-3.5 text-base font-extrabold text-ink"
-          >
-            <StopIcon size={20} />
-            Stop tuner
-          </button>
-        ) : (
-          <button
-            type="button"
-            data-testid="tuner-start"
-            disabled={status === 'starting'}
-            onClick={handleStart}
-            className="press flex items-center justify-center gap-2.5 rounded-full bg-accent px-6 py-3.5 text-base font-extrabold text-ground disabled:opacity-60"
-          >
-            <MicIcon size={20} />
-            {status === 'starting' ? 'Starting…' : 'Start tuner'}
-          </button>
-        ))}
-
-      <section className="flex flex-col gap-3">
-        <h3 className="text-[13px] font-bold tracking-wider text-ink-dim uppercase">
-          Hear each string
-        </h3>
-        <p className="text-sm text-ink-dim">
+      <section className="flex flex-col gap-2">
+        <h3 className="label">Hear each string</h3>
+        <p className="text-meta text-ink-dim tight:sr-only">
           Tune by ear: tap a string, play the same string on your guitar, and match the sound.
         </p>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           {STANDARD_TUNING.map((open, stringIndex) => {
             const isClosest = closest === stringIndex;
             return (
@@ -283,15 +315,15 @@ export function Tuner({
                 data-closest={isClosest}
                 aria-label={`Hear string ${stringNumber(stringIndex)}, ${noteLabel(open)}`}
                 onClick={() => handleHear(stringIndex)}
-                className={`press press-tile flex flex-col items-center gap-0.5 rounded-2xl px-2 py-4 ${
-                  isClosest ? 'bg-accent/12 ring-2 ring-accent' : 'bg-surface ring-2 ring-transparent'
+                className={`press press-tile flex flex-col items-center rounded-2xl px-2 py-2 tight:py-1.5 ${
+                  isClosest ? 'bg-surface-3 ring-2 ring-accent' : 'bg-surface ring-2 ring-transparent'
                 }`}
               >
-                <span className="flex items-center gap-1.5 text-xl font-extrabold">
+                <span className="flex items-center gap-1.5 text-body font-extrabold">
                   {noteLabel(open)}
                   <SpeakerIcon size={16} className="text-ink-dim" />
                 </span>
-                <span className="text-xs text-ink-dim">String {stringNumber(stringIndex)}</span>
+                <span className="text-label text-ink-dim">String {stringNumber(stringIndex)}</span>
               </button>
             );
           })}

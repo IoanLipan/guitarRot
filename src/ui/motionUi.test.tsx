@@ -341,10 +341,13 @@ describe('course list motion', () => {
     expect(screen.getByTestId('lesson-row-l29').parentElement).toHaveClass('rise-in');
   });
 
-  it('the continue card breathes, and the progress bar fills in from the left', () => {
+  it('the continue card is flat amber, and the progress bar fills in from the left', () => {
     render(<Course lessons={FIXTURE_COURSE} done={['alpha']} onOpen={vi.fn()} />);
 
-    expect(screen.getByTestId('course-continue')).toHaveClass('glow-breathe');
+    // One amber thing, at rest: no halo that breathes, no gradient, no shadow.
+    const card = screen.getByTestId('course-continue');
+    expect(card).toHaveClass('bg-accent');
+    expect(card.className).not.toMatch(/glow|gradient|bg-linear|from-|to-|shadow/);
     const fill = screen.getByRole('progressbar', { name: 'Course progress' }).firstElementChild as HTMLElement;
     expect(fill).toHaveClass('fill-in');
     expect(fill.style.transform).toBe('translateX(-66.67%)');
@@ -472,28 +475,37 @@ describe('start screen', () => {
   it('drops the pick in and brings everything else up one after another, all in the DOM at once', () => {
     const { container } = screenWith();
     expect(container.querySelector('svg.logo-drop')).not.toBeNull();
-    expect(container.querySelector('.logo-glow')).not.toBeNull();
+    // The ground behind the pick is flat: the radial glow that used to breathe there is gone.
+    expect(container.querySelector('.logo-glow')).toBeNull();
     const delay = (id: string) => Number.parseInt(screen.getByTestId(id).style.getPropertyValue('--delay'), 10);
     expect(delay('start-learn')).toBeLessThan(delay('start-feed'));
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('guitarRot');
   });
 
-  it('the tapped button shimmers with a spinner while the sounds load; the other just waits', () => {
+  it('the tapped button shows a spinner, at full brightness, while the sounds load; the other just waits', () => {
     screenWith({ loading: true, chosen: 'learn' });
 
     const busy = screen.getByTestId('start-learn');
     expect(busy).toHaveTextContent('Loading sounds…');
-    expect(busy).toHaveClass('shimmer');
     expect(busy).toHaveAttribute('aria-busy', 'true');
     expect(busy.querySelector('.animate-spin')).not.toBeNull();
-    expect(screen.getByTestId('start-feed')).not.toHaveClass('shimmer');
+    expect(busy.className).not.toContain('disabled:opacity-60');
+    expect(screen.getByTestId('start-feed').className).toContain('disabled:opacity-60');
     expect(screen.getByTestId('start-feed').querySelector('.animate-spin')).toBeNull();
   });
 
-  it('shows no shimmer or spinner when nothing is loading', () => {
-    screenWith();
+  it('has no band of light crossing a busy button, and shows no spinner when nothing is loading', () => {
+    screenWith({ loading: true, chosen: 'feed' });
     expect(document.querySelector('.shimmer')).toBeNull();
+    cleanup();
+    screenWith();
     expect(document.querySelector('.animate-spin')).toBeNull();
+  });
+
+  it('is flat: no resting amber shadow under the buttons', () => {
+    screenWith();
+    expect(screen.getByTestId('start-learn').className).not.toMatch(/shadow|gradient/);
+    expect(screen.getByTestId('start-feed').className).not.toMatch(/shadow|gradient/);
   });
 });
 
