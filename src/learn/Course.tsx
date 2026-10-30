@@ -42,7 +42,7 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
 
   if (lessons.length === 0) {
     return (
-      <p className="px-5 text-center text-sm leading-relaxed text-ink-dim" data-testid="course-empty">
+      <p className="px-5 text-center text-meta leading-relaxed text-ink-dim" data-testid="course-empty">
         The lessons are on their way. The Tuner and Explore tabs work in the meantime.
       </p>
     );
@@ -64,10 +64,10 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
     <div className="flex flex-col gap-7 px-5 pt-1 pb-8" data-testid="course">
       <section className="rise-in flex flex-col gap-2" aria-label="Your progress">
         <div className="flex items-baseline justify-between">
-          <p className="text-lg font-extrabold" data-testid="course-progress">
+          <p className="text-lesson font-extrabold" data-testid="course-progress">
             {doneCount} of {lessons.length} lessons
           </p>
-          <span className="text-xs font-bold text-ink-dim tabular-nums">
+          <span className="text-label font-semibold text-ink-dim tabular-nums">
             {Math.round((doneCount / lessons.length) * 100)}%
           </span>
         </div>
@@ -92,20 +92,22 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
           onClick={() => open(next.id)}
           data-testid="course-continue"
           style={stagger(1, 60)}
-          className="rise-in press press-soft glow-breathe flex flex-col gap-3 rounded-3xl bg-linear-to-br from-accent to-accent-deep p-5 text-left text-ground shadow-[0_10px_30px_rgba(255,176,32,0.22)]"
+          className="rise-in press press-soft flex flex-col gap-3 rounded-3xl bg-accent p-5 text-left text-ground"
         >
-          <span className="text-xs font-extrabold tracking-widest uppercase opacity-70">
-            {doneCount === 0 ? 'Start here' : 'Continue'} · Lesson {nextNumber}
-          </span>
+          {/* The one amber thing on this screen, and flat: no gradient, no glow, no shadow. */}
+          <span className="label text-ground/70">{doneCount === 0 ? 'Start here' : 'Up next'}</span>
           <span className="flex flex-col gap-1">
-            <span className="text-2xl leading-tight font-black">{next.title}</span>
-            <span className="text-[15px] leading-snug font-medium opacity-80">
+            <span className="text-title font-extrabold">{next.title}</span>
+            <span className="text-body leading-snug font-medium opacity-80">
               <RichText onAccent>{next.goal}</RichText>
             </span>
           </span>
-          <span className="mt-1 flex h-12 items-center justify-center self-start rounded-full bg-ground px-6 text-base font-extrabold text-accent">
-            {doneCount === 0 ? 'Start' : 'Continue'}
-            <ArrowRightIcon size={20} className="ml-2" />
+          <span className="mt-1 flex items-center gap-4">
+            <span className="flex h-12 items-center justify-center rounded-full bg-ground px-6 text-body font-extrabold text-accent">
+              {doneCount === 0 ? 'Start' : 'Continue'}
+              <ArrowRightIcon size={20} className="ml-2" />
+            </span>
+            <span className="text-meta font-semibold text-ground/70">Lesson {nextNumber}</span>
           </span>
         </button>
       ) : (
@@ -114,8 +116,8 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
             className="scale-in flex flex-col gap-1.5 rounded-3xl bg-good/12 p-5 ring-1 ring-good/40"
             data-testid="course-finished"
           >
-            <span className="text-2xl font-black text-good">Course complete</span>
-            <span className="text-[15px] leading-snug text-ink">
+            <span className="text-title font-extrabold text-good">Course complete</span>
+            <span className="text-body leading-snug text-ink">
               Every lesson is done. Open any of them below to go over it again.
             </span>
           </div>
@@ -127,8 +129,8 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
         return (
           <section key={group.unit} className="flex flex-col gap-2.5" aria-label={group.unit}>
             <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-[13px] font-bold tracking-wider text-ink-dim uppercase">{group.unit}</h2>
-              <span className="shrink-0 text-xs text-[#5f5f6b] tabular-nums">
+              <h2 className="label">{group.unit}</h2>
+              <span className="shrink-0 text-label text-ink-faint tabular-nums">
                 {groupDone}/{group.lessons.length}
               </span>
             </div>
@@ -143,25 +145,26 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
                       onClick={() => open(lesson.id)}
                       data-testid={`lesson-row-${lesson.id}`}
                       data-status={status}
+                      // The next lesson is one tone up from the rest; the amber is the Continue card's.
                       className={`press press-soft flex min-h-16 w-full items-center gap-3.5 rounded-2xl px-3.5 py-3 text-left ${
-                        status === 'next' ? 'bg-surface ring-2 ring-accent/70' : 'bg-surface ring-2 ring-transparent'
+                        status === 'next' ? 'bg-surface-2' : 'bg-surface'
                       }`}
                     >
                       <span
                         aria-hidden="true"
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black tabular-nums ${
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-meta font-extrabold tabular-nums ${
                           status === 'done'
                             ? 'bg-good/15 text-good'
                             : status === 'next'
-                              ? 'bg-accent text-ground'
+                              ? 'bg-surface-3 text-ink'
                               : 'bg-surface-2 text-ink-dim'
                         }`}
                       >
                         {status === 'done' ? <CheckIcon size={18} strokeWidth={3} /> : number}
                       </span>
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="text-base leading-tight font-bold">{lesson.title}</span>
-                        <span className="line-clamp-2 text-[13px] leading-snug text-ink-dim">
+                        <span className="text-body leading-tight font-bold">{lesson.title}</span>
+                        <span className="line-clamp-2 text-label leading-snug text-ink-dim">
                           <RichText>{lesson.goal}</RichText>
                         </span>
                       </span>
@@ -171,7 +174,7 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
                       {status === 'next' && (
                         <span
                           aria-hidden="true"
-                          className="shrink-0 rounded-full bg-accent/15 px-2.5 py-1 text-xs font-extrabold tracking-wider text-accent uppercase"
+                          className="shrink-0 rounded-full bg-surface-3 px-2.5 py-1 text-label font-bold text-ink"
                         >
                           Next
                         </span>

@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -18,8 +18,6 @@ const ANIMATION_CLASSES = [
   'fill-in',
   'tab-icon-pop',
   'logo-drop',
-  'logo-glow',
-  'shimmer',
   'answer-pop',
   'answer-shake',
   'answer-ring',
@@ -28,7 +26,6 @@ const ANIMATION_CLASSES = [
   'bump',
   'advance-sweep',
   'halo',
-  'glow-breathe',
   'morph-icon',
   'fb-dot-pop',
   'fb-dot-emph',
@@ -69,6 +66,13 @@ describe('index.css motion', () => {
     expect(reduced).toMatch(/\*,\s*\*::before,\s*\*::after\s*\{[^}]*transition:\s*none\s*!important/);
     expect(reduced).toMatch(/::view-transition-new\(\*\)/);
     for (const name of ['.rise-in', '.pop-in', '.scale-in', '.lesson-step-in']) expect(reduced).toContain(name);
+  });
+
+  it('has nothing decorative that loops: the decorative glows and the shimmer are gone, no animation repeats forever', () => {
+    expect(css).not.toMatch(/\binfinite\b/);
+    for (const name of ['logo-glow', 'glow-breathe', 'shimmer', 'lit-pulse', 'glow-pulse', 'shimmer-sweep']) {
+      expect(css, name).not.toContain(name);
+    }
   });
 
   it('keeps the reduced-motion block last, so nothing defined after it can switch motion back on', () => {
@@ -127,5 +131,40 @@ describe('index.css motion', () => {
       const ms = [...rule.matchAll(/(\d+)ms/g)].map((match) => Number(match[1]));
       expect(Math.max(...ms), name).toBeLessThanOrEqual(900);
     }
+  });
+
+  it('gives a pointer a hover state on the press utility, above :active so a press still wins', () => {
+    const hover = css.indexOf('.press:hover');
+    expect(hover).toBeGreaterThan(-1);
+    expect(css.slice(css.lastIndexOf('@media', hover), hover)).toContain('(hover: hover)');
+    expect(hover).toBeLessThan(css.indexOf('.press:active'));
+  });
+});
+
+describe('index.css globals', () => {
+  const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
+
+  it('shows a focus ring on every control for keyboards, as a default a utility can still override', () => {
+    expect(css).toMatch(/@layer base\s*\{[^@]*:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--color-accent\)[^}]*outline-offset:\s*2px/);
+  });
+
+  it('is a dark page that does not wait for a double tap', () => {
+    expect(css).toMatch(/html\s*\{[^}]*color-scheme:\s*dark/);
+    expect(css).toMatch(/html\s*\{[^}]*touch-action:\s*manipulation/);
+    expect(html).toContain('<meta name="theme-color" content="#0b0b0f" />');
+  });
+
+  it('sets the app in Figtree, self-hosted with its licence, swapped in and preloaded', () => {
+    expect(css).toMatch(/--font-sans:\s*"Figtree"/);
+    expect(css).toMatch(/body\s*\{[^}]*font-family:\s*var\(--font-sans\)/);
+    expect(css).toMatch(/@font-face\s*\{[^}]*font-family:\s*"Figtree"[^}]*font-weight:\s*300 900[^}]*font-display:\s*swap[^}]*\/fonts\/Figtree-latin\.woff2/);
+    expect(existsSync(resolve(process.cwd(), 'public/fonts/Figtree-latin.woff2'))).toBe(true);
+    expect(readFileSync(resolve(process.cwd(), 'public/fonts/Figtree-OFL.txt'), 'utf8')).toContain('SIL OPEN FONT LICENSE');
+    expect(html).toMatch(/<link rel="preload" href="\/fonts\/Figtree-latin\.woff2" as="font" type="font\/woff2" crossorigin \/>/);
+  });
+
+  it('keeps the old greys out of the stylesheet: text colours come from the tokens', () => {
+    expect(css).toContain('--color-ink-faint: #858593');
+    expect(css).not.toContain('#5f5f6b');
   });
 });

@@ -10,7 +10,8 @@ const TABS: readonly { id: TabId; label: string }[] = [
   { id: 'you', label: 'You' },
 ];
 
-const INACTIVE_COLOR = '#5f5f6b';
+/** Quiet but readable: 6.5:1 on the bar. The old grey was 3:1, under what a label needs. */
+const INACTIVE_COLOR = 'var(--color-ink-dim)';
 
 /** Which way moving from one tab to another goes, by their order in the bar. */
 export function tabDirection(from: TabId, to: TabId): 'forward' | 'back' {
@@ -23,15 +24,18 @@ export function TabBar({ active, onChange }: { active: TabId; onChange: (id: Tab
     TABS.findIndex((tab) => tab.id === active),
   );
   return (
-    <nav className="relative flex shrink-0 border-t border-surface-2 bg-surface pb-[env(safe-area-inset-bottom)]">
+    <nav
+      aria-label="Main"
+      className="relative flex shrink-0 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]"
+    >
       {/* One pill that slides to the active tab, instead of one per tab fading in and out. */}
       <span
         aria-hidden="true"
         data-testid="tab-indicator"
-        className="tab-indicator pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+7px)] left-0 flex w-1/5 justify-center"
+        className="tab-indicator pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+7px)] left-0 flex w-1/5 justify-center tight:bottom-[calc(env(safe-area-inset-bottom)+3px)]"
         style={{ transform: `translateX(${activeIndex * 100}%)` }}
       >
-        <span className="h-1 w-6 rounded-full bg-accent shadow-[0_0_10px_rgba(255,176,32,0.7)]" />
+        <span className="h-1 w-6 rounded-full bg-accent" />
       </span>
       {TABS.map((tab) => {
         const isActive = tab.id === active;
@@ -44,8 +48,9 @@ export function TabBar({ active, onChange }: { active: TabId; onChange: (id: Tab
               onChange(tab.id);
             }}
             aria-current={isActive ? 'page' : undefined}
-            // 78px on an ordinary phone; 64px where every pixel above it counts (see `tight:` in index.css).
-            className="press press-tile flex h-[78px] flex-1 flex-col items-center justify-center gap-1 pb-1 text-xs font-bold tight:h-16 tight:gap-0.5"
+            // 64px on an ordinary phone; 56px where every pixel above it counts (see `tight:` in index.css).
+            // Both clear the 44px a thumb needs, and each tab is a fifth of the bar wide.
+            className="press press-tile flex h-16 flex-1 flex-col items-center justify-center gap-0.5 pb-1 text-label font-semibold tight:h-14"
             style={{ color: isActive ? 'var(--color-accent)' : INACTIVE_COLOR }}
           >
             {/* Keyed by state: becoming active remounts the icon, which replays its pop. */}

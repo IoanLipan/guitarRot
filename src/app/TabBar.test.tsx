@@ -5,6 +5,29 @@ import { TabBar } from './TabBar';
 vi.mock('./haptics', () => ({ tapHaptic: vi.fn() }));
 
 describe('TabBar', () => {
+  it('is the main navigation, named so a screen reader can find it among the others', () => {
+    render(<TabBar active="feed" onChange={vi.fn()} />);
+
+    expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+  });
+
+  it('is 64px tall, and 56px on a short phone, which still clears the 44px a thumb needs', () => {
+    render(<TabBar active="feed" onChange={vi.fn()} />);
+
+    for (const button of screen.getAllByRole('button')) {
+      expect(button).toHaveClass('h-16', 'tight:h-14');
+    }
+  });
+
+  it('is plain: no glow on the indicator, and the inactive tabs are the readable grey, not the faint one', () => {
+    render(<TabBar active="feed" onChange={vi.fn()} />);
+
+    expect(screen.getByTestId('tab-indicator').innerHTML).not.toMatch(/shadow/);
+    expect(screen.getByRole('button', { name: 'Songs' }).style.color).toBe('var(--color-ink-dim)');
+    expect(screen.getByRole('button', { name: 'Feed' }).style.color).toBe('var(--color-accent)');
+    expect(screen.getByRole('navigation').innerHTML).not.toContain('5f5f6b');
+  });
+
   it('lists the five tabs in order and marks the active one', () => {
     render(<TabBar active="songs" onChange={vi.fn()} />);
 

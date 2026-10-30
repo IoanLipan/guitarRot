@@ -118,3 +118,52 @@ describe('Course: marked-up goals', () => {
     expect(row.querySelector('[data-note-chip="E"]')).toHaveStyle({ color: '#ffd84d' });
   });
 });
+
+describe('Course look', () => {
+  it('says "Start here" and "Lesson 1" as plain words, not as a tracked capitals string with a dot', () => {
+    render(<Course lessons={FIXTURE_COURSE} done={[]} onOpen={vi.fn()} />);
+
+    const card = screen.getByTestId('course-continue');
+    expect(card).toHaveTextContent('Start here');
+    expect(card).toHaveTextContent('Lesson 1');
+    expect(card.textContent).not.toContain('·');
+    expect(card.innerHTML).not.toMatch(/uppercase|tracking-/);
+  });
+
+  it('labels the next card "Up next" once something is done, and numbers the lesson it opens', () => {
+    render(<Course lessons={FIXTURE_COURSE} done={['alpha']} onOpen={vi.fn()} />);
+
+    expect(screen.getByTestId('course-continue')).toHaveTextContent('Up next');
+    expect(screen.getByTestId('course-continue')).toHaveTextContent('Lesson 2');
+  });
+
+  it('is the one amber hero, flat: a solid amber card, and the next row is only a tone step up', () => {
+    render(<Course lessons={FIXTURE_COURSE} done={['alpha']} onOpen={vi.fn()} />);
+
+    const card = screen.getByTestId('course-continue');
+    expect(card).toHaveClass('bg-accent');
+    expect(card.className).not.toMatch(/gradient|bg-linear|from-|shadow|glow/);
+
+    const row = screen.getByTestId('lesson-row-beta');
+    expect(row.className).not.toMatch(/accent/);
+    expect(row).toHaveClass('bg-surface-2');
+  });
+
+  it('heads each unit in the quiet label style, with the count in the faint ink, from the tokens', () => {
+    const { container } = render(<Course lessons={FIXTURE_COURSE} done={['alpha']} onOpen={vi.fn()} />);
+
+    for (const head of screen.getAllByRole('heading', { level: 2 })) {
+      expect(head).toHaveClass('label');
+      expect(head.className).not.toMatch(/uppercase|tracking-/);
+    }
+    expect(screen.getByText('1/2')).toHaveClass('text-ink-faint');
+    expect(container.innerHTML).not.toContain('5f5f6b');
+  });
+
+  it('marks the next lesson in words, "Next", with no capitals styling', () => {
+    render(<Course lessons={FIXTURE_COURSE} done={['alpha']} onOpen={vi.fn()} />);
+
+    const pill = within(screen.getByTestId('lesson-row-beta')).getByText('Next');
+    expect(pill.className).not.toMatch(/uppercase|tracking-/);
+  });
+});
