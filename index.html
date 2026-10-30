@@ -9,6 +9,11 @@
          without it the web view is padded and the bar strips fall back to the
          theme's window background. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- The page's ground colour, so the browser's own bars match it instead of flashing white. -->
+    <meta name="theme-color" content="#0b0b0f" />
+    <!-- The app's text face, self-hosted (public/fonts) so the APK has it offline. Fonts are fetched
+         anonymously even from the same origin, so a preload needs crossorigin or it is fetched twice. -->
+    <link rel="preload" href="/fonts/Figtree-latin.woff2" as="font" type="font/woff2" crossorigin />
     <title>guitarRot</title>
   </head>
   <body>
