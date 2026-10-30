@@ -32,6 +32,51 @@
   --color-wood: #2a1d14;
   --color-wood-light: #3b2a1d;
   --color-fret: #8f8f9c;
+
+  /*
+   * Depth comes from this ladder of tones alone (ground → surface → surface-2
+   * → surface-3), never from gradients, glows or shadows on things at rest.
+   */
+  --color-surface-3: #282834;
+  /** Hairlines and borders, in place of raw hex greys. */
+  --color-line: #2b2b36;
+  /** The quietest text that still reads: 5.4:1 on ground, 4.5:1 on surface-2. */
+  --color-ink-faint: #858593;
+  /** The accent while pressed. Amber means "act here" or "progress", nothing else. */
+  --color-accent-press: #e69a12;
+  /**
+   * A dot that is not a note (a finger number, the dot a question asks about).
+   * Notes have their own colours (render/noteColors.ts); amber would read as D.
+   */
+  --color-marker: #f4f4f6;
+
+  /*
+   * The type scale: seven steps instead of eighteen one-off sizes. Sentence
+   * case throughout; no tracked capitals.
+   */
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.25rem;
+  --text-meta: 0.875rem;
+  --text-meta--line-height: 1.25rem;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
+  --text-lesson: 1.125rem;
+  --text-lesson--line-height: 1.6;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.2;
+  --text-headline: 1.75rem;
+  --text-headline--line-height: 1.12;
+  --text-display: 3rem;
+  --text-display--line-height: 1;
+}
+
+/** The one quiet label style: section heads, slider names, meta captions. */
+@utility label {
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--color-ink-dim);
 }
 
 /*
