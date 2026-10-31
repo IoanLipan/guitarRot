@@ -3,8 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { Capacitor } from '@capacitor/core';
 import { getToneProfile, type AudioEngine } from '@/audio';
 import { COURSE } from '@/content';
-import { emptyProgressState } from '@/progress';
-import { fakeProgressHandle } from './testkit';
+import { fakeProgressHandle, returningState } from './testkit';
 import type { ProgressHandle } from './useProgress';
 
 const world = vi.hoisted(() => ({
@@ -172,7 +171,7 @@ function fakeEngine(): AudioEngine {
 }
 
 function setProgress(lessonsDone: string[] = [], loaded = true) {
-  world.progress = fakeProgressHandle({ state: { ...emptyProgressState(), lessonsDone }, loaded });
+  world.progress = fakeProgressHandle({ state: { ...returningState(), lessonsDone }, loaded });
 }
 
 function setVisibility(state: 'hidden' | 'visible') {
@@ -660,7 +659,7 @@ describe('AppShell', () => {
 
   describe('the You tab', () => {
     it('is the fifth tab, and shows where you stand', async () => {
-      world.progress = fakeProgressHandle({ state: { ...emptyProgressState(), xp: 340 } });
+      world.progress = fakeProgressHandle({ state: { ...returningState(), xp: 340 } });
       await openOnFeed();
 
       fireEvent.click(tab('You'));

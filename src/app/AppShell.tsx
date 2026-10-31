@@ -3,6 +3,9 @@ import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Style, StatusBar } from '@capacitor/status-bar';
 import { getToneProfile } from '@/audio';
+import { courseFor, getSong, songPlayableOn } from '@/content';
+import { InstrumentProvider } from '@/instrument';
+import type { InstrumentId } from '@/music';
 import { Feed } from '@/feed/Feed';
 import { AwardLayer } from '@/game/AwardLayer';
 import type { AwardPhase } from '@/game/awardState';
@@ -10,8 +13,9 @@ import { YouTab } from '@/game/YouTab';
 import { Learn } from '@/learn/Learn';
 import { placeAtLesson, placeWithoutLesson, START_PLACE, type LearnPlace } from '@/learn/learnPlace';
 import { Quiz, type QuizApi } from '@/quiz/Quiz';
-import { readShareTarget, resolveShareTarget, type SharedContent } from '@/share';
+import { readShareTarget, resolveShareTarget, sharedInstrument, type SharedContent } from '@/share';
 import { Songs } from '@/songs';
+import { InstrumentSwitch } from './InstrumentSwitch';
 import { SettingsSheet } from './SettingsSheet';
 import { StartScreen, type StartChoice } from './StartScreen';
 import { planStart } from './startPlan';
@@ -81,6 +85,30 @@ export function AppShell() {
   }, []);
 
   const toneId = progress.state.settings.toneId;
+  const instrumentId = progress.state.settings.instrument;
+
+  /**
+   * Moves the app to the other instrument. Sound stops (a riff that was playing is the
+   * wrong instrument's), the open song or lesson is closed if the new instrument has no
+   * such thing, and the content panes below are keyed by instrument so the Feed deals a
+   * new deck and the tuner and quiz start clean. Progress, XP and streaks are not touched.
+   */
+  function switchInstrument(next: InstrumentId) {
+    if (next === instrumentId) return;
+    engine?.stopAll();
+    progress.setInstrument(next);
+    setOpenSongId((id) => {
+      const song = id === null ? undefined : getSong(id);
+      return song !== undefined && songPlayableOn(song, next) ? id : null;
+    });
+    setLearnPlace((place) =>
+      place.lessonId !== null && !courseFor(next).some((lesson) => lesson.id === place.lessonId)
+        ? placeWithoutLesson(place)
+        : place,
+    );
+  }
+
+  const instrumentSwitch = <InstrumentSwitch instrument={instrumentId} onSwitch={switchInstrument} />;
 
   // Apply the stored tone once both the engine and saved settings exist —
   // the engine boots on the default, and progress loads a tick later.
@@ -147,7 +175,7 @@ export function AppShell() {
     }
   });
 
-  const plan = planStart(progress.loaded, progress.state.lessonsDone);
+  const plan = planStart(progress.loaded, progress.state.lessonsDone, courseFor(instrumentId));
   // A lesson has its own close button and its own Next bar, and needs every pixel of height: no tab bar, no gear.
   const inLesson = tab === 'learn' && learnPlace.lessonId !== null;
 
@@ -161,11 +189,20 @@ export function AppShell() {
     if (choice === 'learn') {
       setTab('learn');
       setLearnPlace(
-        plan.kind === 'first' || plan.kind === 'continue' ? placeAtLesson(plan.lesson.id) : START_PLACE,
+        plan.kind === 'first' || plan.kind === 'continue'
+          ? placeAtLesson(plan.lesson.id)
+          : plan.kind === 'empty'
+            ? // No course for this instrument yet: land where Learn has something to do.
+              { ...START_PLACE, section: 'tuner' }
+            : START_PLACE,
       );
     } else {
-      // Opened from a shared link: that link already chose the tab.
+      // Opened from a shared link: that link already chose the tab, and the instrument it is for.
       setTab(shared?.tab ?? 'feed');
+      if (shared !== null) {
+        const wanted = sharedInstrument(shared, instrumentId);
+        if (wanted !== instrumentId) progress.setInstrument(wanted);
+      }
     }
     void start();
   }
@@ -181,73 +218,90 @@ export function AppShell() {
           chosen={chosen}
           sharedLink={shared !== null}
           onChoose={begin}
+          needsInstrument={progress.loaded && !progress.state.settings.instrumentChosen}
+          onPickInstrument={progress.setInstrument}
         />
       </>
     );
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-ground">
-      <AndroidAppBanner />
-      {/* min-h-0 lets this pane actually shrink, so its own scrollers work
-          instead of the whole page growing past the viewport. */}
-      <main className="relative min-h-0 flex-1 overflow-hidden pt-[env(safe-area-inset-top)]">
-        <div ref={paneRef} className="h-full">
+    <InstrumentProvider id={instrumentId}>
+      <div className="flex h-dvh flex-col bg-ground">
+        <AndroidAppBanner />
+        {/* min-h-0 lets this pane actually shrink, so its own scrollers work
+            instead of the whole page growing past the viewport. */}
+        <main className="relative min-h-0 flex-1 overflow-hidden pt-[env(safe-area-inset-top)]">
+          <div ref={paneRef} key={instrumentId} className="h-full">
+            {tab === 'feed' && (
+              <Feed
+                engine={engine}
+                progress={progress}
+                initialItem={shared?.tab === 'feed' ? shared.item : undefined}
+              />
+            )}
+            {tab === 'songs' && (
+              <Songs
+                engine={engine}
+                openSongId={openSongId}
+                onOpenSongChange={setOpenSongId}
+                onSongPlayed={(songId) => progress.record({ type: 'song-played', songId })}
+                instrumentSwitch={instrumentSwitch}
+              />
+            )}
+            {tab === 'learn' && (
+              <Learn
+                engine={engine}
+                progress={progress}
+                place={learnPlace}
+                onPlaceChange={setLearnPlace}
+                onTunedAll={() => progress.record({ type: 'tuned-all' })}
+                onOpenYou={() => changeTab('you')}
+                instrumentSwitch={instrumentSwitch}
+              />
+            )}
+            {tab === 'quiz' && (
+              <Quiz engine={engine} progress={progress} onLayerChange={setQuizLayer} apiRef={quizApiRef} />
+            )}
+            {tab === 'you' && <YouTab progress={progress} openPickId={openPickId} onOpenPickChange={setOpenPickId} />}
+          </div>
+
+          {/* On the Feed the switch rides the same row as the share icon and the gear, one slot further in
+              (the gear is 16px from the edge, share 68px, this 120px). The other tabs set it in their own header. */}
           {tab === 'feed' && (
-            <Feed
-              engine={engine}
-              progress={progress}
-              initialItem={shared?.tab === 'feed' ? shared.item : undefined}
+            <InstrumentSwitch
+              instrument={instrumentId}
+              onSwitch={switchInstrument}
+              className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-[7.5rem] z-20"
             />
           )}
-          {tab === 'songs' && (
-            <Songs
-              engine={engine}
-              openSongId={openSongId}
-              onOpenSongChange={setOpenSongId}
-              onSongPlayed={(songId) => progress.record({ type: 'song-played', songId })}
-            />
+
+          {!inLesson && (
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+              data-testid="open-settings"
+              className="press absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-surface-2/90 text-ink"
+            >
+              <GearIcon size={22} />
+            </button>
           )}
-          {tab === 'learn' && (
-            <Learn
-              engine={engine}
-              progress={progress}
-              place={learnPlace}
-              onPlaceChange={setLearnPlace}
-              onTunedAll={() => progress.record({ type: 'tuned-all' })}
-              onOpenYou={() => changeTab('you')}
-            />
-          )}
-          {tab === 'quiz' && (
-            <Quiz engine={engine} progress={progress} onLayerChange={setQuizLayer} apiRef={quizApiRef} />
-          )}
-          {tab === 'you' && <YouTab progress={progress} openPickId={openPickId} onOpenPickChange={setOpenPickId} />}
-        </div>
+        </main>
 
-        {!inLesson && (
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Settings"
-            data-testid="open-settings"
-            className="press absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-surface-2/90 text-ink"
-          >
-            <GearIcon size={22} />
-          </button>
-        )}
-      </main>
+        {!inLesson && <TabBar active={tab} onChange={changeTab} />}
 
-      {!inLesson && <TabBar active={tab} onChange={changeTab} />}
+        <AwardLayer progress={progress} phase={awardPhase} onOpenPick={showPick} />
 
-      <AwardLayer progress={progress} phase={awardPhase} onOpenPick={showPick} />
-
-      <SettingsSheet
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        engine={engine}
-        progress={progress}
-      />
-    </div>
+        <SettingsSheet
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          engine={engine}
+          progress={progress}
+          onInstrumentChange={switchInstrument}
+        />
+      </div>
+    </InstrumentProvider>
   );
 }
 

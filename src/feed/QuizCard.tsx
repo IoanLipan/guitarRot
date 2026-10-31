@@ -60,10 +60,9 @@ export function QuizCard({
     // A flat card: the answer's colour is on the buttons and in the flash that crosses the card
     // once, not in a tint that stays behind the question.
     <div className="relative flex h-full min-h-0 flex-col overflow-y-auto bg-ground px-6 pt-3 pb-6 tight:pb-4">
-      {/* On the row the share icon and the settings gear float on (see Feed),
-          at the left like the riff card's facts: centred, it ran under the
-          pair on a 320px phone. */}
-      <div className={`${rise} flex min-h-11 shrink-0 items-center pr-24`} style={stagger(0)}>
+      {/* On the row the instrument switch, the share icon and the settings gear float on (see Feed),
+          at the left like the riff card's facts: centred, it ran under them on a 320px phone. */}
+      <div className={`${rise} flex min-h-11 shrink-0 items-center pr-36`} style={stagger(0)}>
         <span className="label">Quick quiz</span>
       </div>
 

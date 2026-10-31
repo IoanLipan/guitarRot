@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { DIFFICULTIES, type Difficulty, type Song } from '@/content';
 import { tapHaptic } from '@/app/haptics';
 import { SearchIcon } from '@/ui/icons';
@@ -34,17 +35,24 @@ export function SongList({
   filter,
   onFilterChange,
   onOpen,
+  instrumentSwitch,
 }: {
   songs: readonly Song[];
   filter: SongFilter;
   onFilterChange: (filter: SongFilter) => void;
   onOpen: (song: Song) => void;
+  /** The quick instrument switch, in the title row beside the settings gear. */
+  instrumentSwitch?: ReactNode;
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col bg-ground">
       {/* The same title every tab has: display face, 48px, the same padding above (see Learn, Quiz). */}
       <div className="shrink-0 px-5 pt-8 pb-3 tight:pt-5">
-        <h1 className="mb-4 pr-12 font-display text-display font-black tight:mb-3">Songs</h1>
+        {/* The gear floats over this corner (see AppShell); the instrument switch stops just short of it. */}
+        <div className="mb-4 flex items-center justify-between gap-3 pr-12 tight:mb-3">
+          <h1 className="font-display text-display font-black">Songs</h1>
+          {instrumentSwitch}
+        </div>
 
         <div className="relative">
           <span

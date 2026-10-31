@@ -147,11 +147,11 @@ export function RiffCard({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 bg-ground px-6 pt-3 pb-6 tight:gap-3 tight:pb-4">
-      {/* One plain line on the row the share icon and the settings gear float on
-          (44px tall, 12px down, 120px in from the right): pr-24 keeps it clear
-          of the pair, and a phone too narrow for all of it breaks it between
+      {/* One plain line on the row the instrument switch, the share icon and the settings gear float on
+          (44px tall, 12px down, 164px in from the right): pr-36 keeps it clear
+          of the three, and a phone too narrow for all of it breaks it between
           the facts rather than sliding it under them. */}
-      <div className={`${rise} flex min-h-11 shrink-0 items-center pr-24`} style={stagger(0)}>
+      <div className={`${rise} flex min-h-11 shrink-0 items-center pr-36`} style={stagger(0)}>
         <MetaLine facts={[riff.style, `Level ${riff.level}`, `${riff.bpm} bpm`]} />
       </div>
 

@@ -1,8 +1,9 @@
-import { useId, useRef, type Dispatch, type KeyboardEvent, type SetStateAction } from 'react';
+import { useId, useRef, type Dispatch, type KeyboardEvent, type ReactNode, type SetStateAction } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import type { ProgressHandle } from '@/app/useProgress';
 import type { AudioEngine } from '@/audio';
-import { COURSE, type Lesson } from '@/content';
+import { courseFor, type Lesson } from '@/content';
+import { useInstrument } from '@/instrument';
 import { LevelChip } from '@/game/LevelChip';
 import { Course } from './Course';
 import { Explore } from './Explore';
@@ -32,20 +33,25 @@ export function Learn({
   onPlaceChange,
   onTunedAll,
   onOpenYou,
-  lessons = COURSE,
+  lessons: lessonsProp,
+  instrumentSwitch,
 }: {
   engine: AudioEngine;
   progress: Pick<ProgressHandle, 'state' | 'completeLesson'>;
   place: LearnPlace;
   onPlaceChange: Dispatch<SetStateAction<LearnPlace>>;
-  /** Told when the tuner, here or in a lesson, has seen all six strings tuned. */
+  /** Told when the tuner, here or in a lesson, has seen every string tuned. */
   onTunedAll?: () => void;
   /** Opens the You tab. When given, the header carries the level and streak chip that does it. */
   onOpenYou?: () => void;
-  /** Defaults to the shipped course; tests hand in their own. */
+  /** Defaults to the course of the instrument being learned; tests hand in their own. */
   lessons?: readonly Lesson[];
+  /** The quick instrument switch, set beside the section tabs. */
+  instrumentSwitch?: ReactNode;
 }) {
   const { section, lessonId: openId } = place;
+  const { id: instrumentId } = useInstrument();
+  const lessons = lessonsProp ?? courseFor(instrumentId);
   // The switch is a tab list: ids tie each tab to the one panel under it, and the arrow
   // keys move along it (see `handleSectionKey`). Hooks come before the lesson branch below.
   const baseId = useId();
@@ -117,46 +123,51 @@ export function Learn({
           <h1 className="font-display text-display font-black">Learn</h1>
           {onOpenYou !== undefined && <LevelChip state={progress.state} onOpen={onOpenYou} />}
         </div>
-        <div
-          role="tablist"
-          aria-label="Learn sections"
-          onKeyDown={handleSectionKey}
-          className="relative grid grid-cols-3 gap-1 rounded-full bg-surface p-1"
-        >
-          {/* One pill that slides to the chosen section; the buttons sit above it. It is a tone step,
-              not amber: on the Course tab the amber is the Continue card's alone. */}
-          <span
-            aria-hidden="true"
-            data-testid="learn-tab-pill"
-            className="tab-indicator pointer-events-none absolute top-1 bottom-1 left-1 w-[calc((100%-1rem)/3)] rounded-full bg-surface-3"
-            style={{
-              transform: `translateX(calc(${Math.max(0, SECTIONS.findIndex((candidate) => candidate.id === section))} * (100% + 0.25rem)))`,
-            }}
-          />
-          {SECTIONS.map(({ id, label }) => {
-            const selected = id === section;
-            return (
-              <button
-                key={id}
-                ref={(node) => {
-                  tabRefs.current[id] = node;
-                }}
-                id={tabId(id)}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                aria-controls={panelId}
-                tabIndex={selected ? 0 : -1}
-                data-testid={`learn-tab-${id}`}
-                onClick={() => chooseSection(id)}
-                className={`press relative z-10 h-11 rounded-full text-meta font-bold ${
-                  selected ? 'text-ink' : 'text-ink-dim'
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
+        {/* The instrument switch shares the row with the section tabs: the title row is already
+            the level chip's, down to the last pixel of a 320px phone. */}
+        <div className="flex items-center gap-2">
+          <div
+            role="tablist"
+            aria-label="Learn sections"
+            onKeyDown={handleSectionKey}
+            className="relative grid min-w-0 flex-1 grid-cols-3 gap-1 rounded-full bg-surface p-1"
+          >
+            {/* One pill that slides to the chosen section; the buttons sit above it. It is a tone step,
+                not amber: on the Course tab the amber is the Continue card's alone. */}
+            <span
+              aria-hidden="true"
+              data-testid="learn-tab-pill"
+              className="tab-indicator pointer-events-none absolute top-1 bottom-1 left-1 w-[calc((100%-1rem)/3)] rounded-full bg-surface-3"
+              style={{
+                transform: `translateX(calc(${Math.max(0, SECTIONS.findIndex((candidate) => candidate.id === section))} * (100% + 0.25rem)))`,
+              }}
+            />
+            {SECTIONS.map(({ id, label }) => {
+              const selected = id === section;
+              return (
+                <button
+                  key={id}
+                  ref={(node) => {
+                    tabRefs.current[id] = node;
+                  }}
+                  id={tabId(id)}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  aria-controls={panelId}
+                  tabIndex={selected ? 0 : -1}
+                  data-testid={`learn-tab-${id}`}
+                  onClick={() => chooseSection(id)}
+                  className={`press relative z-10 h-11 rounded-full text-meta font-bold ${
+                    selected ? 'text-ink' : 'text-ink-dim'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          {instrumentSwitch}
         </div>
       </header>
 

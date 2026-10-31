@@ -27,7 +27,7 @@ export const XP = {
   songRepeat: 5,
   /** The first thing done on a day, whatever it is. */
   firstPracticeOfDay: 10,
-  /** Tuning all six strings, at most once a day. */
+  /** Tuning every string of the instrument, at most once a day. */
   tunedAll: 15,
 } as const;
 

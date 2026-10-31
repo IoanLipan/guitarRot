@@ -132,7 +132,8 @@ describe('migrate: version 1 to version 2', () => {
     expect(migrated.streak).toEqual(v1.streak);
     expect(migrated.daily).toEqual(v1.daily);
     expect(migrated.lessonsDone).toEqual(v1.lessonsDone);
-    expect(migrated.settings).toEqual(v1.settings);
+    // What version 1 had is kept; the instrument it never had is the guitar, already chosen: this player is not asked.
+    expect(migrated.settings).toEqual({ ...v1.settings, instrument: 'guitar', instrumentChosen: true, toneByInstrument: {} });
   });
 
   it('defaults the fields it cannot know anything about', () => {

@@ -130,9 +130,17 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
 
 export const DEFAULT_TONE_ID: ToneId = 'acoustic';
 
+/**
+ * A tone an instrument's own id stands in for while the list has no profile by
+ * that id: the ukulele plays the nylon Classical voicing until it has its own.
+ */
+const STAND_IN_TONE: Readonly<Record<string, ToneId>> = { ukulele: 'classical' };
+
 export function getToneProfile(id: string | undefined): ToneProfile {
+  const standIn = id === undefined ? undefined : STAND_IN_TONE[id];
   return (
     TONE_PROFILES.find((profile) => profile.id === id) ??
+    TONE_PROFILES.find((profile) => profile.id === standIn) ??
     // The list is never empty; the fallback keeps this total for bad stored ids.
     TONE_PROFILES.find((profile) => profile.id === DEFAULT_TONE_ID) ??
     (TONE_PROFILES[0] as ToneProfile)
@@ -146,6 +154,22 @@ export function getToneProfile(id: string | undefined): ToneProfile {
  */
 export function liveBodyGainDb(profile: ToneProfile, voiceIsSynth: boolean): number {
   return voiceIsSynth ? profile.amp.bodyGainDb : 0;
+}
+
+export type ToneInstrument = 'guitar' | 'ukulele';
+
+/**
+ * The voicings one instrument offers, in display order: the guitar's are every
+ * tone but the ukulele's own, and the ukulele's is its own. With no ukulele
+ * voicing in the list the ukulele is offered the nylon stand-in rather than
+ * nothing.
+ */
+export function toneProfilesFor(instrument: ToneInstrument): readonly ToneProfile[] {
+  const own = TONE_PROFILES.filter(
+    (profile) => ((profile.sampleSet as string) === 'ukulele' ? 'ukulele' : 'guitar') === instrument,
+  );
+  if (own.length > 0 || instrument === 'guitar') return own;
+  return TONE_PROFILES.filter((profile) => profile.id === STAND_IN_TONE.ukulele);
 }
 
 export function isToneId(value: unknown): value is ToneId {

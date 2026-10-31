@@ -1,4 +1,5 @@
-import { COURSE, getSong, isMovieSong, type Lesson } from '@/content';
+import { ALL_LESSONS, courseFor, getSong, isMovieSong, type Lesson } from '@/content';
+import { INSTRUMENTS, instrumentIdOf } from '@/music';
 import { levelForXp } from './levels';
 import type { ProgressState } from './types';
 
@@ -27,23 +28,47 @@ export type Achievement = {
 /** A course unit and the lessons in it, in course order. */
 export type CourseUnit = { unit: string; lessonIds: string[] };
 
-export function courseUnits(lessons: readonly Lesson[] = COURSE): CourseUnit[] {
-  const units: CourseUnit[] = [];
+/**
+ * The units of some lessons, in course order. A unit belongs to one
+ * instrument's course: two courses that happen to name a unit alike still have
+ * two units. Left to itself it covers every course there is.
+ */
+export function courseUnits(lessons: readonly Lesson[] = ALL_LESSONS): CourseUnit[] {
+  const units: (CourseUnit & { instrument: string })[] = [];
   for (const lesson of lessons) {
-    let group = units.find((candidate) => candidate.unit === lesson.unit);
+    const instrument = instrumentIdOf(lesson);
+    let group = units.find((candidate) => candidate.unit === lesson.unit && candidate.instrument === instrument);
     if (group === undefined) {
-      group = { unit: lesson.unit, lessonIds: [] };
+      group = { unit: lesson.unit, instrument, lessonIds: [] };
       units.push(group);
     }
     group.lessonIds.push(lesson.id);
   }
-  return units;
+  return units.map(({ unit, lessonIds }) => ({ unit, lessonIds }));
 }
 
-/** Units in which every lesson is done. */
-export function unitsFinished(state: ProgressState, lessons: readonly Lesson[] = COURSE): number {
+/** Units in which every lesson is done, across every course unless given one. */
+export function unitsFinished(state: ProgressState, lessons: readonly Lesson[] = ALL_LESSONS): number {
   const done = new Set(state.lessonsDone);
   return courseUnits(lessons).filter((unit) => unit.lessonIds.every((id) => done.has(id))).length;
+}
+
+/**
+ * How far the player is through the one course they are furthest through, as
+ * units finished of units in it: the progress toward finishing a whole course,
+ * on whichever instrument. An instrument whose course is not written yet has
+ * nothing to finish and never counts.
+ */
+export function wholeCourseProgress(state: ProgressState): { have: number; need: number } {
+  let best = { have: 0, need: 0 };
+  for (const instrument of INSTRUMENTS) {
+    const lessons = courseFor(instrument.id);
+    const need = courseUnits(lessons).length;
+    if (need === 0) continue;
+    const have = unitsFinished(state, lessons);
+    if (best.need === 0 || have / need > best.have / best.need) best = { have, need };
+  }
+  return best;
 }
 
 /** Quiz runs finished, at any difficulty. */
@@ -101,10 +126,14 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   {
     id: 'whole-course',
     name: 'Course graduate',
-    howTo: 'Finish every lesson in the whole course.',
+    howTo: 'Finish every lesson in a whole course.',
     tier: 'gold',
     category: 'learn',
-    ...counting(courseUnits().length, (state) => unitsFinished(state)),
+    earned: (state) => {
+      const { have, need } = wholeCourseProgress(state);
+      return need > 0 && have >= need;
+    },
+    progress: (state) => wholeCourseProgress(state),
   },
 
   // --- Quiz ---------------------------------------------------------------
@@ -264,7 +293,7 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   {
     id: 'tuned-up',
     name: 'Tuned up',
-    howTo: 'Tune all six strings with the tuner.',
+    howTo: 'Tune every string of your instrument with the tuner.',
     tier: 'celluloid',
     category: 'milestone',
     earned: (state) => state.tunedAllDate !== null,

@@ -1,3 +1,5 @@
+import { DEFAULT_INSTRUMENT_ID, getInstrument, type InstrumentId } from '@/music';
+
 /**
  * 2 added the game layer (xp, day streak, achievements, quiz bests, songs).
  * Version 1 states are upgraded on load by `migrate`, not discarded.
@@ -19,8 +21,22 @@ export type Settings = {
   preferFlats: boolean;
   /** Feed riff playback speed, 0.25 to 1.5. */
   defaultSpeed: number;
-  /** Guitar voicing id from `audio/tones.ts`. */
+  /** The voicing id (from `audio/tones.ts`) of the instrument being played. */
   toneId: string;
+  /** The instrument being learned: the Feed, Songs, Learn and Quiz all follow it. */
+  instrument: InstrumentId;
+  /**
+   * Whether the player has picked an instrument. A fresh install has not and is
+   * asked; progress saved before there was a choice belongs to a guitarist, so
+   * it loads as chosen.
+   */
+  instrumentChosen: boolean;
+  /**
+   * The voicing last used on each instrument that is not the current one, kept
+   * when the player switches away so switching back finds their choice again.
+   * The current instrument's is `toneId`.
+   */
+  toneByInstrument: Partial<Record<InstrumentId, string>>;
 };
 
 export type DailyStat = {
@@ -80,7 +96,7 @@ export type ProgressState = {
    * same day earns nothing. `date` is '' before the first, which no day equals.
    */
   songsToday: { date: string; ids: string[] };
-  /** The last local date the tuner tuned all six strings, or null if it never has. */
+  /** The last local date the tuner tuned every string of an instrument, or null if it never has. */
   tunedAllDate: string | null;
 };
 
@@ -92,7 +108,27 @@ export const DEFAULT_SETTINGS: Settings = {
   // They disagreed once, and a fresh install booted on acoustic and then
   // immediately reloaded a second sample set to land on clean.
   toneId: 'acoustic',
+  instrument: DEFAULT_INSTRUMENT_ID,
+  instrumentChosen: false,
+  toneByInstrument: {},
 };
+
+/**
+ * The settings after switching to `next`: the voicing in use goes into the
+ * shelf for the instrument being left, and the one that instrument last used
+ * (or its default) becomes the voicing in use. Choosing counts as having chosen.
+ */
+export function withInstrument(settings: Settings, next: InstrumentId): Settings {
+  if (settings.instrument === next) return { ...settings, instrumentChosen: true };
+  const shelf = { ...settings.toneByInstrument, [settings.instrument]: settings.toneId };
+  return {
+    ...settings,
+    instrument: next,
+    instrumentChosen: true,
+    toneId: shelf[next] ?? getInstrument(next).defaultToneId,
+    toneByInstrument: shelf,
+  };
+}
 
 export const SEEN_LIMIT = 200;
 export const DAILY_KEEP_DAYS = 365;
