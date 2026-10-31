@@ -129,13 +129,12 @@ export const UKE_UNIT_5: readonly Lesson[] = [
       },
       {
         kind: 'explain',
-        headline: 'F (Fa) to Bb (Sib): stretch the index',
+        headline: 'Stretch the index',
         visual: { kind: 'chords', chordIds: ['uke-F', 'uke-Bb'] },
         points: [
           'In F (Fa) your index is ==already== on fret 1 of the E (Mi) string.',
-          'For Bb (Sib) it **lies flat** to cover the A (La) string too.',
+          'For Bb (Sib) it **lies flat** to cover the A (La) string, and two fingers join.',
         ],
-        tip: 'Then the middle and ring fingers join.',
       },
       {
         kind: 'riff',

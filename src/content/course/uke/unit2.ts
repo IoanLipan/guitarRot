@@ -118,13 +118,12 @@ export const UKE_UNIT_2: readonly Lesson[] = [
       },
       {
         kind: 'explain',
-        headline: 'Am (La minor) to F (Fa): add one',
+        headline: 'Add one finger',
         visual: { kind: 'chords', chordIds: ['uke-Am', 'uke-F'] },
         points: [
           'Your middle finger ==stays put== on the G (Sol) string.',
-          'Just drop the index finger on fret 1 of the E (Mi) string: **one finger joins**.',
+          'Drop the index finger on fret 1 of the E (Mi) string: **one finger joins**.',
         ],
-        tip: 'Keep the strum going while you change.',
       },
       {
         kind: 'riff',
@@ -133,13 +132,12 @@ export const UKE_UNIT_2: readonly Lesson[] = [
       },
       {
         kind: 'explain',
-        headline: 'C (Do) to F (Fa)',
+        headline: 'Ring off, two on',
         visual: { kind: 'chords', chordIds: ['uke-C', 'uke-F'] },
         points: [
           'C (Do) to F (Fa) is one of the most common changes in songs.',
           'Lift the ring finger and ==drop index and middle together==.',
         ],
-        tip: 'Say it as you play: **ring off, two on**.',
       },
       {
         kind: 'riff',
@@ -198,28 +196,26 @@ export const UKE_UNIT_2: readonly Lesson[] = [
       },
       {
         kind: 'explain',
-        headline: 'C (Do) to G (Sol): the long hop',
+        headline: 'The long hop',
         visual: { kind: 'chords', chordIds: ['uke-C', 'uke-G'] },
         points: [
           'Lift the ring finger. Then land all three fingers **at the same moment**.',
           'Think of ==stamping a triangle== onto the neck.',
         ],
-        tip: 'Practise silently: shape, count four, change.',
       },
       {
         kind: 'riff',
         riffId: 'uke-c-g-change',
-        caption: 'Two bars of C (Do), two of G (Sol), twice. Most beginners find this one hard: **go slow, keep the hand moving**.',
+        caption: 'Two bars of C (Do), two of G (Sol), twice. A hard one: **go slow**, practise the shape silently, keep the hand moving.',
       },
       {
         kind: 'explain',
-        headline: 'The easier cousin of G (Sol)',
+        headline: 'An easier stand-in',
         visual: { kind: 'chords', chordIds: ['uke-G', 'uke-G7'] },
         points: [
           'G7 (Sol dominant seventh): G (Sol) with one note dropped to F (Fa).',
           'No finger goes past **fret 2**: ==a smaller stretch== than G (Sol).',
         ],
-        tip: 'Songs in C (Do) often use this chord anyway. Try it for any G (Sol).',
       },
       {
         kind: 'chord',

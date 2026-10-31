@@ -29,13 +29,12 @@ export const UKE_UNIT_3: readonly Lesson[] = [
       },
       {
         kind: 'explain',
-        headline: 'Dm (Re minor) to Am (La minor)',
+        headline: 'One finger stays',
         visual: { kind: 'chords', chordIds: ['uke-Dm', 'uke-Am'] },
         points: [
           'The middle finger **stays** on the G (Sol) string, fret 2.',
           'Lift the other two fingers: ==everything else rings open==.',
         ],
-        tip: 'Going back, drop the index and ring fingers together.',
       },
       {
         kind: 'riff',
@@ -221,10 +220,9 @@ export const UKE_UNIT_3: readonly Lesson[] = [
         headline: 'Change while it is quiet',
         visual: { kind: 'chords', chordIds: ['uke-C', 'uke-G7'] },
         points: [
-          'The chop silences the strings, so it is the ==perfect moment to move== your fingers.',
-          'Strum on beat 1, chop on 2 and **change** while it is quiet.',
+          'The chop silences the strings: the ==perfect moment to move== your fingers.',
+          'Strum on 1, chop on 2 and **change** while it is quiet.',
         ],
-        tip: 'Chop, change, strum: the new chord lands on the next ring.',
       },
       {
         kind: 'check',
