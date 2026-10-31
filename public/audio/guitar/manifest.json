@@ -92,6 +92,21 @@
       "F#5": "electric/Fs5.mp3",
       "A5": "electric/A5.mp3",
       "C6": "electric/C6.mp3"
+    },
+    "ukulele": {
+      "C4": "ukulele/C4.mp3",
+      "D4": "ukulele/D4.mp3",
+      "E4": "ukulele/E4.mp3",
+      "F#4": "ukulele/Fs4.mp3",
+      "G4": "ukulele/G4.mp3",
+      "A4": "ukulele/A4.mp3",
+      "B4": "ukulele/B4.mp3",
+      "C#5": "ukulele/Cs5.mp3",
+      "D#5": "ukulele/Ds5.mp3",
+      "F5": "ukulele/F5.mp3",
+      "G5": "ukulele/G5.mp3",
+      "A5": "ukulele/A5.mp3",
+      "C6": "ukulele/C6.mp3"
     }
   }
 }

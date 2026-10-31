@@ -17,6 +17,16 @@ const shipped = new Set(
   ),
 );
 
+// What each set has to span. A#5 (82) reaches fret 21 on the guitar's high E
+// within the same three-semitone stretch; nothing in the content goes past
+// fret 15, so the recordings stop there and inventing higher ones would just
+// be stretching. The ukulele's lowest sounding note is its C string (C4, 60)
+// and fret 15 of its A string is C6 (84).
+const GUITAR_RANGE = { low: 40, high: 82 };
+const RANGE_OF_SET: Record<string, { low: number; high: number }> = {
+  ukulele: { low: 60, high: 84 },
+};
+
 function manifest() {
   if (!isSampleManifest(raw)) throw new Error('public/audio/guitar/manifest.json is not a manifest');
   return raw;
@@ -56,19 +66,17 @@ describe('the manifest that actually ships', () => {
     }
   });
 
-  it('covers the guitar range without leaving a gap wider than three semitones', () => {
+  it('covers the instrument range without leaving a gap wider than three semitones', () => {
     // Stretch a recording further than this and it starts sounding like a
     // synth again, which is the whole point of having samples.
     for (const [name, set] of Object.entries(manifestSets(manifest()))) {
       const midis = Object.keys(set)
         .map(noteToMidi)
         .sort((a, b) => a - b);
+      const range = RANGE_OF_SET[name] ?? GUITAR_RANGE;
 
-      expect(midis[0], `${name} misses the open low E`).toBeLessThanOrEqual(40);
-      // A#5 (82) reaches fret 21 on the high E within the same three-semitone
-      // stretch; nothing in the content goes past fret 15. The recordings
-      // stop there, and inventing higher ones would just be stretching.
-      expect(midis[midis.length - 1], `${name} misses the top of the neck`).toBeGreaterThanOrEqual(82);
+      expect(midis[0], `${name} misses the open low string`).toBeLessThanOrEqual(range.low);
+      expect(midis[midis.length - 1], `${name} misses the top of the neck`).toBeGreaterThanOrEqual(range.high);
       for (let i = 1; i < midis.length; i += 1) {
         expect(midis[i]! - midis[i - 1]!, `${name} gap after midi ${midis[i - 1]}`).toBeLessThanOrEqual(3);
       }
