@@ -1,6 +1,46 @@
 import { describe, expect, it } from 'vitest';
 import { TOUCH_MIN, createFretboardGeometry, type Rect } from './fretboardGeometry';
 
+describe('stringLabels', () => {
+  it('reserves a gutter at the nut end of a horizontal board, and nothing else moves relative to the nut', () => {
+    const plain = createFretboardGeometry({ orientation: 'horizontal', fretRange: [0, 5] });
+    const named = createFretboardGeometry({ orientation: 'horizontal', fretRange: [0, 5], stringLabels: true });
+    const widened = named.width - plain.width;
+    expect(widened).toBeGreaterThan(0);
+    expect(named.height).toBe(plain.height);
+    expect(named.markerPoint({ stringIndex: 2, fret: 3 }).x - plain.markerPoint({ stringIndex: 2, fret: 3 }).x).toBe(widened);
+    expect(named.hasStringLabels).toBe(true);
+    expect(plain.hasStringLabels).toBe(false);
+  });
+
+  it('puts each name level with its string and clear of the open-string markers', () => {
+    const g = createFretboardGeometry({ orientation: 'horizontal', fretRange: [0, 5], interactive: true, stringLabels: true });
+    for (let s = 0; s < 6; s += 1) {
+      expect(g.stringLabelPoint(s).y).toBe(g.stringLine(s).y1);
+      // An open string's marker is 15 units wide at most; the name's right edge (it is at most ~18 units wide) stays left of it.
+      expect(g.stringLabelPoint(s).x + 9).toBeLessThan(g.markerPoint({ stringIndex: s, fret: 0 }).x - 15);
+    }
+  });
+
+  it('does nothing to a vertical board', () => {
+    const plain = createFretboardGeometry({ orientation: 'vertical', fretRange: [0, 4] });
+    const named = createFretboardGeometry({ orientation: 'vertical', fretRange: [0, 4], stringLabels: true });
+    expect(named.width).toBe(plain.width);
+    expect(named.hasStringLabels).toBe(false);
+  });
+
+  it('keeps every tap target on the canvas with the gutter in', () => {
+    const g = createFretboardGeometry({ orientation: 'horizontal', fretRange: [0, 12], interactive: true, stringLabels: true });
+    for (let s = 0; s < 6; s += 1) {
+      for (const fret of [0, 1, 12]) {
+        const rect = g.cellRect({ stringIndex: s, fret });
+        expect(rect.x).toBeGreaterThanOrEqual(0);
+        expect(rect.x + rect.width).toBeLessThanOrEqual(g.width);
+      }
+    }
+  });
+});
+
 describe('cellFrets', () => {
   it('excludes fret 0, which lives in the open-string margin', () => {
     const g = createFretboardGeometry({ orientation: 'horizontal', fretRange: [0, 4] });

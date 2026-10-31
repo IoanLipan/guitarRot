@@ -1,5 +1,6 @@
-import type { ChordShape } from '@/music';
+import { STANDARD_TUNING, fretToMidi, noteName, type ChordShape } from '@/music';
 import type { FretMarker } from './Fretboard';
+import { noteColor } from './noteColors';
 
 export type ChordFretboardProps = {
   markers: FretMarker[];
@@ -11,7 +12,12 @@ export type ChordFretboardProps = {
 
 const DIAGRAM_FRETS = 5;
 
-/** Splits a ChordShape into the props the Fretboard component understands. */
+/**
+ * Splits a ChordShape into the props the Fretboard component understands. The
+ * dots are coloured by note (chord shapes are for the standard tuning). A
+ * board that asks "which chord is this?" strips those colours: the question
+ * dot is not a note.
+ */
 export function chordShapeToFretboard(shape: ChordShape): ChordFretboardProps {
   const markers: FretMarker[] = [];
   const mutedStrings: number[] = [];
@@ -30,10 +36,11 @@ export function chordShapeToFretboard(shape: ChordShape): ChordFretboardProps {
     markers.push({
       stringIndex,
       fret,
+      // The number inside the dot is the finger; the dot is the note, so it
+      // wears that note's colour like every other note on every other board.
       label: finger === null || finger === undefined ? undefined : String(finger),
-      // Amber, per the design's "glowing finger dots" — the white "accent"
-      // tone disappears against the fret wires at chord-diagram sizes.
       tone: 'root',
+      color: noteColor(noteName(fretToMidi(STANDARD_TUNING, stringIndex, fret))),
     });
   });
 

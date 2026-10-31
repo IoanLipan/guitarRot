@@ -9,7 +9,7 @@ import {
   type RiffPlayer,
 } from '@/audio';
 import { beatsPerBar, type Riff, type SongChart } from '@/content';
-import { createTabGeometry, TabStaff, useFollowPlayhead } from '@/render';
+import { createTabGeometry, TabView, useFollowPlayhead } from '@/render';
 import { ChordChart } from '@/songs/ChordChart';
 import { MetronomeIcon } from '@/ui/icons';
 import { PlayPauseIcon } from '@/ui/PlayPauseIcon';
@@ -159,22 +159,17 @@ export function PlayerPanel({
   return (
     <div className="flex flex-col gap-4" data-testid="player-panel">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="min-w-0 text-lg leading-tight font-extrabold">{title}</h3>
-        <span className="shrink-0 text-xs font-bold tracking-wider text-ink-dim uppercase tabular-nums">
-          {riff.bpm} BPM · {riff.timeSignature[0]}/{riff.timeSignature[1]}
+        <h3 className="min-w-0 text-lesson leading-tight font-extrabold">{title}</h3>
+        <span className="shrink-0 text-meta text-ink-dim tabular-nums">
+          {riff.bpm} bpm · {riff.timeSignature[0]}/{riff.timeSignature[1]}
         </span>
       </div>
 
       {chart !== undefined ? (
         <ChordChart chart={chart} activeBar={activeBar} />
       ) : (
-        <div
-          ref={staffScrollRef}
-          data-testid="tab-scroller"
-          className="w-full overflow-x-auto overscroll-x-contain rounded-2xl bg-ground/60 py-3 ring-1 ring-white/8"
-        >
-          <TabStaff riff={riff} geometry={geometry} showPlayhead playheadRef={playheadRef} />
-        </div>
+        // A lesson step is as tall as its content, so there is no room to fill: a fixed spacing.
+        <TabView riff={riff} playheadRef={playheadRef} scrollerRef={staffScrollRef} stringSpacing={26} />
       )}
 
       <div className="flex items-center gap-3">
@@ -183,7 +178,7 @@ export function PlayerPanel({
           onClick={() => void handleToggle()}
           aria-label={playing ? 'Stop' : 'Play'}
           data-testid="player-toggle"
-          className="press flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-ground shadow-[0_6px_18px_rgba(255,176,32,0.35)]"
+          className="press flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-ground"
         >
           <PlayPauseIcon playing={playing} stop size={24} />
         </button>
@@ -204,7 +199,7 @@ export function PlayerPanel({
         </button>
 
         <label className="min-w-0 flex-1">
-          <div className="mb-1.5 flex justify-between text-xs font-bold tracking-wider text-ink-dim uppercase">
+          <div className="label mb-1.5 flex justify-between">
             <span>Speed</span>
             <span className="tabular-nums">{Math.round(speed * 100)}%</span>
           </div>

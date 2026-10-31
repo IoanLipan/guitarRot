@@ -117,6 +117,29 @@ describe('PlayerPanel tab staff', () => {
     expect(screen.getByTestId('tab-scroller').className).toContain('overscroll-x-contain');
   });
 
+  it('keeps the string names beside the scrolling staff, so they stay while it follows the playhead', () => {
+    render(<PlayerPanel riff={riff} title="Warm-up" engine={fakeEngine()} />);
+    expect(screen.getByTestId('tab-scroller')).not.toContainElement(screen.getByTestId('tab-string-names'));
+    expect(screen.getByTestId('tab-string-names')).toHaveTextContent('EADGBe');
+  });
+
+  it('says its tempo in plain lowercase "bpm", not capitals', () => {
+    render(<PlayerPanel riff={riff} title="Warm-up" engine={fakeEngine()} />);
+    const panel = screen.getByTestId('player-panel');
+    expect(panel).toHaveTextContent(`${riff.bpm} bpm`);
+    expect(panel).not.toHaveTextContent('BPM');
+  });
+
+  it('labels its slider "Speed" in the quiet label style, and its play button does not glow', () => {
+    render(<PlayerPanel riff={riff} title="Warm-up" engine={fakeEngine()} />);
+    const row = screen.getByText('Speed').parentElement as HTMLElement;
+    expect(row.className).toContain('label');
+    expect(row.className).not.toMatch(/uppercase|tracking/);
+    const play = screen.getByTestId('player-toggle');
+    expect(play.className).toContain('bg-accent');
+    expect(play.className).not.toContain('shadow');
+  });
+
   it('follows the playhead while playing', async () => {
     const scroller = await playing();
     world.beat = 6;

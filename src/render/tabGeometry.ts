@@ -5,15 +5,38 @@ const STRING_COUNT = 6;
 
 const DEFAULTS = {
   beatWidth: 64,
-  stringSpacing: 22,
-  padding: { top: 26, right: 32, bottom: 26, left: 34 },
+  stringSpacing: 28,
+  // The top band holds the technique marks (h, p, b, P.M.). The string names are
+  // not in the staff: they sit in a column of their own beside it, so they stay
+  // put when the staff scrolls to follow the playhead.
+  padding: { top: 32, right: 32, bottom: 22, left: 18 },
 } as const;
+
+/** How far apart the staff lines may be drawn: below 22 the fret numbers touch, above 40 the staff looks stretched. */
+export const STRING_SPACING_MIN = 22;
+export const STRING_SPACING_MAX = 40;
+
+/**
+ * The line spacing that fills `height` pixels of room (the staff's top and
+ * bottom bands included), kept between the bounds above. A staff drawn at a
+ * fixed size is a strip in a tall card; this is how it grows to use the card.
+ */
+export function stringSpacingForHeight(height: number): number {
+  const room = height - DEFAULTS.padding.top - DEFAULTS.padding.bottom;
+  const spacing = Math.floor(room / (STRING_COUNT - 1));
+  if (!Number.isFinite(spacing)) return DEFAULTS.stringSpacing;
+  return Math.min(STRING_SPACING_MAX, Math.max(STRING_SPACING_MIN, spacing));
+}
 
 export type TabGeometry = {
   width: number;
   height: number;
   beatWidth: number;
   stringSpacing: number;
+  /** Size of a fret number, in pixels (a staff is drawn 1 unit to 1 pixel). Grows with the spacing, 16 to 18. */
+  fretFontSize: number;
+  /** Size of a technique mark above the staff, in pixels. */
+  techniqueFontSize: number;
   totalBeats: number;
   beatsPerBar: number;
   bars: number;
@@ -52,6 +75,7 @@ export function createTabGeometry(opts: {
 
   const beatWidth = opts.beatWidth ?? DEFAULTS.beatWidth;
   const stringSpacing = opts.stringSpacing ?? DEFAULTS.stringSpacing;
+  if (!(stringSpacing > 0)) throw new Error(`A tab staff needs a positive line spacing, got ${stringSpacing}`);
   const padding = DEFAULTS.padding;
 
   const perBar = beatsPerBar(timeSignature);
@@ -80,6 +104,8 @@ export function createTabGeometry(opts: {
     height,
     beatWidth,
     stringSpacing,
+    fretFontSize: stringSpacing >= 32 ? 18 : 16,
+    techniqueFontSize: 13,
     totalBeats,
     beatsPerBar: perBar,
     bars,

@@ -194,6 +194,50 @@ describe('RiffCard', () => {
     });
   });
 
+  describe('what the card says and how it looks', () => {
+    it('reads its facts as one plain line, "Style · Level n · bpm", in sentence case', () => {
+      renderCard();
+      const facts = screen.getByText(`Level ${riff.level}`).closest('p') as HTMLElement;
+      expect(facts).toHaveTextContent(`${riff.style} · Level ${riff.level} · ${riff.bpm} bpm`);
+      expect(facts.className).not.toMatch(/uppercase|tracking/);
+      expect(screen.queryByText(/Lvl/i)).toBeNull();
+      expect(screen.queryByText(/BPM/)).toBeNull();
+    });
+
+    it('breaks between facts and never inside one', () => {
+      renderCard();
+      expect(screen.getByText(`Level ${riff.level}`).className).toContain('whitespace-nowrap');
+    });
+
+    it('labels the speed slider "Speed", in the quiet label style', () => {
+      renderCard();
+      const label = screen.getByText('Speed').parentElement as HTMLElement;
+      expect(label.className).toContain('label');
+      expect(label.className).not.toMatch(/uppercase|tracking/);
+    });
+
+    it('has one amber thing, the play button, and it does not glow at rest', () => {
+      const { container } = renderCard();
+      const play = screen.getByRole('button', { name: /Play|Pause/ });
+      expect(play.className).toContain('bg-accent');
+      expect(play.className).not.toContain('shadow');
+      expect(container.innerHTML).not.toMatch(/rgba\(255,\s*176,\s*32/);
+    });
+
+    it('is a flat card: no gradient', () => {
+      const { container } = renderCard();
+      expect(container.innerHTML).not.toContain('bg-linear');
+      expect((container.firstElementChild as HTMLElement).className).toContain('bg-ground');
+    });
+
+    it('draws the tab with the string names beside it, where following the playhead cannot scroll them away', () => {
+      renderCard();
+      const scroller = screen.getByTestId('tab-scroller');
+      expect(scroller).not.toContainElement(screen.getByTestId('tab-string-names'));
+      expect(screen.getByTestId('tab-string-names')).toHaveTextContent('EADGBe');
+    });
+  });
+
   describe('the tab staff', () => {
     function staff() {
       const scroller = screen.getByTestId('tab-scroller');

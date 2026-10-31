@@ -90,7 +90,10 @@ export function FretboardView({
 
   // The same geometry the Fretboard draws with, so a ping lands on the dot it is for.
   const geometry = useMemo(
-    () => (fretRange === undefined ? null : createFretboardGeometry({ orientation: 'horizontal', fretRange, interactive: true })),
+    () =>
+      fretRange === undefined
+        ? null
+        : createFretboardGeometry({ orientation: 'horizontal', fretRange, interactive: true, stringLabels: true }),
     [fretRange],
   );
 
@@ -148,7 +151,7 @@ export function FretboardView({
             onClick={() => onLoopTap(loopRange === null ? shown.bar : loopRange.anchor)}
             aria-pressed={looping}
             data-testid="fretboard-loop"
-            className={`press flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full px-4 text-xs font-extrabold tracking-wider uppercase ${
+            className={`press flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full px-4 text-meta font-bold ${
               looping ? 'bg-accent text-ground' : 'bg-surface-2 text-ink-dim'
             }`}
           >
@@ -160,13 +163,13 @@ export function FretboardView({
           {lit !== undefined ? (
             <p
               data-testid="fretboard-note"
-              className="max-w-full truncate rounded-full bg-surface-2 px-3.5 py-1.5 text-[15px] font-bold tight:py-1"
+              className="max-w-full truncate rounded-full bg-surface-2 px-3.5 py-1.5 text-body font-bold tight:py-1"
             >
               {describeNotes(lit.positions)}
             </p>
           ) : (
             !playing && (
-              <p data-testid="fretboard-hint" className="text-sm text-ink-dim">
+              <p data-testid="fretboard-hint" className="text-meta text-ink-dim">
                 Press play, or tap a dot to hear it.
               </p>
             )

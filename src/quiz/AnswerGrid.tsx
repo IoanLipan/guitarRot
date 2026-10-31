@@ -44,6 +44,9 @@ export function AnswerGrid({
         const isPicked = option === picked;
         const isCorrectPick = isPicked && option === correctAnswer;
         const isWrongPick = isPicked && option !== correctAnswer;
+        // After a miss the right answer stays lit: dimming it with the rest left
+        // the one thing worth looking at the quietest button on the screen.
+        const isMissedAnswer = answered && !isPicked && option === correctAnswer;
 
         const classes = [
           dense
@@ -58,10 +61,14 @@ export function AnswerGrid({
           classes.push(
             'answer-shake answer-ring border-[var(--color-bad)] bg-[var(--color-bad)] text-[var(--color-ground)]',
           );
+        } else if (isMissedAnswer) {
+          classes.push(
+            'border-[var(--color-good)] bg-[color-mix(in_srgb,var(--color-good)_16%,var(--color-surface))] text-[var(--color-ink)]',
+          );
         } else if (answered) {
-          classes.push('border-[#22222b] bg-[var(--color-surface)] text-[var(--color-ink)] opacity-40');
+          classes.push('border-line bg-[var(--color-surface)] text-[var(--color-ink)] opacity-40');
         } else {
-          classes.push('border-[#2b2b36] bg-[var(--color-surface-2)] text-[var(--color-ink)]');
+          classes.push('border-line bg-[var(--color-surface-2)] text-[var(--color-ink)]');
         }
 
         return (
@@ -71,6 +78,7 @@ export function AnswerGrid({
             disabled={answered}
             ref={isPicked ? pickedRef : undefined}
             data-tone={isWrongPick ? 'bad' : undefined}
+            data-correct={answered && option === correctAnswer ? 'true' : undefined}
             onClick={() => onPick(option)}
             className={classes.join(' ')}
           >

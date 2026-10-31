@@ -10,11 +10,12 @@ import {
 } from '@/audio';
 import { beatsPerBar, chartBars, chordByName, songToRiff, type Song } from '@/content';
 import { STANDARD_TUNING } from '@/music';
-import { chordShapeToFretboard, createTabGeometry, Fretboard, TabStaff, useFollowPlayhead } from '@/render';
+import { chordShapeToFretboard, createTabGeometry, Fretboard, noteColor, TabView, useFollowPlayhead } from '@/render';
 import { ShareButton } from '@/share';
 import { ArrowLeftIcon, CloseIcon, MetronomeIcon } from '@/ui/icons';
 import { PlayPauseIcon } from '@/ui/PlayPauseIcon';
 import { DifficultyPill } from './DifficultyPill';
+import { MetaLine } from './MetaLine';
 import { ChordChart } from './ChordChart';
 import { keyLabel } from './keyLabel';
 import { FretboardView } from './FretboardView';
@@ -230,7 +231,7 @@ export function SongPlayer({
       : chordByName(chartBars(song.chart)[activeBar]?.chordName ?? '');
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 bg-linear-to-b from-surface to-ground px-5 pt-3 pb-5 tight:gap-2 tight:pb-3">
+    <div className="flex h-full min-h-0 flex-col gap-3 bg-ground px-5 pt-3 pb-5 tight:gap-2 tight:pb-3">
       {/* pr-14 keeps the share pill clear of the shell's settings gear,
           which floats over this pane at the top right (pt-3 puts the row level with it). */}
       <div className="flex shrink-0 items-center justify-between gap-3 pr-14">
@@ -239,7 +240,7 @@ export function SongPlayer({
           onClick={onBack}
           aria-label="Back to songs"
           data-testid="song-back"
-          className="press flex h-11 items-center gap-1.5 rounded-full bg-surface-2 pr-4 pl-3 text-xs font-bold tracking-wider text-ink-dim uppercase"
+          className="press flex h-11 items-center gap-1.5 rounded-full bg-surface-2 pr-4 pl-3 text-meta font-semibold text-ink-dim"
         >
           <ArrowLeftIcon size={18} /> Songs
         </button>
@@ -256,36 +257,34 @@ export function SongPlayer({
         >
           {song.title}
         </h2>
-        <p className={`mt-0.5 truncate text-sm text-ink-dim ${view === 'fretboard' ? 'tight:hidden' : ''}`}>
+        <p className={`mt-0.5 truncate text-meta text-ink-dim ${view === 'fretboard' ? 'tight:hidden' : ''}`}>
           {song.artist}
         </p>
       </div>
 
-      {/* On a short phone the chips become one row that slides sideways (they bleed to the
-          screen edges so it is plain they do), instead of wrapping onto a second line;
-          and in the fretboard view of a tight one they go altogether, as do the artist line and
+      {/* One plain line of facts, wrapping between them on a narrow phone (never mid-fact).
+          In the fretboard view of a tight screen it goes altogether, as do the artist line and
           the "Looping bars" row below (the view's own toggle shows it is looping): the board
           needs the room. */}
-      <div
-        className={`flex shrink-0 flex-wrap gap-1.5 short:-mx-5 short:flex-nowrap short:overflow-x-auto short:px-5 short:[scrollbar-width:none] short:[&::-webkit-scrollbar]:hidden short:[&>*]:shrink-0 short:[&>*]:whitespace-nowrap ${
-          view === 'fretboard' ? '[@media(max-height:700px)]:hidden' : ''
-        }`}
-      >
-        <DifficultyPill difficulty={song.difficulty} />
-        <Chip>{song.style}</Chip>
-        <Chip>Key {keyLabel(song.key)}</Chip>
-        <Chip>{song.bpm} BPM</Chip>
-      </div>
+      <MetaLine
+        className={`shrink-0 ${view === 'fretboard' ? '[@media(max-height:700px)]:hidden' : ''}`}
+        facts={[
+          <DifficultyPill key="difficulty" difficulty={song.difficulty} />,
+          song.style,
+          `Key ${keyLabel(song.key)}`,
+          `${song.bpm} bpm`,
+        ]}
+      />
 
       {/* The blurb is the first thing to go: two lines on a short phone, none on a tight one,
           where the staff and the fretboard need the room more. */}
-      <p className="shrink-0 text-[13px] leading-relaxed text-ink-dim short:line-clamp-2 tight:hidden">
+      <p className="shrink-0 text-label text-ink-dim short:line-clamp-2 tight:hidden">
         {song.about}
       </p>
 
       {loopRange !== null && (
         <div
-          className={`flex shrink-0 items-center gap-2 text-xs font-bold text-ink-dim ${
+          className={`flex shrink-0 items-center gap-2 text-meta font-semibold text-ink-dim ${
             view === 'fretboard' ? 'tight:hidden' : ''
           }`}
         >
@@ -312,7 +311,7 @@ export function SongPlayer({
           aria-label="Song view"
           data-testid="view-toggle"
           style={{ gridTemplateColumns: `repeat(${views.length}, minmax(0, 1fr))` }}
-          className="relative grid shrink-0 gap-1 self-start rounded-full bg-surface-2 p-1"
+          className="relative grid w-full shrink-0 gap-1 rounded-full bg-surface-2 p-1"
         >
           {/* One pill that slides to the chosen view, like Learn's section switch; the buttons sit above it. */}
           <span
@@ -334,7 +333,7 @@ export function SongPlayer({
                 tapHaptic();
                 setChosenView(option);
               }}
-              className={`press relative z-10 min-h-11 min-w-20 rounded-full px-4 text-xs font-extrabold tracking-wider uppercase ${
+              className={`press relative z-10 min-h-11 rounded-full px-2 text-meta font-bold ${
                 view === option ? 'text-ground' : 'text-ink-dim'
               }`}
             >
@@ -362,15 +361,7 @@ export function SongPlayer({
             onLoopTap={handleBarTap}
           />
         ) : (
-          <div className="flex h-full items-center">
-            <div
-              ref={tabScrollerRef}
-              data-testid="tab-scroller"
-              className="max-h-full w-full overflow-x-auto rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8 tight:py-2"
-            >
-              <TabStaff riff={riff} geometry={geometry} showPlayhead playheadRef={playheadRef} />
-            </div>
-          </div>
+          <TabView riff={riff} playheadRef={playheadRef} scrollerRef={tabScrollerRef} />
         )}
       </div>
 
@@ -379,7 +370,7 @@ export function SongPlayer({
           type="button"
           onClick={() => void handleToggle()}
           aria-label={playing ? 'Pause' : 'Play'}
-          className="press flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent shadow-[0_6px_18px_rgba(255,176,32,0.35)]"
+          className="press flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent"
         >
           <PlayPauseIcon playing={playing} size={26} className="text-ground" />
         </button>
@@ -400,7 +391,7 @@ export function SongPlayer({
         </button>
 
         <label className="min-w-0 flex-1">
-          <div className="mb-1.5 flex justify-between text-xs font-bold tracking-wider text-ink-dim uppercase">
+          <div className="label mb-1.5 flex justify-between">
             <span>Speed</span>
             <span className="tabular-nums">{Math.round(speed * 100)}%</span>
           </div>
@@ -416,28 +407,29 @@ export function SongPlayer({
           />
         </label>
 
-        {/* The fretboard view already shows where the fingers go. */}
+        {/* The fretboard view already shows where the fingers go. The name says which chord the
+            little diagram is: it carries no label of its own. */}
         {currentChord !== undefined && view !== 'fretboard' && (
-          <div className="w-16 shrink-0 max-[339px]:w-12" data-testid="current-chord">
-            <Fretboard
-              orientation="vertical"
-              fretRange={chordShapeToFretboard(currentChord).fretRange}
-              markers={chordShapeToFretboard(currentChord).markers}
-              tuning={STANDARD_TUNING}
-              fit
-            />
+          <div className="flex w-14 shrink-0 flex-col items-center" data-testid="current-chord">
+            <span className="text-meta leading-4 font-bold" style={{ color: noteColor(currentChord.name) }}>
+              {currentChord.name}
+            </span>
+            <div className="h-16 w-full">
+              <Fretboard
+                orientation="vertical"
+                fretRange={chordShapeToFretboard(currentChord).fretRange}
+                markers={chordShapeToFretboard(currentChord).markers}
+                tuning={STANDARD_TUNING}
+                showFretNumbers={false}
+                fit
+                className="h-full w-full"
+                ariaLabel={`${currentChord.name} chord diagram`}
+              />
+            </div>
           </div>
         )}
       </div>
     </div>
-  );
-}
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-bold tracking-wider text-ink-dim uppercase">
-      {children}
-    </span>
   );
 }
 

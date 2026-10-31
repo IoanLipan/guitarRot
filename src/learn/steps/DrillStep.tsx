@@ -3,7 +3,7 @@ import { ArrowRightIcon } from '@/ui/icons';
 import { errorHaptic, successHaptic, tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { LessonStep } from '@/content';
-import { fretToMidi, STANDARD_TUNING, withSolfege, type FretPosition } from '@/music';
+import { fretToMidi, STANDARD_TUNING, stringNumber, withSolfege, type FretPosition } from '@/music';
 import { AnswerGrid, explainNoteAnswer, noteQuestionAt, type NoteQuizQuestion } from '@/quiz';
 import { Neck } from './Neck';
 import { Reveal } from './Reveal';
@@ -170,13 +170,20 @@ export function DrillStep({
 
       {question !== undefined ? (
         <>
+          {/* The question is the note under the dot, so nothing on the board may say it: no
+              letter in the dot (Neck would write one by default) and no note in what a tap
+              target tells a screen reader. Where the dot is, is all it says. */}
           <Neck
             fretRange={question.fretRange}
             markers={[{ ...question.position, tone: 'root' }]}
+            labelMode="none"
+            revealNotes={false}
             onFretTap={handleFretTap}
             focus={question.position}
             popMarkers
-            ariaLabel="Name-this-note prompt. Tap any fret to hear it."
+            ariaLabel={`Name this note. The dot is on string ${stringNumber(question.position.stringIndex)}, ${
+              question.position.fret === 0 ? 'open' : `fret ${question.position.fret}`
+            }. Tap any fret to hear it.`}
           />
 
           <h2 className="text-center text-xl font-black">{question.prompt}</h2>
@@ -206,7 +213,7 @@ export function DrillStep({
                     tapHaptic();
                     advance();
                   }}
-                  className="press flex items-center justify-center gap-2 rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink"
+                  className="press flex items-center justify-center gap-2 rounded-full bg-surface-2 px-6 py-3 text-meta font-bold text-ink"
                 >
                   {index + 1 >= total ? 'See how you did' : 'Next question'}
                   <ArrowRightIcon size={18} />
@@ -229,7 +236,7 @@ export function DrillStep({
               type="button"
               onClick={handleAgain}
               data-testid="drill-again"
-              className="press mt-2 rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink"
+              className="press mt-2 rounded-full bg-surface-2 px-6 py-3 text-meta font-bold text-ink"
             >
               Try again
             </button>

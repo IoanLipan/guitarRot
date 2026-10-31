@@ -12,6 +12,7 @@ import {
   withSolfege,
   type ChordShape,
 } from '@/music';
+import { RichText } from '@/learn/steps/RichText';
 import { chordShapeToFretboard, Fretboard } from '@/render';
 
 /** How long the "just strummed" highlight holds after a tap. */
@@ -56,15 +57,16 @@ export function ChordCard({
     <button
       type="button"
       onClick={handleStrum}
+      // The card's name is what it does. Its contents (the name, the solfège, the notes) stay
+      // on screen, but read aloud as one run of ~80 characters they were no way to find the button.
+      aria-label={`Strum ${chord.name}`}
       data-testid={`chord-card-${chord.id}`}
       // pt-16: the first 56px belong to the share icon and settings gear (see Feed).
-      className="fx-host flex h-full min-h-0 w-full flex-col items-center justify-center gap-5 bg-linear-to-b from-surface-2 to-ground px-6 pt-16 pb-6 text-center tight:gap-3 tight:pb-4"
+      className="fx-host flex h-full min-h-0 w-full flex-col items-center justify-center gap-5 bg-ground px-6 pt-16 pb-6 text-center tight:gap-3 tight:pb-4"
     >
       <div className={`${rise} shrink-0`} style={stagger(0)}>
-        <div className="text-6xl leading-none font-black tight:text-5xl">{chord.name}</div>
-        <div className="mt-1.5 text-sm tracking-wider text-ink-dim uppercase">
-          {chordSolfegeName(chord)}
-        </div>
+        <div className="text-display font-black">{chord.name}</div>
+        <div className="mt-1.5 text-meta text-ink-dim">{chordSolfegeName(chord)}</div>
       </div>
 
       <div
@@ -89,17 +91,19 @@ export function ChordCard({
       </div>
 
       <div className={`${rise} flex min-h-16 shrink-0 flex-col items-center justify-center gap-1.5`} style={stagger(2)}>
-        {/* Each tone stays whole if a longer chord has to wrap. */}
-        <div className="text-center text-base font-bold tracking-wide tabular-nums">
+        {/* Each tone is a note chip, as in the lessons, and stays whole if a longer chord has to wrap. */}
+        <div className="text-center text-lesson font-bold">
           {tones.map((tone, index) => (
             <Fragment key={tone}>
               {index > 0 && ' · '}
-              <span className="whitespace-nowrap">{tone}</span>
+              <span className="whitespace-nowrap">
+                <RichText>{tone}</RichText>
+              </span>
             </Fragment>
           ))}
         </div>
         <div
-          className="flex items-center gap-2 text-sm font-semibold transition-colors"
+          className="flex items-center gap-2 text-meta font-semibold transition-colors"
           style={{ color: strumming ? 'var(--color-accent)' : 'var(--color-ink-dim)' }}
         >
           <span
@@ -111,7 +115,7 @@ export function ChordCard({
           >
             <NoteIcon size={18} />
           </span>
-          {strumming ? 'strumming…' : 'tap anywhere to hear it'}
+          {strumming ? 'Strumming…' : 'Tap anywhere to hear it'}
         </div>
       </div>
     </button>

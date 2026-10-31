@@ -1,5 +1,5 @@
 import type { AudioEngine } from '@/audio';
-import { chordStrings, chordVoicing, fretToMidi, STANDARD_TUNING, type FretPosition } from '@/music';
+import { chordStrings, chordVoicing, fretToMidi, STANDARD_TUNING, stringNumber, type FretPosition } from '@/music';
 import { chordShapeToFretboard, Fretboard, type MarkerTone } from '@/render';
 import type { QuizQuestion } from './generateQuiz';
 
@@ -43,10 +43,14 @@ export function QuizVisual({
           { stringIndex: question.position.stringIndex, fret: question.position.fret, tone: dotTone },
         ]}
         onFretTap={handleFretTap}
+        // The tap targets say where they are, not which note: that is the question.
+        revealNotes={false}
         popMarkers
         fit={fit}
         className={className}
-        ariaLabel="Name-this-note prompt. Tap any fret to hear it."
+        ariaLabel={`Name this note. The dot is on string ${stringNumber(question.position.stringIndex)}, ${
+          question.position.fret === 0 ? 'open' : `fret ${question.position.fret}`
+        }. Tap any fret to hear it.`}
       />
     );
   }
@@ -64,7 +68,9 @@ export function QuizVisual({
       <Fretboard
         orientation="vertical"
         fretRange={diagram.fretRange}
-        markers={diagram.markers}
+        // The question dots are not notes: the colour of a fretted note would
+        // start to name the chord, so they are plain markers with the finger.
+        markers={diagram.markers.map(({ color: _color, ...marker }) => marker)}
         mutedStrings={diagram.mutedStrings}
         openStrings={diagram.openStrings}
         barre={diagram.barre}

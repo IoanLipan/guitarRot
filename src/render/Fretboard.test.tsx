@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Fretboard } from './Fretboard';
+import { createFretboardGeometry } from './fretboardGeometry';
 
 describe('Fretboard', () => {
   it('renders one marker per position', () => {
@@ -280,6 +281,249 @@ describe('Fretboard', () => {
     );
     const y = (id: string) => Number(screen.getByTestId(id).getAttribute('y'));
     expect(y('marker-s5f1')).toBeLessThan(y('marker-s0f1'));
+  });
+
+  describe('a question board does not give its answer away', () => {
+    const question = (
+      <Fretboard
+        orientation="horizontal"
+        fretRange={[0, 5]}
+        markers={[{ stringIndex: 3, fret: 3, tone: 'root' }]}
+        onFretTap={() => {}}
+        revealNotes={false}
+      />
+    );
+
+    it('names only where each tap target is, never the note', () => {
+      render(question);
+      expect(screen.getByTestId('cell-s3f5')).toHaveAttribute('aria-label', 'String 3, fret 5');
+      expect(screen.getByTestId('cell-s3f3')).toHaveAttribute('aria-label', 'String 3, fret 3');
+      expect(screen.getByTestId('cell-s0f0')).toHaveAttribute('aria-label', 'String 6, open');
+      for (const cell of screen.getAllByRole('button')) {
+        expect(cell.getAttribute('aria-label')).toMatch(/^String \d, (fret \d+|open)$/);
+      }
+    });
+
+    it('still says the note on a board that is a picture of the answer', () => {
+      render(<Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} onFretTap={() => {}} />);
+      // The G string, two frets up.
+      expect(screen.getByTestId('cell-s3f2')).toHaveAttribute('aria-label', 'A3 (La), string 3, fret 2');
+    });
+
+    it('prints nothing in the dot', () => {
+      render(question);
+      expect(screen.getByTestId('marker-s3f3')).toHaveTextContent('');
+    });
+  });
+
+  describe('keyboard', () => {
+    function board(onFretTap = vi.fn()) {
+      render(
+        <Fretboard
+          orientation="horizontal"
+          fretRange={[0, 5]}
+          markers={[{ stringIndex: 2, fret: 3 }]}
+          onFretTap={onFretTap}
+        />,
+      );
+      return onFretTap;
+    }
+
+    it('is one tab stop: the cell of the first dot, every other cell out of the tab order', () => {
+      board();
+      const stops = screen.getAllByRole('button').filter((cell) => cell.getAttribute('tabindex') === '0');
+      expect(stops).toHaveLength(1);
+      expect(stops[0]).toBe(screen.getByTestId('cell-s2f3'));
+    });
+
+    it('starts on the low E string at the nut when there is no dot', () => {
+      render(<Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} onFretTap={() => {}} />);
+      expect(screen.getByTestId('cell-s0f0')).toHaveAttribute('tabindex', '0');
+    });
+
+    it('moves with the arrow keys and carries the tab stop along', () => {
+      board();
+      const start = screen.getByTestId('cell-s2f3');
+      start.focus();
+      fireEvent.keyDown(start, { key: 'ArrowRight' });
+      expect(document.activeElement).toBe(screen.getByTestId('cell-s2f4'));
+      expect(screen.getByTestId('cell-s2f4')).toHaveAttribute('tabindex', '0');
+      expect(screen.getByTestId('cell-s2f3')).toHaveAttribute('tabindex', '-1');
+
+      // The high string is on top of a horizontal board, so Up is the next string index.
+      fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowUp' });
+      expect(document.activeElement).toBe(screen.getByTestId('cell-s3f4'));
+
+      fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowLeft' });
+      fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowDown' });
+      expect(document.activeElement).toBe(screen.getByTestId('cell-s2f3'));
+    });
+
+    it('jumps to the ends of the string with Home and End, and stops at the edges', () => {
+      board();
+      const start = screen.getByTestId('cell-s2f3');
+      start.focus();
+      fireEvent.keyDown(start, { key: 'End' });
+      expect(document.activeElement).toBe(screen.getByTestId('cell-s2f5'));
+      fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowRight' });
+      expect(document.activeElement).toBe(screen.getByTestId('cell-s2f5'));
+      fireEvent.keyDown(document.activeElement as Element, { key: 'Home' });
+      expect(document.activeElement).toBe(screen.getByTestId('cell-s2f0'));
+    });
+
+    it('goes down a vertical board with the Down arrow, and across it with Right', () => {
+      render(
+        <Fretboard
+          orientation="vertical"
+          fretRange={[0, 4]}
+          markers={[{ stringIndex: 1, fret: 1 }]}
+          onFretTap={() => {}}
+        />,
+      );
+      const start = screen.getByTestId('cell-s1f1');
+      start.focus();
+      fireEvent.keyDown(start, { key: 'ArrowDown' });
+      expect(document.activeElement).toBe(screen.getByTestId('cell-s1f2'));
+      fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowRight' });
+      expect(document.activeElement).toBe(screen.getByTestId('cell-s2f2'));
+    });
+
+    it('taps the focused cell with Enter or Space', () => {
+      const onFretTap = board();
+      const cell = screen.getByTestId('cell-s2f3');
+      cell.focus();
+      fireEvent.keyDown(cell, { key: 'Enter' });
+      expect(onFretTap).toHaveBeenLastCalledWith({ stringIndex: 2, fret: 3 });
+      fireEvent.keyDown(cell, { key: ' ' });
+      expect(onFretTap).toHaveBeenCalledTimes(2);
+    });
+
+    it('is a group of buttons when it can be tapped, and an image when it cannot', () => {
+      const { unmount } = render(
+        <Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} onFretTap={() => {}} ariaLabel="Tappable" />,
+      );
+      expect(screen.getByRole('group', { name: 'Tappable' })).toBeInTheDocument();
+      unmount();
+      render(<Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} ariaLabel="Just a picture" />);
+      expect(screen.getByRole('img', { name: 'Just a picture' })).toBeInTheDocument();
+    });
+  });
+
+  describe('string names', () => {
+    const geometry = createFretboardGeometry({ orientation: 'horizontal', fretRange: [0, 5], stringLabels: true });
+
+    it('names the six strings as the tab does, the low E at the bottom, each level with its string', () => {
+      render(<Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} />);
+      const names = [0, 1, 2, 3, 4, 5].map((i) => screen.getByTestId(`string-name-${i}`));
+      expect(names.map((name) => name.textContent)).toEqual(['E', 'A', 'D', 'G', 'B', 'e']);
+      names.forEach((name, i) => {
+        expect(Number(name.getAttribute('y'))).toBeCloseTo(geometry.stringLine(i).y1);
+        // In the gutter at the nut end, left of everything the board draws.
+        expect(Number(name.getAttribute('x'))).toBeLessThan(geometry.markerPoint({ stringIndex: i, fret: 0 }).x - 20);
+      });
+    });
+
+    it('is not on a vertical board, and can be switched off', () => {
+      const { unmount } = render(<Fretboard orientation="vertical" fretRange={[0, 4]} markers={[]} />);
+      expect(screen.queryByTestId('string-name-0')).toBeNull();
+      unmount();
+      render(<Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} stringNames={false} />);
+      expect(screen.queryByTestId('string-name-0')).toBeNull();
+    });
+
+    it('can keep the room for the names and leave the drawing to its caller', () => {
+      const { container, unmount } = render(
+        <Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} stringNames="gutter" />,
+      );
+      expect(screen.queryByTestId('string-name-0')).toBeNull();
+      const withGutter = container.querySelector('svg')?.getAttribute('viewBox');
+      unmount();
+      const bare = render(
+        <Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} stringNames={false} />,
+      ).container.querySelector('svg')?.getAttribute('viewBox');
+      expect(withGutter).not.toBe(bare);
+    });
+  });
+
+  describe('the numbers and names are legible', () => {
+    function labelSizes() {
+      const svg = screen.getByTestId('fretboard');
+      return [...svg.querySelectorAll('text')]
+        .filter((text) => /^\d+$/.test(text.textContent ?? '') || text.getAttribute('data-testid')?.startsWith('string-name'))
+        .map((text) => Number(text.getAttribute('font-size')));
+    }
+
+    it('draws fret numbers and string names at 12px or more at natural size', () => {
+      render(<Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} />);
+      const sizes = labelSizes();
+      expect(sizes).toHaveLength(11);
+      for (const size of sizes) expect(size).toBeGreaterThanOrEqual(12);
+    });
+
+    describe('on a board scaled to fit its box', () => {
+      const geometry = createFretboardGeometry({
+        orientation: 'horizontal',
+        fretRange: [0, 5],
+        interactive: true,
+        stringLabels: true,
+      });
+
+      function boxedAt(scale: number) {
+        Object.defineProperty(window.SVGElement.prototype, 'clientWidth', {
+          configurable: true,
+          get: () => geometry.width * scale,
+        });
+        Object.defineProperty(window.SVGElement.prototype, 'clientHeight', {
+          configurable: true,
+          get: () => geometry.height * scale,
+        });
+      }
+
+      afterEach(() => {
+        Reflect.deleteProperty(window.SVGElement.prototype, 'clientWidth');
+        Reflect.deleteProperty(window.SVGElement.prototype, 'clientHeight');
+      });
+
+      it('asks for 13 real pixels: a board at 0.7 draws about 18 units, which is 13px', () => {
+        boxedAt(0.7);
+        render(<Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} onFretTap={() => {}} fit />);
+        for (const size of labelSizes()) {
+          expect(size).toBeCloseTo(18, 0);
+          expect(size * 0.7).toBeGreaterThanOrEqual(12);
+        }
+      });
+
+      it('does not blow the text up on a board that is already large', () => {
+        boxedAt(1.4);
+        render(<Fretboard orientation="horizontal" fretRange={[0, 5]} markers={[]} onFretTap={() => {}} fit />);
+        for (const size of labelSizes()) {
+          expect(size).toBeLessThan(13);
+          expect(size * 1.4).toBeGreaterThanOrEqual(12);
+        }
+      });
+    });
+  });
+
+  describe('notes and markers', () => {
+    it('draws a dot that is not a note in the marker colour, never amber', () => {
+      render(
+        <Fretboard
+          orientation="horizontal"
+          fretRange={[0, 5]}
+          markers={[
+            { stringIndex: 0, fret: 3, tone: 'root' },
+            { stringIndex: 1, fret: 3, tone: 'accent' },
+            { stringIndex: 2, fret: 3 },
+          ]}
+        />,
+      );
+      for (const id of ['marker-s0f3', 'marker-s1f3', 'marker-s2f3']) {
+        const dot = screen.getByTestId(id).previousElementSibling;
+        expect(dot).toHaveAttribute('fill', 'var(--color-marker)');
+        expect(screen.getByTestId(id)).toHaveAttribute('fill', 'var(--color-ground)');
+      }
+      expect(screen.getByTestId('fretboard').innerHTML).not.toContain('var(--color-accent)');
+    });
   });
 
   it('shrinks a long label so "Sol" still fits inside its dot', () => {

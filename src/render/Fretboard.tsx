@@ -1,4 +1,4 @@
-import { useId, useMemo, type CSSProperties } from 'react';
+import { useId, useMemo, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import {
   STANDARD_TUNING,
   fretToMidi,
@@ -16,6 +16,28 @@ import {
   type Orientation,
   type FretboardGeometry,
 } from './fretboardGeometry';
+import { STRING_NAMES } from './stringNames';
+import { useRenderedScale } from './useRenderedScale';
+
+/**
+ * The size, in real pixels, the numbers and string names around the board are
+ * drawn at wherever the board ends up (see useRenderedScale), never below the
+ * 12px that stays legible on a phone.
+ */
+const LABEL_PX = 13;
+/** Bounds, in viewBox units, of that size: the gutters around the board only have so much room. */
+const LABEL_UNITS_MIN = 9.5;
+const LABEL_UNITS_MAX = { horizontal: 18, vertical: 15 } as const;
+
+/**
+ * What an arrow key does, as [strings, frets] to move. Horizontally the high
+ * string is on top and frets run to the right; vertically strings run left to
+ * right and frets downwards.
+ */
+const ARROW_STEPS: Record<Orientation, Record<string, readonly [number, number]>> = {
+  horizontal: { ArrowRight: [0, 1], ArrowLeft: [0, -1], ArrowUp: [1, 0], ArrowDown: [-1, 0] },
+  vertical: { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] },
+};
 
 export type MarkerTone = 'root' | 'accent' | 'ghost' | 'muted' | 'wrong' | 'correct';
 
@@ -66,6 +88,21 @@ export type FretboardProps = {
   showFretNumbers?: boolean;
   /** Passing this makes the board interactive: bigger cells and tap targets. A tap also pulses the fret it landed on. */
   onFretTap?: (position: FretPosition) => void;
+  /**
+   * Whether a tap target tells a screen reader which note it is ("G2 (Sol),
+   * string 6, fret 3"). Leave it on for a picture. Turn it off on a board that
+   * is asking "name this note": hearing the answer from the very control you
+   * tap defeats the question, so the cell says only where it is ("String 6, fret 3").
+   */
+  revealNotes?: boolean;
+  /**
+   * The names of the strings (E A D G B e) in a column at the nut end, so
+   * "string 3 is G" in an explanation can be found on the board. On by default
+   * for a horizontal board. `"gutter"` keeps the room for the column but draws
+   * nothing, for a board whose caller draws the names itself (see Neck, which
+   * keeps them in view when the board scrolls). Vertical boards have none.
+   */
+  stringNames?: boolean | 'gutter';
   /** The dots spring in when they appear: for a board whose dot is the answer to a tap or a question. */
   popMarkers?: boolean;
   /**
@@ -82,9 +119,16 @@ export type FretboardProps = {
 /** Low E is thickest. Index matches stringIndex. */
 const STRING_WIDTHS = [3.2, 2.8, 2.4, 1.9, 1.5, 1.2];
 
+/**
+ * A dot is either a note, which wears that note's colour (`color`, from
+ * noteColor), or a marker: a dot that is not a note, such as the one a question
+ * asks about, "play this one now" or a finger number. Markers are the near-white
+ * `--color-marker`. Amber is not one of them: amber is for the thing you tap,
+ * and on a board it would read as the note D.
+ */
 const TONE_FILL: Record<MarkerTone, string> = {
-  root: 'var(--color-accent)',
-  accent: 'var(--color-ink)',
+  root: 'var(--color-marker)',
+  accent: 'var(--color-marker)',
   ghost: 'var(--color-surface-2)',
   muted: 'var(--color-ink-dim)',
   wrong: 'var(--color-bad)',
@@ -136,30 +180,94 @@ export function Fretboard({
   showInlays = true,
   showFretNumbers = true,
   onFretTap,
+  revealNotes = true,
+  stringNames = orientation === 'horizontal',
   popMarkers = false,
   fit = false,
   className,
   ariaLabel,
 }: FretboardProps) {
   const interactive = onFretTap !== undefined;
+  const nameGutter = stringNames !== false && orientation === 'horizontal';
+  const drawNames = stringNames === true && nameGutter;
 
   const geometry: FretboardGeometry = useMemo(
-    () => createFretboardGeometry({ orientation, fretRange, interactive }),
-    [orientation, fretRange, interactive],
+    () => createFretboardGeometry({ orientation, fretRange, interactive, stringLabels: nameGutter }),
+    [orientation, fretRange, interactive, nameGutter],
   );
 
   const markerRadius = Math.min(geometry.stringSpacing, geometry.fretSpacing) * 0.34 * markerScale;
-  const tappableFrets = geometry.hasNut ? [0, ...geometry.cellFrets] : geometry.cellFrets;
+  const tappableFrets = useMemo(
+    () => (geometry.hasNut ? [0, ...geometry.cellFrets] : [...geometry.cellFrets]),
+    [geometry],
+  );
   const woodId = `wood-${useId()}`;
+
+  // Numbers and names are asked for in pixels, so they stay readable when the
+  // board is scaled down to fit a small card.
+  const { ref: svgRef, scale } = useRenderedScale(geometry.width, geometry.height);
+  const labelUnits = Math.min(
+    LABEL_UNITS_MAX[orientation],
+    Math.max(LABEL_UNITS_MIN, LABEL_PX / scale),
+  );
+
+  // One tab stop for the whole grid of tap targets (a roving tabindex): Tab
+  // lands on one cell, the arrow keys move between them. It starts on the first
+  // dot, which on a question board is the dot being asked about.
+  const [roving, setRoving] = useState<FretPosition | null>(null);
+  const [ringed, setRinged] = useState<FretPosition | null>(null);
+  const firstMarker = markers.find((marker) => tappableFrets.includes(marker.fret));
+  const entry: FretPosition = firstMarker ?? { stringIndex: 0, fret: tappableFrets[0] ?? 0 };
+  const current =
+    roving !== null && tappableFrets.includes(roving.fret) ? roving : { stringIndex: entry.stringIndex, fret: entry.fret };
+  const samePosition = (a: FretPosition, b: FretPosition) => a.stringIndex === b.stringIndex && a.fret === b.fret;
+
+  function activate(position: FretPosition, svg: SVGSVGElement | null) {
+    onFretTap?.(position);
+    const point = geometry.markerPoint(position);
+    pingAt(svg, point.x, point.y, markerRadius);
+  }
+
+  /** The cell one arrow key away, or null at the edge of the board. */
+  function neighbour(position: FretPosition, key: string): FretPosition | null {
+    const index = tappableFrets.indexOf(position.fret);
+    const [stringStep, fretStep] =
+      key === 'Home' ? [0, -tappableFrets.length] : key === 'End' ? [0, tappableFrets.length] : (ARROW_STEPS[orientation][key] ?? [0, 0]);
+    if (stringStep === 0 && fretStep === 0) return null;
+
+    const nextString = Math.min(STRING_NAMES.length - 1, Math.max(0, position.stringIndex + stringStep));
+    const nextFret = tappableFrets[Math.min(tappableFrets.length - 1, Math.max(0, index + fretStep))];
+    if (nextFret === undefined) return null;
+    const next = { stringIndex: nextString, fret: nextFret };
+    return samePosition(next, position) ? null : next;
+  }
+
+  function handleKeyDown(event: KeyboardEvent<SVGRectElement>, position: FretPosition) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      activate(position, event.currentTarget.ownerSVGElement);
+      return;
+    }
+    const next = neighbour(position, event.key);
+    if (next === null) return;
+    event.preventDefault();
+    setRoving(next);
+    event.currentTarget.ownerSVGElement
+      ?.querySelector<SVGElement>(`[data-cell="${next.stringIndex}:${next.fret}"]`)
+      ?.focus();
+  }
 
   return (
     <svg
+      ref={svgRef}
       className={className}
       viewBox={`0 0 ${geometry.width} ${geometry.height}`}
       width={fit ? '100%' : geometry.width}
       height={fit ? '100%' : geometry.height}
       preserveAspectRatio="xMidYMid meet"
-      role="img"
+      // A picture is an image; a board you can tap is a group of buttons,
+      // and an image's children are hidden from a screen reader.
+      role={interactive ? 'group' : 'img'}
       aria-label={ariaLabel ?? 'Guitar fretboard'}
       data-testid="fretboard"
       data-orientation={orientation}
@@ -272,10 +380,33 @@ export function Fretboard({
               y={point.y}
               textAnchor="middle"
               dominantBaseline="middle"
-              fontSize={11}
+              fontSize={labelUnits}
+              fontWeight={600}
               fill="var(--color-ink-dim)"
+              aria-hidden="true"
             >
               {fret}
+            </text>
+          );
+        })}
+
+      {drawNames &&
+        STRING_NAMES.map((name, stringIndex) => {
+          const point = geometry.stringLabelPoint(stringIndex);
+          return (
+            <text
+              key={`name-${stringIndex}`}
+              data-testid={`string-name-${stringIndex}`}
+              x={point.x}
+              y={point.y}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize={labelUnits}
+              fontWeight={600}
+              fill={highlightStrings.includes(stringIndex) ? 'var(--color-ink)' : 'var(--color-ink-dim)'}
+              aria-hidden="true"
+            >
+              {name}
             </text>
           );
         })}
@@ -372,31 +503,72 @@ export function Fretboard({
 
       {interactive &&
         tappableFrets.flatMap((fret) =>
-          STRING_WIDTHS.map((_, stringIndex) => {
-            const rect = geometry.cellRect({ stringIndex, fret });
+          Array.from({ length: STRING_NAMES.length }, (_, stringIndex) => {
+            const position = { stringIndex, fret };
+            const rect = geometry.cellRect(position);
             const midi = fretToMidi(tuning, stringIndex, fret);
+            const where = `string ${stringNumber(stringIndex)}, ${fret === 0 ? 'open' : `fret ${fret}`}`;
             return (
               <rect
                 key={`cell-s${stringIndex}f${fret}`}
                 data-testid={`cell-s${stringIndex}f${fret}`}
+                data-cell={`${stringIndex}:${fret}`}
                 x={rect.x}
                 y={rect.y}
                 width={rect.width}
                 height={rect.height}
                 fill="transparent"
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', outline: 'none' }}
                 role="button"
-                aria-label={`${noteLabel(midi, { withOctave: true })}, string ${stringNumber(stringIndex)}, fret ${fret}`}
-                onClick={(event) => {
-                  onFretTap?.({ stringIndex, fret });
-                  const point = geometry.markerPoint({ stringIndex, fret });
-                  pingAt(event.currentTarget.ownerSVGElement, point.x, point.y, markerRadius);
+                tabIndex={samePosition(position, current) ? 0 : -1}
+                aria-label={
+                  revealNotes
+                    ? `${noteLabel(midi, { withOctave: true })}, ${where}`
+                    : `${where.charAt(0).toUpperCase()}${where.slice(1)}`
+                }
+                onClick={(event) => activate(position, event.currentTarget.ownerSVGElement)}
+                onKeyDown={(event) => handleKeyDown(event, position)}
+                onFocus={(event) => {
+                  setRoving(position);
+                  setRinged(focusIsVisible(event.currentTarget) ? position : null);
                 }}
+                onBlur={() => setRinged(null)}
               />
             );
           }),
         )}
+
+      {interactive && ringed !== null && tappableFrets.includes(ringed.fret) && (
+        <FocusRing rect={geometry.cellRect(ringed)} />
+      )}
     </svg>
+  );
+}
+
+/** `:focus-visible` is what tells a keyboard user's focus from a tap's; assume the keyboard where a browser cannot say. */
+function focusIsVisible(element: Element): boolean {
+  try {
+    return element.matches(':focus-visible');
+  } catch {
+    return true;
+  }
+}
+
+/** The amber ring on the cell a keyboard has reached: amber means "act here". */
+function FocusRing({ rect }: { rect: { x: number; y: number; width: number; height: number } }) {
+  return (
+    <rect
+      data-testid="cell-focus-ring"
+      x={rect.x + 2}
+      y={rect.y + 2}
+      width={rect.width - 4}
+      height={rect.height - 4}
+      rx={8}
+      fill="none"
+      stroke="var(--color-accent)"
+      strokeWidth={2.5}
+      pointerEvents="none"
+    />
   );
 }
 

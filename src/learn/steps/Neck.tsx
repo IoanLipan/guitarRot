@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { FretPosition } from '@/music';
-import { createFretboardGeometry, Fretboard, type FretMarker, type LabelMode } from '@/render';
+import { createFretboardGeometry, Fretboard, STRING_NAMES, type FretMarker, type LabelMode } from '@/render';
 
 /**
- * Widest board, in pixels, that is drawn scaled to the screen. A phone gives a
- * lesson about 350px; anything wider keeps its natural size and scrolls
- * sideways instead, because shrinking twelve frets into 350px leaves the dots
- * too small to read.
+ * Widest board, in pixels, that is drawn scaled to the screen. A board of
+ * frets 0-5 (about 362px with its string names) shrinks to fit even a 320px
+ * phone; anything wider keeps its natural size and scrolls sideways instead,
+ * because shrinking twelve frets into a phone's width leaves the dots too
+ * small to read.
  */
-const FIT_LIMIT = 350;
+const FIT_LIMIT = 400;
+/** Width, in board units, of the strip at the nut end that holds the string names (they are centred 12 units in). */
+const NAME_COLUMN = 24;
 /** Small boards grow to fill the width, but not into something cartoonish. */
 const MAX_ZOOM = 1.4;
 /**
@@ -34,6 +37,8 @@ export type NeckProps = {
   markerScale?: number;
   /** The dots spring in when they appear (a dot that is the answer to a tap or a question). */
   popMarkers?: boolean;
+  /** Whether each tap target tells a screen reader its note. Off for a board that asks "name this note". */
+  revealNotes?: boolean;
   /** Widest board, in pixels, still scaled to fit; wider ones scroll. Defaults to what a lesson screen holds. */
   fitLimit?: number;
   /**
@@ -55,13 +60,14 @@ export function Neck({
   highlightStrings,
   markerScale,
   popMarkers,
+  revealNotes,
   fitLimit = FIT_LIMIT,
   bleed = true,
   ariaLabel,
 }: NeckProps) {
   const interactive = onFretTap !== undefined;
   const natural = useMemo(
-    () => createFretboardGeometry({ orientation: 'horizontal', fretRange, interactive }),
+    () => createFretboardGeometry({ orientation: 'horizontal', fretRange, interactive, stringLabels: true }),
     [fretRange, interactive],
   );
   const scrolls = natural.width > fitLimit;
@@ -73,8 +79,10 @@ export function Neck({
   useEffect(() => {
     const scroller = scrollerRef.current;
     if (!scrolls || scroller === null || focusString === undefined || focusFret === undefined) return;
-    const dot = scroller.querySelector(`[data-testid="marker-s${focusString}f${focusFret}"]`);
-    if (dot === null) return;
+    // Measure the dot's group, not its label: a board that says nothing in its
+    // dots (a question) leaves an empty <text>, which has no box to measure.
+    const dot = scroller.querySelector(`[data-testid="marker-s${focusString}f${focusFret}"]`)?.parentElement;
+    if (dot === null || dot === undefined) return;
     const box = scroller.getBoundingClientRect();
     const at = dot.getBoundingClientRect();
     const left = scroller.scrollLeft + (at.left + at.width / 2) - (box.left + box.width / 2);
@@ -89,13 +97,44 @@ export function Neck({
       data-testid="neck"
     >
       <div
-        className="mx-auto w-full"
+        className="relative mx-auto flex w-full"
         style={{
           aspectRatio: `${natural.width} / ${natural.height}`,
           minWidth: scrolls ? natural.width : undefined,
           maxWidth: Math.min(natural.width * MAX_ZOOM, (maxHeight * natural.width) / natural.height),
         }}
       >
+        {/* A board that scrolls would carry its string names away with the nut: these
+            stay at the left edge of what is in view, level with their strings. */}
+        {scrolls && (
+          <div
+            aria-hidden="true"
+            data-testid="neck-string-names"
+            className={`pointer-events-none sticky z-10 shrink-0 self-stretch ${
+              bleed ? 'left-5 narrow:left-4' : 'left-0'
+            }`}
+            // Exactly the column of the board's gutter that the names sit in, so
+            // at rest they are where Fretboard would have drawn them; the
+            // negative margin gives the room back to the board.
+            style={{ width: `${(NAME_COLUMN / natural.width) * 100}%`, marginRight: `${-(NAME_COLUMN / natural.width) * 100}%` }}
+          >
+            {STRING_NAMES.map((name, stringIndex) => {
+              const point = natural.stringLabelPoint(stringIndex);
+              return (
+                <span
+                  key={name + stringIndex}
+                  className="absolute flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-ground/80 text-label font-semibold text-ink-dim"
+                  style={{
+                    left: `${(point.x / NAME_COLUMN) * 100}%`,
+                    top: `${(point.y / natural.height) * 100}%`,
+                  }}
+                >
+                  {name}
+                </span>
+              );
+            })}
+          </div>
+        )}
         <Fretboard
           orientation="horizontal"
           fretRange={fretRange}
@@ -105,8 +144,10 @@ export function Neck({
           markerScale={markerScale}
           popMarkers={popMarkers}
           onFretTap={onFretTap}
+          revealNotes={revealNotes}
+          stringNames={scrolls ? 'gutter' : true}
           fit
-          className="h-full w-full"
+          className="h-full w-full min-w-0 flex-1"
           ariaLabel={ariaLabel}
         />
       </div>
