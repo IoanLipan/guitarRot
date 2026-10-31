@@ -36,6 +36,7 @@ export function InstrumentSwitch({
       }}
       aria-label={`${current.name}. Switch to ${other.name.toLowerCase()}`}
       data-testid="instrument-switch"
+      data-instrument-switch=""
       data-instrument={instrument}
       className={`press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-2/90 text-ink ${className}`}
     >

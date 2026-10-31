@@ -86,6 +86,12 @@ export function AppShell() {
 
   const toneId = progress.state.settings.toneId;
   const instrumentId = progress.state.settings.instrument;
+  const refocusSwitch = useRef(false);
+  useEffect(() => {
+    if (!refocusSwitch.current) return;
+    refocusSwitch.current = false;
+    document.querySelector<HTMLElement>('[data-instrument-switch]')?.focus({ preventScroll: true });
+  }, [instrumentId]);
 
   /**
    * Moves the app to the other instrument. Sound stops (a riff that was playing is the
@@ -95,6 +101,8 @@ export function AppShell() {
    */
   function switchInstrument(next: InstrumentId) {
     if (next === instrumentId) return;
+    // The switch in Learn's header is inside the panes that are remounted, so keyboard focus on it would be lost.
+    refocusSwitch.current = document.activeElement?.hasAttribute('data-instrument-switch') === true;
     engine?.stopAll();
     progress.setInstrument(next);
     setOpenSongId((id) => {

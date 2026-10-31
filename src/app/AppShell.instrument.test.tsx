@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { getToneProfile, type AudioEngine } from '@/audio';
 import { COURSE } from '@/content';
 import { useInstrument } from '@/instrument';
@@ -337,6 +338,26 @@ describe('the quick switch', () => {
     expect(world.engine.stopAll).toHaveBeenCalled();
     expect(world.moves).toEqual(['ukulele']);
     expect(screen.getByTestId('feed-screen')).toHaveTextContent('ukulele');
+  });
+
+  it('keeps keyboard focus on the switch when the pane under it is dealt again, wherever the switch is', async () => {
+    await startOn();
+    fireEvent.click(tab('Learn'));
+
+    await userEvent.click(screen.getByTestId('instrument-switch'));
+    expect(screen.getByTestId('learn-instrument')).toHaveTextContent('ukulele');
+    expect(document.activeElement).toBe(screen.getByTestId('instrument-switch'));
+
+  });
+
+  it('does not take focus when the switch was not what was used', async () => {
+    await startOn();
+    fireEvent.click(tab('Learn'));
+    fireEvent.click(screen.getByTestId('open-settings'));
+
+    fireEvent.click(screen.getByTestId('settings-pick-ukulele'));
+
+    expect(document.activeElement).not.toBe(screen.getByTestId('instrument-switch'));
   });
 
   it('does nothing to switch to the instrument already in use', async () => {
