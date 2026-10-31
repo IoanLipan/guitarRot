@@ -135,6 +135,17 @@ describe('ShareButton in the Android app', () => {
   });
 });
 
+describe('ShareButton as a pill', () => {
+  it('says "Share" in the house label style: sentence case, no tracked capitals', () => {
+    render(<ShareButton target={target} title="Blues shuffle in E" />);
+
+    const button = screen.getByTestId('share-button');
+    expect(button).toHaveTextContent('Share');
+    expect(button).toHaveClass('label');
+    expect(button.className).not.toMatch(/uppercase|tracking-|text-xs/);
+  });
+});
+
 describe('ShareButton as an icon', () => {
   it('is a 44px circle that still says what it does', () => {
     render(<ShareButton target={target} title="Blues shuffle in E" iconOnly />);

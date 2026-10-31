@@ -7,10 +7,30 @@ import { fretToMidi, STANDARD_TUNING, stringNumber, withSolfege, type FretPositi
 import { AnswerGrid, explainNoteAnswer, noteQuestionAt, type NoteQuizQuestion } from '@/quiz';
 import { Neck } from './Neck';
 import { Reveal } from './Reveal';
-import { StepKicker } from './StepHeading';
 
 /** A right answer holds just long enough to register, then the next question loads (as in the Quiz tab). */
 const CORRECT_HOLD_MS = 1000;
+
+/** The small phones (320x568, 360x640, 375x667): the `tight:` variant in index.css. */
+const TIGHT_SCREEN = '(max-height: 700px)';
+/**
+ * Tallest the board may be on a tight screen. The drill is a board, a question and four answers, and on
+ * a 568px phone the answers only fit, without a scroll, if the board gives up about half its height.
+ */
+const TIGHT_NECK_HEIGHT = 160;
+
+function useTightScreen(): boolean {
+  const query = () => (typeof window.matchMedia === 'function' ? window.matchMedia(TIGHT_SCREEN) : null);
+  const [tight, setTight] = useState(() => query()?.matches ?? false);
+  useEffect(() => {
+    const list = query();
+    if (list === null) return;
+    const update = () => setTight(list.matches);
+    list.addEventListener('change', update);
+    return () => list.removeEventListener('change', update);
+  }, []);
+  return tight;
+}
 
 function shuffled<T>(items: readonly T[]): T[] {
   const copy = [...items];
@@ -74,6 +94,7 @@ export function DrillStep({
   const [results, setResults] = useState<boolean[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const tight = useTightScreen();
 
   useEffect(
     () => () => {
@@ -138,34 +159,31 @@ export function DrillStep({
   const right = results.filter(Boolean).length;
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-4" data-testid="step-drill">
-      <div className="flex flex-col gap-3">
-        <StepKicker>Practice</StepKicker>
-        <div className="flex items-center gap-3">
-          <ol className="flex flex-1 gap-1.5" aria-label="Progress through the questions">
-            {Array.from({ length: total }, (_, i) => {
-              const result = results[i];
-              const background =
-                result === undefined
-                  ? i === index
-                    ? 'var(--color-accent)'
-                    : 'var(--color-surface-2)'
-                  : result
-                    ? 'var(--color-good)'
-                    : 'var(--color-bad)';
-              return (
-                <li
-                  key={i}
-                  className="h-1.5 flex-1 rounded-full transition-colors"
-                  style={{ background }}
-                />
-              );
-            })}
-          </ol>
-          <span className="shrink-0 text-xs font-bold text-ink-dim tabular-nums" data-testid="drill-count">
-            {finished ? total : index + 1} / {total}
-          </span>
-        </div>
+    <div ref={rootRef} className="flex flex-col gap-4 tight:gap-3" data-testid="step-drill">
+      <div className="flex items-center gap-3">
+        <ol className="flex flex-1 gap-1.5" aria-label="Progress through the questions">
+          {Array.from({ length: total }, (_, i) => {
+            const result = results[i];
+            const background =
+              result === undefined
+                ? i === index
+                  ? 'var(--color-accent)'
+                  : 'var(--color-surface-2)'
+                : result
+                  ? 'var(--color-good)'
+                  : 'var(--color-bad)';
+            return (
+              <li
+                key={i}
+                className="h-1.5 flex-1 rounded-full transition-colors"
+                style={{ background }}
+              />
+            );
+          })}
+        </ol>
+        <span className="label shrink-0 tabular-nums" data-testid="drill-count">
+          {finished ? total : index + 1} / {total}
+        </span>
       </div>
 
       {question !== undefined ? (
@@ -177,6 +195,8 @@ export function DrillStep({
             fretRange={question.fretRange}
             markers={[{ ...question.position, tone: 'root' }]}
             labelMode="none"
+            maxHeight={tight ? TIGHT_NECK_HEIGHT : undefined}
+            fitHeight
             revealNotes={false}
             onFretTap={handleFretTap}
             focus={question.position}
@@ -186,7 +206,7 @@ export function DrillStep({
             }. Tap any fret to hear it.`}
           />
 
-          <h2 className="text-center text-xl font-black">{question.prompt}</h2>
+          <h2 className="text-center text-title font-black">{question.prompt}</h2>
 
           <AnswerGrid
             options={question.options}
@@ -196,11 +216,13 @@ export function DrillStep({
             formatOption={withSolfege}
           />
 
-          <div className="flex min-h-28 flex-col items-center gap-3" role="status" aria-live="polite">
-            {correct && <p className="pop-in text-2xl font-black text-good">Right</p>}
+          {/* Room for the verdict, so a right answer does not move anything. On a tight screen that room is
+              only one line: the answers above it must stay on screen, and a miss's explanation scrolls in. */}
+          <div className="flex min-h-28 flex-col items-center gap-3 tight:min-h-7" role="status" aria-live="polite">
+            {correct && <p className="pop-in text-title font-black text-good">Right</p>}
             {answered && !correct && picked !== null && (
               <Reveal className="rise-in flex scroll-mb-8 flex-col items-center gap-3">
-                <p className="text-2xl font-black text-bad">Not quite</p>
+                <p className="text-title font-black text-bad">Not quite</p>
                 <p
                   data-testid="drill-explanation"
                   className="text-center text-[15px] leading-relaxed text-ink"

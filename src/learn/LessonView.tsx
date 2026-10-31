@@ -49,12 +49,20 @@ function useMoreBelow(scrollRef: RefObject<HTMLDivElement | null>, step: number)
     const measure = () => setMore(scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight > 4);
     measure();
     scroller.addEventListener('scroll', measure, { passive: true });
+    // A step's own entrances (the rises and pops, which start a few pixels low) reach past the
+    // bottom while they play, and nothing is resized when they end: so a step that fits asked
+    // "is there more?" too early and kept saying yes. Animation events bubble, so ask again as
+    // each one finishes.
+    scroller.addEventListener('animationend', measure);
+    scroller.addEventListener('animationcancel', measure);
     // A step grows (a check's answer arrives) and a window resizes: look again.
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
     observer?.observe(scroller);
     if (scroller.firstElementChild !== null) observer?.observe(scroller.firstElementChild);
     return () => {
       scroller.removeEventListener('scroll', measure);
+      scroller.removeEventListener('animationend', measure);
+      scroller.removeEventListener('animationcancel', measure);
       observer?.disconnect();
     };
   }, [scrollRef, step]);
@@ -278,7 +286,7 @@ export function LessonView({
               ref={scrollRef}
               data-testid="lesson-scroll"
               data-dir={direction}
-              className="lesson-step-in h-full overflow-y-auto px-5 pt-4 pb-4 short:pt-3 short:pb-3 narrow:px-4"
+              className="lesson-step-in h-full overflow-y-auto px-5 pt-4 pb-1 short:pt-3 narrow:px-4"
             >
               <div className="mx-auto w-full max-w-md">
                 {step !== undefined && (
@@ -287,24 +295,35 @@ export function LessonView({
               </div>
             </div>
 
-            {/* The fade lets a step scroll under the footer without its last line sliced off
-                mid-letter, and the cue says there is more: both only while there is. */}
+            {/* The fade lets a step scroll away under its own bottom edge without the last line
+                sliced off mid-letter: only while there is more to scroll to. */}
             <div
               aria-hidden="true"
-              data-testid="lesson-more"
+              data-testid="lesson-fade"
               data-visible={moreBelow ? 'true' : 'false'}
-              className={`pointer-events-none absolute inset-x-0 bottom-0 flex h-8 items-end justify-center bg-linear-to-t from-ground to-transparent transition-opacity duration-200 ${
+              className={`pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-ground to-transparent transition-opacity duration-200 ${
                 moreBelow ? 'opacity-100' : 'opacity-0'
               }`}
-            >
-              <span className="label flex items-center gap-1 pb-0.5 text-ink">
-                More below
-                <ChevronDown />
-              </span>
-            </div>
+            />
           </div>
 
-          <footer className="flex shrink-0 gap-3 px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] narrow:px-4 tight:pt-2 tight:pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+          {/* The cue has a row of its own between the scroller and the footer, so it can never sit
+              on the step's text (it did, on the note chips and on the "Common mistake" callout). The
+              row is always there, so a step does not jump when the cue comes and goes: it is the room
+              the scroller's bottom padding and the footer's top padding used to share. */}
+          <div
+            aria-hidden="true"
+            data-testid="lesson-more"
+            data-visible={moreBelow ? 'true' : 'false'}
+            className={`pointer-events-none flex h-6 shrink-0 items-center justify-center gap-1 text-label leading-4 font-semibold text-ink-dim transition-opacity duration-200 short:h-5 tight:h-4 ${
+              moreBelow ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            More below
+            <ChevronDown />
+          </div>
+
+          <footer className="flex shrink-0 gap-3 px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] narrow:px-4 tight:pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
             {index > 0 && (
               <button
                 type="button"

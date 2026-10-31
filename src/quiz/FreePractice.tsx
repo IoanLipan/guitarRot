@@ -102,9 +102,7 @@ export function FreePractice({
       <div
         key={`streak-${streakBumps}`}
         data-testid="streak"
-        className={`flex shrink-0 items-center gap-2 text-[13px] font-extrabold tracking-wider uppercase ${
-          streakBumps > 0 ? 'bump' : ''
-        }`}
+        className={`label flex shrink-0 items-center gap-2 ${streakBumps > 0 ? 'bump' : ''}`}
         style={{ color: accent ?? 'var(--color-ink-dim)' }}
       >
         <span
@@ -157,7 +155,7 @@ export function FreePractice({
                 className="pop-in text-3xl font-black tracking-tight text-good"
                 style={{ textShadow: '0 0 28px rgba(53,208,127,0.55)' }}
               >
-                PERFECT
+                Perfect
               </p>
               <span
                 className="advance-sweep max-w-40"
@@ -168,7 +166,7 @@ export function FreePractice({
           )}
           {answered && !correct && (
             <>
-              <p className="pop-in text-2xl font-black tracking-tight text-bad">MISS</p>
+              <p className="pop-in text-2xl font-black tracking-tight text-bad">Miss</p>
               <p
                 data-testid="quiz-explanation"
                 className="text-center text-sm leading-relaxed text-ink-dim"

@@ -919,13 +919,20 @@ describe('LessonView: what is left to scroll to', () => {
 
   it('shows no fade or cue on a step that fits', () => {
     view(lesson('x', [card(['Short.'])]));
+    expect(screen.getByTestId('lesson-fade')).toHaveAttribute('data-visible', 'false');
     expect(screen.getByTestId('lesson-more')).toHaveAttribute('data-visible', 'false');
   });
 
-  it('shows the fade, with a cue in words, on a step that runs past the footer', () => {
+  it('shows the fade, and a cue in words, on a step that runs past the footer', () => {
     fake('scrollHeight', 900);
     fake('clientHeight', 400);
     view(lesson('x', [card(['Long.'])]));
+
+    const fade = screen.getByTestId('lesson-fade');
+    expect(fade).toHaveAttribute('data-visible', 'true');
+    // 32px of fade, and only that: no words on it, for it lies over the step's own last lines.
+    expect(fade).toHaveClass('h-8', 'pointer-events-none');
+    expect(fade).toHaveTextContent('');
 
     const more = screen.getByTestId('lesson-more');
     expect(more).toHaveAttribute('data-visible', 'true');
@@ -933,20 +940,67 @@ describe('LessonView: what is left to scroll to', () => {
     expect(more).toHaveAttribute('aria-hidden', 'true');
     // A cue, not a control: it must never take a tap meant for the step underneath.
     expect(more).toHaveClass('pointer-events-none');
-    // 32px of fade.
-    expect(more).toHaveClass('h-8');
   });
 
-  it('lets go of the fade once the step has been scrolled to its end', () => {
+  it('puts the cue in a row of its own under the scroll, so it can not sit on the step\'s text', () => {
     fake('scrollHeight', 900);
     fake('clientHeight', 400);
     view(lesson('x', [card(['Long.'])]));
     const scroller = screen.getByTestId('lesson-scroll');
+    const more = screen.getByTestId('lesson-more');
+    const footer = screen.getByTestId('lesson-next').closest('footer');
+
+    // Not in what scrolls, and not in the box the fade lies over it either...
+    expect(scroller).not.toContainElement(more);
+    expect(screen.getByTestId('lesson-fade').parentElement).not.toContainElement(more);
+    // ...but in the flow, between that box and the footer, so the scroller ends where the cue starts.
+    expect(more.className).not.toMatch(/(^|\s)(absolute|fixed|sticky)(\s|$)/);
+    expect(screen.getByTestId('lesson-fade').parentElement?.nextElementSibling).toBe(more);
+    expect(more.nextElementSibling).toBe(footer);
+  });
+
+  it('keeps the cue\'s row, and so the step\'s height, whether the cue shows or not', () => {
+    // 24px, 20px under short:, 16px under tight: what the scroller's bottom padding and the footer's top padding gave.
+    const ROW = ['h-6', 'short:h-5', 'tight:h-4'];
+
+    view(lesson('x', [card(['Short.'])]));
+    expect(screen.getByTestId('lesson-more')).toHaveAttribute('data-visible', 'false');
+    expect(screen.getByTestId('lesson-more')).toHaveClass(...ROW);
+    cleanup();
+
+    fake('scrollHeight', 900);
+    fake('clientHeight', 400);
+    view(lesson('x', [card(['Long.'])]));
+    expect(screen.getByTestId('lesson-more')).toHaveAttribute('data-visible', 'true');
+    expect(screen.getByTestId('lesson-more')).toHaveClass(...ROW);
+  });
+
+  it('looks again when an entrance animation ends: a step that fits no longer says there is more', () => {
+    // While a step's rises play they reach a few pixels past the bottom: it measures as longer than it is.
+    fake('scrollHeight', 497);
+    fake('clientHeight', 488);
+    view(lesson('x', [card(['Fits.'])]));
+    expect(screen.getByTestId('lesson-more')).toHaveAttribute('data-visible', 'true');
+
+    fake('scrollHeight', 488);
+    fireEvent.animationEnd(screen.getByTestId('lesson-scroll').firstElementChild as HTMLElement);
+
+    expect(screen.getByTestId('lesson-fade')).toHaveAttribute('data-visible', 'false');
+    expect(screen.getByTestId('lesson-more')).toHaveAttribute('data-visible', 'false');
+  });
+
+  it('lets go of the fade and the cue once the step has been scrolled to its end', () => {
+    fake('scrollHeight', 900);
+    fake('clientHeight', 400);
+    view(lesson('x', [card(['Long.'])]));
+    const scroller = screen.getByTestId('lesson-scroll');
+    expect(screen.getByTestId('lesson-fade')).toHaveAttribute('data-visible', 'true');
     expect(screen.getByTestId('lesson-more')).toHaveAttribute('data-visible', 'true');
 
     Object.defineProperty(scroller, 'scrollTop', { configurable: true, value: 500 });
     fireEvent.scroll(scroller);
 
+    expect(screen.getByTestId('lesson-fade')).toHaveAttribute('data-visible', 'false');
     expect(screen.getByTestId('lesson-more')).toHaveAttribute('data-visible', 'false');
   });
 });
@@ -1023,6 +1077,19 @@ describe('LessonView: one amber button, and room for it on a short phone', () =>
     expect(step.className).toContain('[&_[data-testid=tuner-start]]:bg-surface-2');
     expect(step.className).toContain('[&_[data-testid=tuner-start]]:text-accent');
     expect(screen.getByTestId('tuner-start')).toBeInTheDocument();
+  });
+
+  it('changes nothing else about the tuner: it compacts itself, so the step carries no selectors of its own for that', () => {
+    view(lesson('x', [{ kind: 'tuner' }, CHECK]));
+    // Every rule on the wrapper is about the Start button; the ones written against the old markup are gone
+    // (`section:first-child`, a forced readout size, a forced gap, a heading override).
+    const rules = screen.getByTestId('step-tuner').className.split(/\s+/).filter(Boolean);
+    expect(rules.length).toBeGreaterThan(0);
+    for (const rule of rules) expect(rule).toContain('[data-testid=tuner-start]');
+    // Start is above the meter in the tuner's own markup, which is what lets that compaction stand alone.
+    const tuner = screen.getByTestId('tuner');
+    expect(tuner.firstElementChild).toBe(screen.getByTestId('tuner-start'));
+    expect(tuner.className).toContain('tight:gap-3');
   });
 
   it('trims a check question under tight: a smaller headline, shorter options, closer together', () => {

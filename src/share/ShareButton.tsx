@@ -100,7 +100,7 @@ export function ShareButton({ target, title, className, iconOnly = false }: Shar
       onClick={() => void handleShare()}
       aria-label={`Share ${title}`}
       data-testid="share-button"
-      className={`press flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 text-xs font-bold tracking-wider text-ink-dim uppercase ${
+      className={`press label flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 ${
         iconOnly ? 'h-11 w-11 justify-center' : 'px-3 py-1.5'
       } ${className ?? ''}`}
     >

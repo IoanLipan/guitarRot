@@ -15,8 +15,8 @@ import { MetronomeIcon } from '@/ui/icons';
 import { PlayPauseIcon } from '@/ui/PlayPauseIcon';
 
 /**
- * A compact player for the riff or song a lesson step points at: the tab (or,
- * for a chord-chart song, the chart), play/stop, a metronome and a speed knob.
+ * A compact player for the riff or song a lesson step points at: play/stop, a
+ * metronome and a speed knob, then the tab (or, for a chord-chart song, the chart).
  * Built the way `SongPlayer` is, with the same cleanup rules, because the
  * transport is global: only one player may be alive, so this one is created
  * when the step appears and stopped, then disposed, the moment it goes.
@@ -157,7 +157,7 @@ export function PlayerPanel({
   }
 
   return (
-    <div className="flex flex-col gap-4" data-testid="player-panel">
+    <div className="flex flex-col gap-4 tight:gap-3" data-testid="player-panel">
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="min-w-0 text-lesson leading-tight font-extrabold">{title}</h3>
         <span className="shrink-0 text-meta text-ink-dim tabular-nums">
@@ -165,20 +165,16 @@ export function PlayerPanel({
         </span>
       </div>
 
-      {chart !== undefined ? (
-        <ChordChart chart={chart} activeBar={activeBar} />
-      ) : (
-        // A lesson step is as tall as its content, so there is no room to fill: a fixed spacing.
-        <TabView riff={riff} playheadRef={playheadRef} scrollerRef={staffScrollRef} stringSpacing={26} />
-      )}
-
-      <div className="flex items-center gap-3">
+      {/* The controls come before the tab or chart: those are as tall as the song is long, and on a
+          320x568 phone Play used to be under the fold, out of sight until the step was scrolled. */}
+      <div className="flex items-center gap-3" data-testid="player-controls">
+        {/* The in-step action look, not the amber fill: Next is the only one of those on a lesson screen. */}
         <button
           type="button"
           onClick={() => void handleToggle()}
           aria-label={playing ? 'Stop' : 'Play'}
           data-testid="player-toggle"
-          className="press flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-ground"
+          className="press flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface-2 text-accent ring-1 ring-accent/40"
         >
           <PlayPauseIcon playing={playing} stop size={24} />
         </button>
@@ -189,11 +185,10 @@ export function PlayerPanel({
           aria-label="Metronome"
           aria-pressed={metronomeOn}
           data-testid="metronome-toggle"
-          className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
-          style={{
-            background: metronomeOn ? 'var(--color-accent)' : 'var(--color-surface-2)',
-            color: metronomeOn ? 'var(--color-ground)' : 'var(--color-ink-dim)',
-          }}
+          // On is the ring and the amber glyph, like the tuner's closest string; never an amber fill.
+          className={`press flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
+            metronomeOn ? 'bg-surface-3 text-accent ring-2 ring-accent' : 'bg-surface-2 text-ink-dim ring-2 ring-transparent'
+          }`}
         >
           <MetronomeIcon size={22} />
         </button>
@@ -215,6 +210,13 @@ export function PlayerPanel({
           />
         </label>
       </div>
+
+      {chart !== undefined ? (
+        <ChordChart chart={chart} activeBar={activeBar} />
+      ) : (
+        // A lesson step is as tall as its content, so there is no room to fill: a fixed spacing.
+        <TabView riff={riff} playheadRef={playheadRef} scrollerRef={staffScrollRef} stringSpacing={26} />
+      )}
     </div>
   );
 }

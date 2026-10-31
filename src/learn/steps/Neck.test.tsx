@@ -29,6 +29,32 @@ describe('Neck string names', () => {
     expect(board.style.minWidth).not.toBe('');
   });
 
+  it('draws a board that scrolls at its natural size, however low maxHeight is, unless asked to fit its height', () => {
+    const minWidth = (props: { fitHeight?: boolean }) => {
+      const { unmount } = render(<Neck fretRange={[0, 12]} markers={[]} maxHeight={170} ariaLabel="A long neck" {...props} />);
+      const wrapper = screen.getByTestId('neck').firstElementChild as HTMLElement;
+      const width = Number.parseFloat(wrapper.style.minWidth);
+      const [w, h] = (wrapper.style.aspectRatio.split('/') as [string, string]).map(Number) as [number, number];
+      unmount();
+      return { width, height: (width * h) / w };
+    };
+    const natural = minWidth({});
+    const fitted = minWidth({ fitHeight: true });
+    expect(natural.height).toBeGreaterThan(170);
+    expect(fitted.height).toBeCloseTo(170, 0);
+    expect(fitted.width).toBeLessThan(natural.width);
+  });
+
+  it('leaves a board that is already lower than maxHeight alone when asked to fit its height', () => {
+    const minWidth = (props: { fitHeight?: boolean }) => {
+      const { unmount } = render(<Neck fretRange={[0, 12]} markers={[]} maxHeight={600} ariaLabel="A long neck" {...props} />);
+      const width = (screen.getByTestId('neck').firstElementChild as HTMLElement).style.minWidth;
+      unmount();
+      return width;
+    };
+    expect(minWidth({ fitHeight: true })).toBe(minWidth({}));
+  });
+
   it('puts each name level with its string', () => {
     render(<Neck fretRange={[0, 12]} markers={[]} ariaLabel="A long neck" />);
     const tops = [...screen.getByTestId('neck-string-names').children].map((name) =>
