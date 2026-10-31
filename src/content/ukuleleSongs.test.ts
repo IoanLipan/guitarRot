@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { STANDARD_TUNING, UKULELE, fretToMidi, noteName, type Midi } from '@/music';
 import { legatoProblems } from './legato';
 import { SONGS, UKULELE_SONGS, ALL_SONGS, getSong, songsFor } from './songCatalog';
-import { MOVIES_TAG, isMovieSong, songPlayableOn, songToRiff, validateSong, type Song } from './songs';
+import { MOVIES_TAG, chartBars, isMovieSong, songPlayableOn, songToRiff, validateSong, type Song } from './songs';
 import { UKULELE_EDITION_SPECS, UKULELE_LEFT_OUT, type TuneEdition } from './ukuleleSongs';
 import { beatsPerBar, validateRiff, type Riff, type TabEvent } from './types';
 
@@ -26,6 +26,9 @@ function guitar(id: string): Song {
   return song;
 }
 
+/** The ukulele songs made from a guitar tab: all but the ones written for it alone. */
+const TUNES = UKULELE_SONGS.filter((song) => song.riff !== undefined);
+
 const midiOnUkulele = (event: TabEvent): Midi => fretToMidi(UKULELE.tuning, event.stringIndex, event.fret);
 const midiOnGuitar = (event: TabEvent): Midi => fretToMidi(STANDARD_TUNING, event.stringIndex, event.fret);
 
@@ -43,8 +46,8 @@ const names = (riff: Riff, count: number): string[] =>
 
 describe('the ukulele editions of the single-note songs', () => {
   it('are nine songs, each its own entry with a ukulele id', () => {
-    expect(UKULELE_SONGS).toHaveLength(9);
-    expect(UKULELE_SONGS.map((song) => song.id)).toEqual([
+    expect(TUNES).toHaveLength(9);
+    expect(TUNES.map((song) => song.id)).toEqual([
       'uke-ode-to-joy',
       'uke-twinkle-twinkle',
       'uke-frere-jacques',
@@ -58,8 +61,8 @@ describe('the ukulele editions of the single-note songs', () => {
     for (const song of UKULELE_SONGS) {
       expect(song.id.startsWith('uke-'), song.id).toBe(true);
       expect(song.instrument, song.id).toBe('ukulele');
-      expect(riffOf(song).instrument, song.id).toBe('ukulele');
     }
+    for (const song of TUNES) expect(riffOf(song).instrument, song.id).toBe('ukulele');
   });
 
   it('are in the catalogue once each, found by id, and the guitar\'s songs are exactly as they were', () => {
@@ -81,7 +84,7 @@ describe('the ukulele editions of the single-note songs', () => {
   });
 
   it('validate as songs, riffs and legato phrasing, and play back as riffs', () => {
-    for (const song of UKULELE_SONGS) {
+    for (const song of TUNES) {
       expect(validateSong(song), `${song.id} song`).toEqual([]);
       const riff = riffOf(song);
       expect(validateRiff(riff), `${song.id} riff`).toEqual([]);
@@ -91,7 +94,7 @@ describe('the ukulele editions of the single-note songs', () => {
   });
 
   it('keep the song and its riff in step', () => {
-    for (const song of UKULELE_SONGS) {
+    for (const song of TUNES) {
       const riff = riffOf(song);
       expect(riff.bpm, song.id).toBe(song.bpm);
       expect(riff.title, song.id).toBe(song.title);
@@ -104,7 +107,7 @@ describe('the ukulele editions of the single-note songs', () => {
   });
 
   it('carry the licensing rule over: public-domain tunes keep their attribution, plus what was changed', () => {
-    for (const song of UKULELE_SONGS) {
+    for (const song of TUNES) {
       const spec = UKULELE_EDITION_SPECS.find((candidate) => candidate.id === song.id) as TuneEdition;
       const original = guitar(spec.from);
       expect(song.source, song.id).toBe(original.source);
@@ -120,18 +123,20 @@ describe('the ukulele editions of the single-note songs', () => {
   it('keep the Movies tag on a movie song, and the film in its about line', () => {
     const movies = UKULELE_SONGS.filter(isMovieSong).map((song) => song.id);
     expect(movies.sort()).toEqual([
+      'uke-canon-in-d',
       'uke-dies-irae',
       'uke-hillside-jig',
       'uke-in-the-hall-of-the-mountain-king',
       'uke-ode-to-joy',
     ]);
-    for (const song of UKULELE_SONGS) {
+    for (const song of TUNES) {
       expect(isMovieSong(song), song.id).toBe(isMovieSong(guitar(UKULELE_EDITION_SPECS.find((s) => s.id === song.id)!.from)));
       if (isMovieSong(song)) expect(song.tags, song.id).toContain(MOVIES_TAG);
     }
     expect(ukulele('uke-ode-to-joy').about).toContain('Die Hard (1988)');
     expect(ukulele('uke-dies-irae').about).toContain('The Shining (1980)');
     expect(ukulele('uke-in-the-hall-of-the-mountain-king').about).toContain('The Social Network (2010)');
+    expect(ukulele('uke-canon-in-d').about).toContain('Ordinary People (1980)');
   });
 
   it('keep an about line written for a person: one line, no longer than the guitar\'s', () => {
@@ -186,7 +191,7 @@ describe('the same tunes, moved to four strings', () => {
   );
 
   it('keep every note in the ukulele\'s range: C4, the open C string, up to the twelfth fret of the A string', () => {
-    for (const song of UKULELE_SONGS) {
+    for (const song of TUNES) {
       for (const event of riffOf(song).events) {
         expect(midiOnUkulele(event), song.id).toBeGreaterThanOrEqual(60);
         expect(midiOnUkulele(event), song.id).toBeLessThanOrEqual(81);
@@ -217,7 +222,7 @@ describe('the same tunes, moved to four strings', () => {
   });
 
   it('are one voice: a single note at a time, each ending before the next, and never past the bar', () => {
-    for (const song of UKULELE_SONGS) {
+    for (const song of TUNES) {
       const riff = riffOf(song);
       const events = [...riff.events].sort((a, b) => a.beat - b.beat);
       events.forEach((event, index) => {
@@ -298,5 +303,31 @@ describe('the tunes that have no ukulele edition', () => {
       expect((UKULELE_LEFT_OUT[id] ?? '').length, id).toBeGreaterThan(20);
     }
     expect(Object.keys(UKULELE_LEFT_OUT)).toHaveLength(17);
+  });
+});
+
+describe('the Canon in D, as chords', () => {
+  const canon = () => ukulele('uke-canon-in-d');
+
+  it('is a strummed chart for the ukulele alone, with a ukulele shape for each of its chords', () => {
+    const song = canon();
+    expect(song.chart).toBeDefined();
+    expect(song.riff).toBeUndefined();
+    expect(validateSong(song)).toEqual([]);
+    expect(songPlayableOn(song, 'ukulele')).toBe(true);
+    expect(songPlayableOn(song, 'guitar')).toBe(false);
+    expect(chartBars(song.chart!).map((bar) => bar.chordName)).toEqual([
+      ...['D', 'A', 'Bm', 'F#m', 'G', 'D', 'G', 'A'],
+      ...['D', 'A', 'Bm', 'F#m', 'G', 'D', 'G', 'A'],
+    ]);
+  });
+
+  it('plays as a ukulele riff on four strings, and stays public domain with an attribution', () => {
+    const riff = songToRiff(canon());
+    expect(riff.instrument).toBe('ukulele');
+    expect(validateRiff(riff)).toEqual([]);
+    expect(Math.max(...riff.events.map((event) => event.stringIndex))).toBeLessThan(4);
+    expect(canon().source).toBe('public-domain');
+    expect(canon().attribution).toContain('Pachelbel');
   });
 });

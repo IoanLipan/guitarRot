@@ -1,6 +1,6 @@
 import { STANDARD_TUNING, fretToMidi, noteName, type Midi } from '@/music';
 import { melodyRiff } from './melody';
-import type { Difficulty, Song } from './songs';
+import { MOVIES_TAG, type Difficulty, type Song } from './songs';
 import { beatsPerBar, type Riff } from './types';
 
 /*
@@ -302,3 +302,38 @@ export function ukuleleEditions(guitarSongs: readonly Song[]): Song[] {
     return guitar === undefined ? [] : [ukuleleEdition(guitar, edition)];
   });
 }
+
+/**
+ * Songs written for the ukulele alone, with no guitar tab to make them from.
+ *
+ * The Canon's eight-chord ground is a chord chart, not a tune, so it is the one
+ * piece whose ukulele form is a strummed song: the harmony is Pachelbel's and
+ * in the public domain, the chart is ours. (The guitar's tab of the Canon is a
+ * Mutopia edition of both voices, and stays a tab.)
+ */
+export const UKULELE_CHART_SONGS: readonly Song[] = [
+  {
+    id: 'uke-canon-in-d',
+    instrument: 'ukulele',
+    title: 'Canon in D (the chords)',
+    artist: 'Johann Pachelbel',
+    difficulty: 'medium',
+    style: 'Baroque',
+    key: 'D',
+    bpm: 55,
+    source: 'public-domain',
+    attribution:
+      'Johann Pachelbel (1653\u20131706), Canon in D; the eight-chord ground that repeats under it, in the public domain. The chord chart and its arpeggio are guitarRot\'s.',
+    tags: [MOVIES_TAG, 'film', 'classical', 'baroque', 'public-domain', 'arpeggio', 'ground-bass', 'D major', 'ukulele'],
+    about:
+      'Heard in Ordinary People (1980). The same eight chords go round and round, picked one string at a time; the Bm and F#m are the ones to drill.',
+    chart: {
+      pattern: 'arpeggio',
+      timeSignature: [4, 4],
+      sections: [
+        { label: 'Ground', bars: ['D', 'A', 'Bm', 'F#m', 'G', 'D', 'G', 'A'] },
+        { label: 'Again', bars: ['D', 'A', 'Bm', 'F#m', 'G', 'D', 'G', 'A'] },
+      ],
+    },
+  },
+];

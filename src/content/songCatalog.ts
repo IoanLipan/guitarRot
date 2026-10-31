@@ -4,7 +4,7 @@ import { MOVIES_TAG, songPlayableOn, type Song, type SongSection } from './songs
 import { melodyRiff } from './melody';
 import { HARD_SONGS } from './hardSongs';
 import { MOVIE_SONGS } from './movieSongs';
-import { ukuleleEditions } from './ukuleleSongs';
+import { UKULELE_CHART_SONGS, ukuleleEditions } from './ukuleleSongs';
 
 const TRAD = (where: string) => `Traditional ${where}; melody and harmony are in the public domain.`;
 
@@ -746,11 +746,12 @@ export const SONGS: readonly Song[] = [
 ];
 
 /**
- * The ukulele's own editions of the guitar's single-note songs (see
- * ukuleleSongs.ts). Each is a separate song with its own id, written for four
- * strings; the guitar's `SONGS` stay exactly as they were.
+ * The ukulele's own songs (see ukuleleSongs.ts): its editions of the guitar's
+ * single-note songs and the few written for it alone. Each is a separate song
+ * with its own id, written for four strings; the guitar's `SONGS` stay
+ * exactly as they were.
  */
-export const UKULELE_SONGS: readonly Song[] = ukuleleEditions(SONGS);
+export const UKULELE_SONGS: readonly Song[] = [...ukuleleEditions(SONGS), ...UKULELE_CHART_SONGS];
 
 /** Every song in the app, whichever instrument it is for. */
 export const ALL_SONGS: readonly Song[] = [...SONGS, ...UKULELE_SONGS];
