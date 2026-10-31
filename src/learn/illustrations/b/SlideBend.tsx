@@ -106,7 +106,7 @@ export function SlideBend() {
         </g>
       ))}
       <circle cx={n((arcFrom + arcTo) / 2)} cy={bendY - 17} r={DOT_R} fill={ACCENT} />
-      <Label x={n((arcFrom + arcTo) / 2)} y={bendY - 16.5} size={11} color="#0b0b0f" weight={900} anchor="middle">
+      <Label x={n((arcFrom + arcTo) / 2)} y={bendY - 16.5} size={11} color="var(--color-ground)" weight={900} anchor="middle">
         3
       </Label>
       <Label x={n((x7 + x8) / 2)} y={bendTop + 90} size={12} color={DIM} anchor="middle">

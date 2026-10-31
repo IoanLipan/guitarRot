@@ -102,7 +102,7 @@ export function SlowLoop() {
             <rect x={x} y={BASE - h} width={BLOCK_W} height={h} rx={8} fill={INK} fillOpacity={0.1} stroke={INK} strokeOpacity={0.45} strokeWidth={1.5} />
             <text x={n(x + BLOCK_W / 2)} y={BASE - h / 2 + 0.5} textAnchor="middle" dominantBaseline="middle" fontWeight={900}>
               <tspan fill={INK} fontSize={17}>{tempo}</tspan>
-              <tspan fill={DIM} fontSize={11}> bpm</tspan>
+              <tspan fill={DIM} fontSize={15}> bpm</tspan>
             </text>
             {next !== undefined && (
               <g>

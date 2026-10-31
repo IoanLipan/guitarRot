@@ -9,7 +9,7 @@ const NOTES = [
 
 /** What an Em strum sounds on each string, string 6 (thick, top) to string 1. */
 const STRUM = ['E', 'B', 'E', 'G', 'B', 'E'] as const;
-const STRING_TOP = 118;
+const STRING_TOP = 124;
 const STRING_GAP = 14;
 
 /** A chord is a few notes sounding together; Em is E, G and B. */
@@ -23,7 +23,7 @@ export function ChordNotes() {
       {NOTES.map((n) => (
         <g key={n.name}>
           <NoteDot x={n.x} y={52} name={n.name} r={25} />
-          <text x={n.x} y={92} fill={noteColor(n.name)} fontSize={14} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+          <text x={n.x} y={92} fill={noteColor(n.name)} fontSize={15} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
             {n.solfege}
           </text>
         </g>
@@ -40,7 +40,7 @@ export function ChordNotes() {
       <text x={300} y={46} fill={em} fontSize={28} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
         Em
       </text>
-      <text x={300} y={70} fill={em} fontSize={13} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+      <text x={300} y={70} fill={em} fontSize={15} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
         (Mi minor)
       </text>
 
@@ -49,11 +49,8 @@ export function ChordNotes() {
         const y = STRING_TOP + i * STRING_GAP;
         return (
           <g key={i}>
-            <text x={30} y={y} fill={noteColor(note)} fontSize={12} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
-              {note}
-            </text>
             <line
-              x1={46}
+              x1={30}
               y1={y}
               x2={326}
               y2={y}
@@ -65,7 +62,7 @@ export function ChordNotes() {
           </g>
         );
       })}
-      <Arrow x1={186} y1={104} x2={186} y2={STRING_TOP + 5 * STRING_GAP + 20} color={ACCENT} width={5} headSize={13} />
+      <Arrow x1={186} y1={108} x2={186} y2={STRING_TOP + 5 * STRING_GAP + 20} color={ACCENT} width={5} headSize={13} />
       <Tag x={180} y={221} text="strum = all together" color={ACCENT} stroke={ACCENT} />
     </Art>
   );

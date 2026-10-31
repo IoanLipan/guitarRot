@@ -18,8 +18,8 @@ type Row = {
 
 const ROWS: readonly Row[] = [
   { string: 62, finger: 100 - 16, width: 24, kind: 'ok', lines: ['just behind', 'the fret wire'], size: 15 },
-  { string: 128, finger: 100, width: 18, kind: 'bad', lines: ['on top of the wire'], size: 12 },
-  { string: 186, finger: (44 + 100) / 2, width: 18, kind: 'warn', lines: ['middle of the gap:', 'buzzes'], size: 12 },
+  { string: 128, finger: 100, width: 18, kind: 'bad', lines: ['on top of', 'the wire'], size: 15 },
+  { string: 186, finger: (44 + 100) / 2, width: 18, kind: 'warn', lines: ['middle of the', 'gap: buzzes'], size: 15 },
 ];
 
 const COLORS = { ok: GOOD, bad: BAD, warn: ACCENT } as const;
@@ -84,10 +84,10 @@ export function FretFinger() {
           </g>
         );
       })}
-      <text x={STRIP_LEFT} y={230} fill={DIM} fontSize={11} fontWeight={700} dominantBaseline="middle">
+      <text x={STRIP_LEFT} y={230} fill={DIM} fontSize={15} fontWeight={700} dominantBaseline="middle">
         ← headstock
       </text>
-      <text x={STRIP_RIGHT} y={230} fill={DIM} fontSize={11} fontWeight={700} textAnchor="end" dominantBaseline="middle">
+      <text x={STRIP_RIGHT} y={230} fill={DIM} fontSize={15} fontWeight={700} textAnchor="end" dominantBaseline="middle">
         body →
       </text>
     </Art>

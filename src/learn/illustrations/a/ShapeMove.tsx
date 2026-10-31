@@ -62,7 +62,7 @@ export function ShapeMove() {
 
       {/* finger 1 is new */}
       <circle cx={AM.stringX(2)} cy={AM.fretY(1)} r={15} fill="none" stroke={GOOD} strokeWidth={2} strokeDasharray="3 3" />
-      <text x={AM.stringX(1) + 17} y={AM.fretY(1)} fill={GOOD} fontSize={13} fontWeight={800} dominantBaseline="middle">
+      <text x={AM.stringX(1) + 17} y={AM.fretY(1)} fill={GOOD} fontSize={15} fontWeight={800} dominantBaseline="middle">
         add
       </text>
 

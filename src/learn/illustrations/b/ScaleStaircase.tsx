@@ -52,7 +52,7 @@ export function ScaleStaircase() {
         return (
           <g key={i}>
             <rect x={n(x)} y={BASE - h} width={n(w)} height={h} rx={6} fill={NOTE_COLORS[step.letter]} />
-            <Label x={n(x + w / 2)} y={BASE - h + 16} size={14} color="#0b0b0f" weight={900} anchor="middle">
+            <Label x={n(x + w / 2)} y={BASE - h + 16} size={14} color="var(--color-ground)" weight={900} anchor="middle">
               {step.solfege}
             </Label>
           </g>
@@ -85,26 +85,26 @@ export function ScaleStaircase() {
         return (
           <g key={i}>
             <circle cx={x} cy={BASE + 24} r={12} fill={half ? ACCENT : 'none'} stroke={half ? ACCENT : DIM} strokeWidth={1.8} />
-            <Label x={x} y={BASE + 25} size={14} color={half ? '#0b0b0f' : INK} weight={900} anchor="middle">
+            <Label x={x} y={BASE + 25} size={14} color={half ? 'var(--color-ground)' : INK} weight={900} anchor="middle">
               {g}
             </Label>
           </g>
         );
       })}
 
-      <circle cx={26} cy={BASE + 58} r={9} fill="none" stroke={DIM} strokeWidth={1.8} />
-      <Label x={26} y={BASE + 59} size={11} color={INK} weight={900} anchor="middle">
+      <circle cx={34} cy={BASE + 58} r={12} fill="none" stroke={DIM} strokeWidth={1.8} />
+      <Label x={34} y={BASE + 59} color={INK} weight={900} anchor="middle">
         W
       </Label>
-      <Label x={42} y={BASE + 58} size={12} color={DIM}>
-        whole step = 2 frets
+      <Label x={54} y={BASE + 58} color={DIM}>
+        whole = 2 frets
       </Label>
-      <circle cx={190} cy={BASE + 58} r={9} fill={ACCENT} />
-      <Label x={190} y={BASE + 59} size={11} color="#0b0b0f" weight={900} anchor="middle">
+      <circle cx={202} cy={BASE + 58} r={12} fill={ACCENT} />
+      <Label x={202} y={BASE + 59} color="var(--color-ground)" weight={900} anchor="middle">
         H
       </Label>
-      <Label x={206} y={BASE + 58} size={12} color={DIM}>
-        half step = 1 fret
+      <Label x={222} y={BASE + 58} color={DIM}>
+        half = 1 fret
       </Label>
     </Art>
   );

@@ -47,7 +47,7 @@ export function PickGrip() {
       <Tag x={10} y={190} text={['just the tip', 'shows']} anchor="start" color={ACCENT} stroke={ACCENT} />
 
       <ArcArrow from={[214, 200]} c1={[234, 224]} c2={[298, 224]} to={[324, 198]} color={DIM} width={2.6} />
-      <text x={270} y={228} fill={INK} fontSize={12} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
+      <text x={270} y={228} fill={INK} fontSize={15} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
         pick from the wrist
       </text>
     </Art>

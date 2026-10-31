@@ -76,7 +76,7 @@ export function StrumPattern() {
         if (p === undefined) return null;
         const color = slot.hit === 'down' ? ACCENT : slot.hit === 'up' ? UP : DIM;
         return slot.hit === 'miss' ? (
-          <circle key={i} cx={p.x} cy={p.y} r={5.5} fill="#15151c" stroke={color} strokeWidth={2} />
+          <circle key={i} cx={p.x} cy={p.y} r={5.5} fill="var(--color-surface)" stroke={color} strokeWidth={2} />
         ) : (
           <circle key={i} cx={p.x} cy={p.y} r={5.5} fill={color} />
         );

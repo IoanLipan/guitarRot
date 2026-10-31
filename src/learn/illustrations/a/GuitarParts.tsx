@@ -23,12 +23,11 @@ const PEGS = [19, 33, 47];
 
 /** An acoustic guitar from the front, headstock on the left, every part named. */
 export function GuitarParts() {
-  const headstock = tagBox(10, 20, ['Headstock'], 12, 'start');
-  const nut = tagBox(57, 46, ['Nut']);
+  const headstock = tagBox(10, 22, ['Headstock'], 16, 'start');
   return (
     <Art
       height={230}
-      label="An acoustic guitar seen from the front, headstock on the left, with the headstock, tuning pegs, nut, frets, neck, strings, sound hole, bridge and body labelled."
+      label="An acoustic guitar seen from the front, headstock on the left, with the headstock, frets, neck, strings, sound hole, bridge and body labelled."
     >
       {/* body */}
       <path d={acousticBodyPath(JOIN_X, TAIL_X, CY)} fill={WOOD_LIGHT} stroke={WOOD_EDGE} strokeWidth={2.2} strokeLinejoin="round" />
@@ -101,25 +100,21 @@ export function GuitarParts() {
 
       {/* labels above */}
       <Leader x1={40} y1={headstock.bottom} x2={40} y2={122} />
-      <Tag x={10} y={20} text="Headstock" anchor="start" />
-      <Leader x1={57} y1={nut.bottom} x2={57} y2={CY - 16} />
-      <Tag x={57} y={46} text="Nut" />
+      <Tag x={10} y={22} text="Headstock" anchor="start" size={16} />
       <Leader x1={fretX(8)} y1={32} x2={fretX(8)} y2={CY - 12} />
-      <Tag x={fretX(8)} y={20} text="Frets" />
+      <Tag x={fretX(8)} y={22} text="Frets" size={16} />
       <Leader x1={242} y1={57} x2={SOUND_HOLE_X - 5} y2={CY - 18} />
-      <Tag x={236} y={46} text="Sound hole" />
+      <Tag x={236} y={50} text="Sound hole" size={16} />
       <Leader x1={300} y1={32} x2={300} y2={85} />
-      <Tag x={300} y={20} text="Body" />
+      <Tag x={300} y={22} text="Body" size={16} />
 
       {/* labels below */}
-      <Leader x1={33} y1={176} x2={33} y2={156} />
-      <Tag x={10} y={186} text="Tuning pegs" anchor="start" />
-      <Leader x1={128} y1={176} x2={128} y2={CY + 15} />
-      <Tag x={132} y={186} text="Neck" />
-      <Leader x1={176} y1={176} x2={176} y2={CY + 11} color={ACCENT} />
-      <Tag x={192} y={186} text="Strings" color={ACCENT} stroke={ACCENT} />
-      <Leader x1={BRIDGE_X} y1={196} x2={BRIDGE_X} y2={CY + 12} />
-      <Tag x={BRIDGE_X} y={206} text="Bridge" />
+      <Leader x1={92} y1={178} x2={92} y2={CY + 15} />
+      <Tag x={92} y={190} text="Neck" size={16} />
+      <Leader x1={170} y1={178} x2={170} y2={CY + 11} color={ACCENT} />
+      <Tag x={170} y={190} text="Strings" size={16} color={ACCENT} stroke={ACCENT} />
+      <Leader x1={BRIDGE_X} y1={190} x2={BRIDGE_X} y2={CY + 12} />
+      <Tag x={BRIDGE_X} y={202} text="Bridge" size={16} />
     </Art>
   );
 }

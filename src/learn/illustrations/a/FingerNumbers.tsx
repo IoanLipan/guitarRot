@@ -5,10 +5,11 @@ const PALM_TOP = 104;
 
 /** The four fingers: where each starts on the palm, how it fans out, how long it is. */
 const FINGERS = [
-  { number: 1, name: 'index', base: 138, angle: -16, length: 62 },
-  { number: 2, name: 'middle', base: 166, angle: -5, length: 70 },
-  { number: 3, name: 'ring', base: 194, angle: 6, length: 63 },
-  { number: 4, name: 'pinky', base: 222, angle: 17, length: 48 },
+  // `at` and `dx` push a name sideways off its fingertip, so neighbours' names at 15 units do not run into each other.
+  { number: 1, name: 'index', base: 138, angle: -16, length: 62, at: 'end', dx: 10 },
+  { number: 2, name: 'middle', base: 166, angle: -5, length: 70, at: 'middle', dx: 0 },
+  { number: 3, name: 'ring', base: 194, angle: 6, length: 63, at: 'start', dx: -14 },
+  { number: 4, name: 'pinky', base: 222, angle: 17, length: 48, at: 'start', dx: -6 },
 ] as const;
 
 const FRET_LEFT = 22;
@@ -53,10 +54,10 @@ export function FingerNumbers() {
         return (
           <g key={`n${f.number}`}>
             <circle cx={cx} cy={cy} r={11.5} fill={ACCENT} />
-            <text x={cx} y={cy + 0.5} fill="#0b0b0f" fontSize={15} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
+            <text x={cx} y={cy + 0.5} fill="var(--color-ground)" fontSize={15} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
               {f.number}
             </text>
-            <text x={cx} y={cy - 24} fill={INK} fontSize={11} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
+            <text x={cx + f.dx} y={cy - 24} fill={INK} fontSize={15} fontWeight={700} textAnchor={f.at} dominantBaseline="middle">
               {f.name}
             </text>
           </g>
@@ -65,7 +66,7 @@ export function FingerNumbers() {
 
       {/* the thumb */}
       <circle cx={82} cy={112} r={11} fill="none" stroke={INK} strokeWidth={2} strokeDasharray="3 3" />
-      <text x={82} y={112.5} fill={INK} fontSize={14} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
+      <text x={82} y={112.5} fill={INK} fontSize={15} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
         T
       </text>
       <Leader x1={84} y1={170} x2={84} y2={128} dot={false} />
@@ -79,15 +80,15 @@ export function FingerNumbers() {
           {n < 4 && <line x1={FRET_LEFT + n * FRET_WIDTH} y1={204} x2={FRET_LEFT + n * FRET_WIDTH} y2={236} stroke={FRET} strokeWidth={1.6} />}
           <line x1={FRET_LEFT + (n - 1) * FRET_WIDTH + 4} y1={220} x2={FRET_LEFT + n * FRET_WIDTH} y2={220} stroke={STEEL} strokeWidth={1.8} />
           <circle cx={FRET_LEFT + (n - 0.5) * FRET_WIDTH} cy={220} r={11} fill={ACCENT} />
-          <text x={FRET_LEFT + (n - 0.5) * FRET_WIDTH} y={220.5} fill="#0b0b0f" fontSize={14} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
+          <text x={FRET_LEFT + (n - 0.5) * FRET_WIDTH} y={220.5} fill="var(--color-ground)" fontSize={15} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
             {n}
           </text>
         </g>
       ))}
-      <text x={246} y={214} fill={ACCENT} fontSize={14} fontWeight={800} dominantBaseline="middle">
+      <text x={246} y={214} fill={ACCENT} fontSize={15} fontWeight={800} dominantBaseline="middle">
         one finger
       </text>
-      <text x={246} y={232} fill={ACCENT} fontSize={14} fontWeight={800} dominantBaseline="middle">
+      <text x={246} y={232} fill={ACCENT} fontSize={15} fontWeight={800} dominantBaseline="middle">
         per fret
       </text>
     </Art>

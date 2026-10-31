@@ -18,9 +18,19 @@ export const SURFACE_2 = 'var(--color-surface-2)';
 export const WOOD = 'var(--color-wood)';
 export const WOOD_LIGHT = 'var(--color-wood-light)';
 export const FRET = 'var(--color-fret)';
-/** Strings: a light steel grey that reads on wood and on the dark ground. */
-export const STEEL = '#c9c9d3';
+/** The page ground: the colour of text drawn on a note colour or on amber. */
+export const GROUND = 'var(--color-ground)';
+/** Strings: the dim ink, which reads on wood and on the dark ground. */
+export const STEEL = 'var(--color-ink-dim)';
 export { NOTE_COLORS, noteColor };
+
+/**
+ * The smallest type a drawing may use, in viewBox units. A drawing is 360 units
+ * wide and sits in a card about 312px wide on a 360px phone, so 1 unit is
+ * about 0.87px: 15 units is 13px, and still 11px on a 320px phone. (Labels
+ * of 11 to 12 units were 6 to 9px once a short phone letterboxed the picture.)
+ */
+export const MIN_TEXT = 15;
 
 /** Stroke widths for strings 1 (thin, high) to 6 (thick, low), in viewBox units. */
 export const STRING_WIDTHS = [1.2, 1.6, 2, 2.6, 3.2, 3.8] as const;
@@ -57,7 +67,7 @@ export function Label({
   y,
   children,
   color = DIM,
-  size = 11,
+  size = 16,
   weight = 700,
   anchor = 'start',
 }: {
@@ -70,7 +80,7 @@ export function Label({
   anchor?: 'start' | 'middle' | 'end';
 }) {
   return (
-    <text x={x} y={y} fill={color} fontSize={size} fontWeight={weight} textAnchor={anchor} dominantBaseline="middle">
+    <text x={x} y={y} fill={color} fontSize={Math.max(size, MIN_TEXT)} fontWeight={weight} textAnchor={anchor} dominantBaseline="middle">
       {children}
     </text>
   );
@@ -86,7 +96,7 @@ export function NotePill({
   name,
   solfege,
   show = 'both',
-  size = 11,
+  size = 15,
 }: {
   x: number;
   y: number;
@@ -98,8 +108,9 @@ export function NotePill({
 }) {
   const color = noteColor(name);
   const text = show === 'name' || solfege === undefined ? name : show === 'solfege' ? solfege : `${name} (${solfege})`;
-  const width = text.length * size * 0.62 + size * 1.2;
-  const height = size * 1.9;
+  const type = Math.max(size, MIN_TEXT);
+  const width = text.length * type * 0.62 + type * 1.2;
+  const height = type * 1.9;
   return (
     <g>
       <rect
@@ -114,7 +125,7 @@ export function NotePill({
         strokeOpacity={0.55}
         strokeWidth={1}
       />
-      <text x={x} y={y + 0.5} fill={color} fontSize={size} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+      <text x={x} y={y + 0.5} fill={color} fontSize={type} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
         {text}
       </text>
     </g>
@@ -122,11 +133,11 @@ export function NotePill({
 }
 
 /** A round note bubble for dots and rows: the colour fill with the label inside. */
-export function NoteDot({ x, y, name, r = 11, label }: { x: number; y: number; name: string; r?: number; label?: string }) {
+export function NoteDot({ x, y, name, r = 15, label }: { x: number; y: number; name: string; r?: number; label?: string }) {
   return (
     <g>
       <circle cx={x} cy={y} r={r} fill={noteColor(name)} />
-      <text x={x} y={y + 0.5} fill="#0b0b0f" fontSize={r * 0.95} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
+      <text x={x} y={y + 0.5} fill={GROUND} fontSize={Math.max(r * 0.95, MIN_TEXT)} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
         {label ?? name}
       </text>
     </g>
@@ -236,13 +247,13 @@ export function Badge({ x, y, ok, r = 9 }: { x: number; y: number; ok: boolean; 
         <polyline
           points={`${x - s},${y} ${x - s * 0.25},${y + s * 0.75} ${x + s},${y - s * 0.7}`}
           fill="none"
-          stroke="#0b0b0f"
+          stroke={GROUND}
           strokeWidth={2.2}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
       ) : (
-        <g stroke="#0b0b0f" strokeWidth={2.2} strokeLinecap="round">
+        <g stroke={GROUND} strokeWidth={2.2} strokeLinecap="round">
           <line x1={x - s} y1={y - s} x2={x + s} y2={y + s} />
           <line x1={x + s} y1={y - s} x2={x - s} y2={y + s} />
         </g>

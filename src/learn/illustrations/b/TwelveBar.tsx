@@ -52,10 +52,10 @@ export function TwelveBar() {
               <Label x={x + 9} y={y + 11} size={11} color={DIM} weight={700}>
                 {r * 4 + c + 1}
               </Label>
-              <Label x={cx} y={y + 23} size={24} color={color} weight={900} anchor="middle">
+              <Label x={cx} y={y + 20} size={22} color={color} weight={900} anchor="middle">
                 {chord.name}
               </Label>
-              <text x={cx} y={y + 41} fontSize={12} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+              <text x={cx} y={y + 41.5} fontSize={15} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
                 <tspan fill={color}>{chord.solfege}</tspan>
                 <tspan fill={DIM}>{`  \u00b7  ${degree}`}</tspan>
               </text>

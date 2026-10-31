@@ -69,13 +69,10 @@ export function MissingIllustration({ name }: { name: string }) {
       role="img"
       aria-label={`Illustration "${name}" is not drawn yet`}
       data-testid="illustration-missing"
-      className="flex min-h-[200px] flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-white/10 px-4 py-8 text-center"
+      className="flex min-h-[200px] flex-col items-center justify-center gap-1 rounded-2xl bg-surface-2 px-4 py-8 text-center"
     >
-      <span aria-hidden="true" className="text-3xl opacity-60">
-        🎨
-      </span>
-      <span className="font-mono text-sm font-bold text-ink">{name}</span>
-      <span className="text-xs tracking-wider text-ink-dim uppercase">illustration coming</span>
+      <span className="text-body font-bold text-ink">{name}</span>
+      <span className="label">Illustration coming soon</span>
     </div>
   );
 }
@@ -87,9 +84,10 @@ function IllustrationView({ name }: { name: Extract<Visual, { kind: 'illustratio
     <div
       data-testid="visual-illustration"
       data-illustration={name}
-      // The drawings cap themselves at 260 high; on a phone that crowds out the
-      // words below, so the card holds them a little shorter. They letterbox.
-      className="[&_svg]:mx-auto [&_svg]:max-h-[228px]! short:[&_svg]:max-h-[min(200px,22vh)]!"
+      // A drawing is as wide as the card, which is what keeps its labels readable. Only on the
+      // short phones (under `tight:`) does the card hold it a little shorter, so the words below
+      // still show; it then letterboxes, and the drawings carry labels big enough to survive that.
+      className="[&_svg]:mx-auto tight:[&_svg]:max-h-[min(256px,33vh)]!"
     >
       <Drawing />
     </div>
@@ -154,7 +152,7 @@ function NeckView({
       />
       {interactive && (
         <p
-          className="flex min-h-6 items-center justify-center gap-1.5 text-[13px] font-semibold text-ink-dim"
+          className="label flex min-h-6 items-center justify-center gap-1.5"
           aria-live="polite"
           data-testid="neck-heard"
         >
@@ -165,7 +163,7 @@ function NeckView({
             </>
           ) : (
             <>
-              <span className="text-[15px]">
+              <span className="text-body">
                 <RichText>{noteLabel(fretToMidi(STANDARD_TUNING, heard.stringIndex, heard.fret))}</RichText>
               </span>
               <span>
@@ -219,7 +217,7 @@ function ChordsView({
               }}
               // min-w-20, not wider: three tiles have to fit a 320px phone (about 270px of card) without sliding sideways.
               className={`press press-tile fx-host flex min-w-20 max-w-[10.5rem] flex-1 flex-col items-center gap-0.5 rounded-2xl px-2 pt-2.5 pb-2.5 narrow:px-1 ${
-                playing ? 'scale-[1.02] bg-accent/12 ring-2 ring-accent/70' : 'bg-white/[0.035] ring-2 ring-transparent'
+                playing ? 'scale-[1.02] bg-accent/12 ring-2 ring-accent/70' : 'bg-surface-2 ring-2 ring-transparent'
               }`}
             >
               <span
@@ -229,7 +227,7 @@ function ChordsView({
               >
                 {chord.name}
               </span>
-              <span aria-hidden="true" className="text-center text-xs leading-tight font-bold tracking-wider text-ink-dim uppercase">
+              <span aria-hidden="true" className="text-center text-label leading-tight font-semibold text-ink-dim">
                 {chordSolfegeName(chord)}
               </span>
               <span
@@ -255,7 +253,7 @@ function ChordsView({
                 {tones.map((tone) => (
                   <span
                     key={tone}
-                    className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1 text-xs leading-none font-black text-ground"
+                    className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1 text-label leading-none font-black text-ground"
                     style={{ background: noteColor(tone) }}
                   >
                     {tone}
@@ -274,7 +272,7 @@ function ChordsView({
 /** The small line under an interactive picture that says it can be tapped. */
 function TapHint({ children }: { children: React.ReactNode }) {
   return (
-    <p className="flex min-h-5 items-center justify-center gap-1.5 text-[13px] font-semibold text-ink-dim" aria-hidden="true">
+    <p className="label flex min-h-5 items-center justify-center gap-1.5" aria-hidden="true">
       <NoteIcon size={16} className="text-accent" /> {children}
     </p>
   );
@@ -324,8 +322,7 @@ function NotesView({ notes, engine }: { notes: readonly string[]; engine: AudioE
                 }`}
                 style={
                   {
-                    background: `radial-gradient(circle at 32% 26%, ${color}, ${color} 55%, ${color}e0)`,
-                    boxShadow: `inset 0 -4px 0 rgba(0,0,0,0.2), 0 8px 18px -8px ${color}`,
+                    background: color,
                     containerType: 'inline-size',
                     '--ping': `${color}aa`,
                   } as CSSProperties
@@ -333,7 +330,7 @@ function NotesView({ notes, engine }: { notes: readonly string[]; engine: AudioE
               >
                 <span style={{ fontSize: letter.length > 1 ? '30cqw' : '42cqw', lineHeight: 1 }}>{letter}</span>
               </span>
-              <span aria-hidden="true" className="text-[13px] leading-none font-extrabold" style={{ color }}>
+              <span aria-hidden="true" className="text-label leading-none font-extrabold" style={{ color }}>
                 {solfege}
               </span>
             </button>
@@ -363,19 +360,14 @@ export function VisualView({ visual, engine }: { visual: Visual; engine: AudioEn
   }
 }
 
-/** The rounded, softly glowing card a visual sits in, which pops in when the step opens. */
+/** The rounded card a visual sits in, which pops in when the step opens. A tone step, not a glow. */
 export function VisualCard({ visual, engine }: { visual: Visual; engine: AudioEngine }) {
   const tight = visual.kind === 'illustration';
   return (
     <div
       data-testid="explain-visual"
       data-visual={visual.kind}
-      className={`explain-pop rounded-3xl ${tight ? 'p-2.5 short:p-2' : 'px-3 py-3.5 short:py-3 narrow:px-2'}`}
-      style={{
-        background:
-          'radial-gradient(120% 90% at 50% 0%, rgba(255,176,32,0.10), rgba(255,176,32,0) 62%), var(--color-surface)',
-        boxShadow: '0 0 0 1px rgba(255,255,255,0.05), 0 16px 44px -18px rgba(255,176,32,0.30)',
-      }}
+      className={`explain-pop rounded-3xl bg-surface ${tight ? 'p-2.5 short:p-2' : 'px-3 py-3.5 short:py-3 narrow:px-2'}`}
     >
       <VisualView visual={visual} engine={engine} />
     </div>

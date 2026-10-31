@@ -46,7 +46,7 @@ export function StringOrder() {
         return (
           <g key={s.number}>
             <circle cx={26} cy={y} r={10.5} fill={SURFACE_2} stroke={DIM} strokeOpacity={0.6} strokeWidth={1.2} />
-            <text x={26} y={y + 0.5} fill={INK} fontSize={13} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+            <text x={26} y={y + 0.5} fill={INK} fontSize={15} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
               {s.number}
             </text>
             <NotePill x={76} y={y} name={s.note} solfege={s.solfege} size={12} />
