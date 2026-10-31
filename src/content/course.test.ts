@@ -14,6 +14,7 @@ import {
   parseNoteName,
   scalePositions,
   spellingSolfege,
+  GUITAR,
   stringNumber,
   withSolfege,
   QUALITY_LABELS,
@@ -171,7 +172,7 @@ function problemWith(lessonId: string, f: Fact): string | null {
     case 'solfege':
       return spellingSolfege(f.letter) === f.is ? null : `is ${spellingSolfege(f.letter)}`;
     case 'string-number': {
-      if (stringNumber(f.stringIndex) !== f.number) return `index ${f.stringIndex} is string ${stringNumber(f.stringIndex)}`;
+      if (stringNumber(f.stringIndex, GUITAR) !== f.number) return `index ${f.stringIndex} is string ${stringNumber(f.stringIndex, GUITAR)}`;
       const open = noteName(openStringMidi(T, f.stringIndex));
       return open === f.open ? null : `open string is ${open}`;
     }
@@ -267,7 +268,7 @@ function problemWith(lessonId: string, f: Fact): string | null {
     }
     case 'check-string-number': {
       const check = checkFor(lessonId, f.ask);
-      const want = `String ${stringNumber(f.stringIndex)}`;
+      const want = `String ${stringNumber(f.stringIndex, GUITAR)}`;
       return check.answer === want ? null : `answer is "${check.answer}", it is "${want}"`;
     }
     case 'check-same-note': {

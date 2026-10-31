@@ -1,10 +1,22 @@
-import { CHORDS } from '@/content';
-import { STANDARD_TUNING, fretToMidi, noteName, type ChordShape, type FretPosition, type Tuning } from '@/music';
+import { ALL_CHORDS, chordsFor } from '@/content';
+import {
+  DEFAULT_INSTRUMENT_ID,
+  fretToMidi,
+  getInstrument,
+  instrumentIdOf,
+  noteName,
+  type ChordShape,
+  type FretPosition,
+  type InstrumentId,
+  type Tuning,
+} from '@/music';
 import type { QuizDifficulty } from '@/progress';
 
 export type NoteQuizQuestion = {
   kind: 'note';
   id: string;
+  /** The instrument whose neck the dot is on. Absent means the guitar. */
+  instrument?: InstrumentId;
   prompt: string;
   position: FretPosition;
   fretRange: [number, number];
@@ -25,8 +37,6 @@ export type QuizQuestion = NoteQuizQuestion | ChordQuizQuestion;
 
 /** Fret window shown for note-ID questions, matching the design handoff. */
 export const NOTE_QUIZ_FRET_RANGE: [number, number] = [0, 5];
-
-const STRING_COUNT = 6;
 
 /** The far end of the neck any note question reaches (the hard difficulty's). */
 export const QUIZ_MAX_FRET = 12;
@@ -72,6 +82,9 @@ function shuffle<T>(items: readonly T[], random: () => number): T[] {
 }
 
 export type NoteQuestionOptions = {
+  /** Whose neck the question is on: its strings and its pitches. Defaults to the guitar. */
+  instrument?: InstrumentId;
+  /** Overrides the instrument's open-string pitches. */
   tuning?: Tuning;
   random?: () => number;
   /** The frets the picture shows, and the generator draws from. Defaults to the Quiz tab's 0 to 5. */
@@ -128,7 +141,8 @@ export function noteQuestionAt(
   fret: number,
   opts: NoteQuestionOptions = {},
 ): NoteQuizQuestion {
-  const tuning = opts.tuning ?? STANDARD_TUNING;
+  const instrument = opts.instrument ?? DEFAULT_INSTRUMENT_ID;
+  const tuning = opts.tuning ?? getInstrument(instrument).tuning;
   const random = opts.random ?? Math.random;
   const midi = fretToMidi(tuning, stringIndex, fret);
   const correctAnswer = noteName(midi);
@@ -142,7 +156,9 @@ export function noteQuestionAt(
 
   return {
     kind: 'note',
-    id: `note-s${stringIndex}f${fret}`,
+    id: noteQuestionId(instrument, stringIndex, fret),
+    // Left off for the guitar so its questions are exactly what they were.
+    ...(instrument === DEFAULT_INSTRUMENT_ID ? {} : { instrument }),
     prompt: 'Name this note',
     position: { stringIndex, fret },
     // The Quiz tab's own window when the fret fits it, so its questions are exactly what they were.
@@ -155,7 +171,7 @@ export function noteQuestionAt(
 /** Every position in the window whose note is a natural one. */
 function naturalPositions(tuning: Tuning, [lowFret, highFret]: readonly [number, number]): FretPosition[] {
   const found: FretPosition[] = [];
-  for (let stringIndex = 0; stringIndex < STRING_COUNT; stringIndex += 1) {
+  for (let stringIndex = 0; stringIndex < tuning.length; stringIndex += 1) {
     for (let fret = lowFret; fret <= highFret; fret += 1) {
       if (!noteName(fretToMidi(tuning, stringIndex, fret)).includes('#')) found.push({ stringIndex, fret });
     }
@@ -167,24 +183,28 @@ export function generateNoteQuestion(opts: NoteQuestionOptions = {}): NoteQuizQu
   const random = opts.random ?? Math.random;
   const range = opts.fretRange ?? NOTE_QUIZ_FRET_RANGE;
   const [lowFret, highFret] = range;
+  const tuning = opts.tuning ?? getInstrument(opts.instrument ?? DEFAULT_INSTRUMENT_ID).tuning;
 
   if (opts.naturalsOnly === true) {
     // Drawn from the positions that qualify, because most of an open-position
     // neck is natural but a quarter of it is not, and "redraw until natural"
     // would burn an unbounded number of random calls.
-    const pool = naturalPositions(opts.tuning ?? STANDARD_TUNING, range);
+    const pool = naturalPositions(tuning, range);
     const pick = pool[Math.floor(random() * pool.length)];
     if (pick === undefined) throw new Error('No natural notes in that fret range');
     return noteQuestionAt(pick.stringIndex, pick.fret, { ...opts, random });
   }
 
-  const stringIndex = Math.floor(random() * STRING_COUNT);
+  const stringIndex = Math.floor(random() * tuning.length);
   const fret = lowFret + Math.floor(random() * (highFret - lowFret + 1));
   return noteQuestionAt(stringIndex, fret, { ...opts, random });
 }
 
 export type ChordQuestionOptions = {
+  /** The chords the other answers are drawn from. Defaults to the instrument's whole library. */
   chords?: readonly ChordShape[];
+  /** Whose chords to ask about when `chords` is not given. Defaults to the guitar. */
+  instrument?: InstrumentId;
   random?: () => number;
   /** Answers on offer, the right one among them. Defaults to 4. */
   optionCount?: number;
@@ -192,7 +212,7 @@ export type ChordQuestionOptions = {
 
 /** Builds the question for one specific chord, so it can be rebuilt from its id. */
 export function chordQuestionFor(correct: ChordShape, opts: ChordQuestionOptions = {}): ChordQuizQuestion {
-  const pool = opts.chords ?? CHORDS;
+  const pool = opts.chords ?? chordsFor(opts.instrument ?? instrumentIdOf(correct));
   const random = opts.random ?? Math.random;
   const optionCount = opts.optionCount ?? DEFAULT_OPTION_COUNT;
   if (pool.length < optionCount) {
@@ -215,7 +235,7 @@ export function chordQuestionFor(correct: ChordShape, opts: ChordQuestionOptions
 }
 
 export function generateChordQuestion(opts: ChordQuestionOptions = {}): ChordQuizQuestion {
-  const pool = opts.chords ?? CHORDS;
+  const pool = opts.chords ?? chordsFor(opts.instrument ?? DEFAULT_INSTRUMENT_ID);
   const random = opts.random ?? Math.random;
   const optionCount = opts.optionCount ?? DEFAULT_OPTION_COUNT;
   if (pool.length < optionCount) {
@@ -233,7 +253,10 @@ export function generateChordQuestion(opts: ChordQuestionOptions = {}): ChordQui
  * are still open shapes; hard is everything in the library, barres and power
  * chords included.
  */
-export function chordPoolFor(difficulty: QuizDifficulty, library: readonly ChordShape[] = CHORDS): ChordShape[] {
+export function chordPoolFor(
+  difficulty: QuizDifficulty,
+  library: readonly ChordShape[] = chordsFor(DEFAULT_INSTRUMENT_ID),
+): ChordShape[] {
   switch (difficulty) {
     case 'easy':
       return library.filter((chord) => (chord.quality === 'maj' || chord.quality === 'min') && chord.difficulty <= 2);
@@ -253,16 +276,37 @@ export function chordPoolFor(difficulty: QuizDifficulty, library: readonly Chord
  */
 export function generateQuestion(
   difficulty: QuizDifficulty,
-  opts: { random?: () => number } = {},
+  opts: { random?: () => number; instrument?: InstrumentId } = {},
 ): QuizQuestion {
   const random = opts.random ?? Math.random;
+  const instrument = opts.instrument ?? DEFAULT_INSTRUMENT_ID;
   const { fretRange, naturalsOnly, optionCount } = DIFFICULTY_PROFILES[difficulty];
   return random() < 0.5
-    ? generateNoteQuestion({ random, fretRange, naturalsOnly, optionCount })
-    : generateChordQuestion({ random, chords: chordPoolFor(difficulty), optionCount });
+    ? generateNoteQuestion({ random, fretRange, naturalsOnly, optionCount, instrument })
+    : generateChordQuestion({ random, chords: chordPoolFor(difficulty, chordsFor(instrument)), optionCount });
 }
 
-const NOTE_QUESTION_ID = /^note-s(\d+)f(\d+)$/;
+/**
+ * A note question's id: where the dot is, and for any instrument but the
+ * guitar, whose neck it is (the same string and fret is a different note on a
+ * ukulele). A guitar id is `note-s3f5`; a ukulele's is `note-uke-s3f5`.
+ */
+function noteQuestionId(instrument: InstrumentId, stringIndex: number, fret: number): string {
+  return `note-${instrument === 'ukulele' ? 'uke-' : ''}s${stringIndex}f${fret}`;
+}
+
+const NOTE_QUESTION_ID = /^note-(uke-)?s(\d+)f(\d+)$/;
+
+/**
+ * Whose question an id names: a note id says so in its name, a chord id by the
+ * chord it names. What is not a known id is the guitar's, so nothing is lost.
+ */
+export function instrumentOfQuestionId(id: string): InstrumentId {
+  const note = NOTE_QUESTION_ID.exec(id);
+  if (note !== null) return note[1] === undefined ? 'guitar' : 'ukulele';
+  const chord = ALL_CHORDS.find((c) => c.id === id.slice('chord-'.length));
+  return id.startsWith('chord-') && chord !== undefined ? instrumentIdOf(chord) : 'guitar';
+}
 
 /**
  * Rebuilds the question a given quiz id names. Ids are deterministic
@@ -275,14 +319,15 @@ const NOTE_QUESTION_ID = /^note-s(\d+)f(\d+)$/;
 export function questionForId(id: string): QuizQuestion | null {
   const note = NOTE_QUESTION_ID.exec(id);
   if (note !== null) {
-    const stringIndex = Number(note[1]);
-    const fret = Number(note[2]);
-    if (stringIndex >= STRING_COUNT || fret > QUIZ_MAX_FRET) return null;
-    return noteQuestionAt(stringIndex, fret);
+    const instrument: InstrumentId = note[1] === undefined ? 'guitar' : 'ukulele';
+    const stringIndex = Number(note[2]);
+    const fret = Number(note[3]);
+    if (stringIndex >= getInstrument(instrument).tuning.length || fret > QUIZ_MAX_FRET) return null;
+    return noteQuestionAt(stringIndex, fret, { instrument });
   }
 
   if (id.startsWith('chord-')) {
-    const chord = CHORDS.find((c) => c.id === id.slice('chord-'.length));
+    const chord = ALL_CHORDS.find((c) => c.id === id.slice('chord-'.length));
     return chord === undefined ? null : chordQuestionFor(chord);
   }
 

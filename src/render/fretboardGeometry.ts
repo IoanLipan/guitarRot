@@ -8,7 +8,8 @@ export type Rect = { x: number; y: number; width: number; height: number };
 /** Minimum comfortable thumb target, in CSS pixels. */
 export const TOUCH_MIN = 44;
 
-const STRING_COUNT = 6;
+/** The string count the layout constants below were drawn for: a guitar's. */
+const DESIGN_STRING_COUNT = 6;
 
 /** Extra room, in viewBox units, a horizontal board gives the column of string names at its nut end. */
 export const NAME_GUTTER = 8;
@@ -51,12 +52,17 @@ const BASE = {
   },
 } as const;
 
+/** Extra string spacing, in viewBox units, for each string a board has fewer than six. */
+const STRING_SPREAD: Record<Orientation, number> = { horizontal: 4, vertical: 3 };
+
 export type FretboardGeometry = {
   orientation: Orientation;
   readonly fretRange: readonly [number, number];
   /** Frets that get a drawn cell. Never contains 0; open strings sit in the margin. */
   readonly cellFrets: readonly number[];
   hasNut: boolean;
+  /** How many strings the board draws. */
+  readonly stringCount: number;
   width: number;
   height: number;
   stringSpacing: number;
@@ -80,8 +86,14 @@ export function createFretboardGeometry(opts: {
   interactive?: boolean;
   /** Reserve a column at the nut end for the string names (E A D G B e). Horizontal boards only. */
   stringLabels?: boolean;
+  /** How many strings the board draws. Defaults to a guitar's six. */
+  stringCount?: number;
 }): FretboardGeometry {
   const { orientation, fretRange, interactive = false } = opts;
+  const stringCount = opts.stringCount ?? DESIGN_STRING_COUNT;
+  if (!Number.isInteger(stringCount) || stringCount < 1) {
+    throw new Error(`A board needs a whole number of strings, at least one, got ${stringCount}`);
+  }
   const stringLabels = opts.stringLabels === true && orientation === 'horizontal';
   const [lowFret, highFret] = fretRange;
   if (!Number.isInteger(lowFret) || !Number.isInteger(highFret)) {
@@ -95,9 +107,11 @@ export function createFretboardGeometry(opts: {
   }
 
   const base = BASE[orientation];
-  const stringSpacing = interactive
-    ? Math.max(base.stringSpacing, TOUCH_MIN)
-    : base.stringSpacing;
+  // Fewer strings sit further apart: a ukulele neck is as wide as a guitar's
+  // is, and four strings at a six-string pitch would draw a thin ribbon.
+  const spread = (DESIGN_STRING_COUNT - Math.min(stringCount, DESIGN_STRING_COUNT)) * STRING_SPREAD[orientation];
+  const baseStringSpacing = base.stringSpacing + spread;
+  const stringSpacing = interactive ? Math.max(baseStringSpacing, TOUCH_MIN) : baseStringSpacing;
   const fretSpacing = interactive ? Math.max(base.fretSpacing, TOUCH_MIN) : base.fretSpacing;
 
   // Derive openOffset and padding from the (possibly interactive-widened)
@@ -126,7 +140,7 @@ export function createFretboardGeometry(opts: {
   const cellFrets: number[] = [];
   for (let f = Math.max(1, lowFret); f <= highFret; f += 1) cellFrets.push(f);
 
-  const stringSpan = (STRING_COUNT - 1) * stringSpacing;
+  const stringSpan = (stringCount - 1) * stringSpacing;
   const fretSpan = cellFrets.length * fretSpacing;
 
   const width =
@@ -138,13 +152,13 @@ export function createFretboardGeometry(opts: {
       ? padding.top + stringSpan + padding.bottom
       : padding.top + fretSpan + padding.bottom;
 
-  /** Position along the string axis. Low E is bottom (horizontal) or left (vertical). */
+  /** Position along the string axis. String index 0 is bottom (horizontal) or left (vertical). */
   function stringCoord(stringIndex: number): number {
-    if (stringIndex < 0 || stringIndex >= STRING_COUNT) {
+    if (stringIndex < 0 || stringIndex >= stringCount) {
       throw new Error(`String index out of range: ${stringIndex}`);
     }
     return orientation === 'horizontal'
-      ? padding.top + (STRING_COUNT - 1 - stringIndex) * stringSpacing
+      ? padding.top + (stringCount - 1 - stringIndex) * stringSpacing
       : padding.left + stringIndex * stringSpacing;
   }
 
@@ -216,6 +230,7 @@ export function createFretboardGeometry(opts: {
         : { x: padding.left - 14, y: fretCoord(fret) };
     },
 
+    stringCount,
     hasStringLabels: stringLabels,
 
     stringLabelPoint(stringIndex) {
@@ -225,7 +240,7 @@ export function createFretboardGeometry(opts: {
 
     inlayPoints(fret) {
       if (!cellFrets.includes(fret)) return [];
-      const centre = (stringCoord(0) + stringCoord(STRING_COUNT - 1)) / 2;
+      const centre = (stringCoord(0) + stringCoord(stringCount - 1)) / 2;
       const along = fretCoord(fret);
       const point = (across: number): Point =>
         orientation === 'horizontal' ? { x: along, y: across } : { x: across, y: along };

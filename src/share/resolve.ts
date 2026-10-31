@@ -1,5 +1,6 @@
 import { questionForId } from '@/quiz';
-import { getChord, getRiff, getSong, type Song } from '@/content';
+import { getChord, getRiff, getSong, songHome, songPlayableOn, type Song } from '@/content';
+import { instrumentIdOf, type InstrumentId } from '@/music';
 import type { FeedItem } from '@/feed/generator';
 import type { ShareTarget } from './shareId';
 
@@ -40,6 +41,20 @@ export function resolveShareTarget(target: ShareTarget): SharedContent | null {
 
   const item = resolveQuiz(target.id);
   return item === null ? null : { tab: 'feed', item };
+}
+
+/**
+ * The instrument a shared link needs to be shown on: a ukulele chord is a
+ * four-string diagram and a guitar riff a six-line tab whatever the person who
+ * opens the link usually plays. A song that `current` can play stays on it;
+ * one it cannot goes to the instrument it was written for.
+ */
+export function sharedInstrument(content: SharedContent, current: InstrumentId): InstrumentId {
+  if (content.tab === 'songs') return songPlayableOn(content.song, current) ? current : songHome(content.song);
+  const { item } = content;
+  if (item.kind === 'riff') return instrumentIdOf(item.riff);
+  if (item.kind === 'chord') return instrumentIdOf(item.chord);
+  return instrumentIdOf(item.question.kind === 'note' ? item.question : item.question.chord);
 }
 
 /** What a shared card is called, for the OS share sheet's preview. */

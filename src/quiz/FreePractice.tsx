@@ -3,7 +3,8 @@ import { ArrowLeftIcon, ArrowRightIcon } from '@/ui/icons';
 import { errorHaptic, successHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { ProgressHandle } from '@/app/useProgress';
-import { withSolfege } from '@/music';
+import { useInstrument } from '@/instrument';
+import { withSolfege, type InstrumentId } from '@/music';
 import { FlashWash } from '@/ui/FlashWash';
 import { fillTransform, stagger, useBump } from '@/ui/motion';
 import { AnswerGrid } from './AnswerGrid';
@@ -16,8 +17,10 @@ const ROUND_LENGTH = 10;
 /** How long a correct answer holds before the next question loads. */
 const CORRECT_HOLD_MS = 1000;
 
-function randomQuestion(random: () => number = Math.random): QuizQuestion {
-  return random() < 0.5 ? generateNoteQuestion({ random }) : generateChordQuestion({ random });
+function randomQuestion(instrument: InstrumentId, random: () => number = Math.random): QuizQuestion {
+  return random() < 0.5
+    ? generateNoteQuestion({ random, instrument })
+    : generateChordQuestion({ random, instrument });
 }
 
 /**
@@ -35,7 +38,8 @@ export function FreePractice({
   /** Back to the mode select. */
   onExit: () => void;
 }) {
-  const [question, setQuestion] = useState<QuizQuestion>(() => randomQuestion());
+  const { id: instrument } = useInstrument();
+  const [question, setQuestion] = useState<QuizQuestion>(() => randomQuestion(instrument));
   const [picked, setPicked] = useState<string | null>(null);
   const [answeredInRound, setAnsweredInRound] = useState(0);
   /** Counts questions dealt, so each one is a fresh element that plays its entrance. */
@@ -59,7 +63,7 @@ export function FreePractice({
   function nextQuestion() {
     if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
     setAnsweredInRound((count) => (count >= ROUND_LENGTH ? 0 : count));
-    setQuestion(randomQuestion());
+    setQuestion(randomQuestion(instrument));
     setPicked(null);
     setDealt((count) => count + 1);
   }

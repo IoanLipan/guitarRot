@@ -1,7 +1,8 @@
 import { VALID_TIME_SIGNATURE_DENOMINATORS, beatsPerBar, type TimeSignature } from '@/content';
 import type { Line } from './fretboardGeometry';
 
-const STRING_COUNT = 6;
+/** The string count the layout was drawn for: a guitar's six. */
+const DEFAULT_STRING_COUNT = 6;
 
 const DEFAULTS = {
   beatWidth: 64,
@@ -21,14 +22,16 @@ export const STRING_SPACING_MAX = 40;
  * bottom bands included), kept between the bounds above. A staff drawn at a
  * fixed size is a strip in a tall card; this is how it grows to use the card.
  */
-export function stringSpacingForHeight(height: number): number {
+export function stringSpacingForHeight(height: number, stringCount: number = DEFAULT_STRING_COUNT): number {
   const room = height - DEFAULTS.padding.top - DEFAULTS.padding.bottom;
-  const spacing = Math.floor(room / (STRING_COUNT - 1));
+  const spacing = Math.floor(room / Math.max(1, stringCount - 1));
   if (!Number.isFinite(spacing)) return DEFAULTS.stringSpacing;
   return Math.min(STRING_SPACING_MAX, Math.max(STRING_SPACING_MIN, spacing));
 }
 
 export type TabGeometry = {
+  /** How many lines the staff has: one per string. */
+  stringCount: number;
   width: number;
   height: number;
   beatWidth: number;
@@ -53,8 +56,14 @@ export function createTabGeometry(opts: {
   timeSignature: TimeSignature;
   beatWidth?: number;
   stringSpacing?: number;
+  /** How many staff lines (strings). Defaults to a guitar's six. */
+  stringCount?: number;
 }): TabGeometry {
   const { bars, timeSignature } = opts;
+  const stringCount = opts.stringCount ?? DEFAULT_STRING_COUNT;
+  if (!Number.isInteger(stringCount) || stringCount < 1) {
+    throw new Error(`A tab staff needs a whole number of lines, at least one, got ${stringCount}`);
+  }
   if (!Number.isInteger(bars) || bars < 1) {
     throw new Error(`A tab staff needs a whole number of bars, at least one, got ${bars}`);
   }
@@ -82,7 +91,7 @@ export function createTabGeometry(opts: {
   const totalBeats = bars * perBar;
 
   const staffTop = padding.top;
-  const staffBottom = padding.top + (STRING_COUNT - 1) * stringSpacing;
+  const staffBottom = padding.top + (stringCount - 1) * stringSpacing;
 
   const width = padding.left + totalBeats * beatWidth + padding.right;
   const height = staffBottom + padding.bottom;
@@ -91,15 +100,16 @@ export function createTabGeometry(opts: {
     return padding.left + beat * beatWidth;
   }
 
-  /** Low E is the bottom line, as in tab notation. */
+  /** String index 0 is the bottom line, as in tab notation (the guitar's low E, the ukulele's high G). */
   function yForString(stringIndex: number): number {
-    if (stringIndex < 0 || stringIndex >= STRING_COUNT) {
+    if (stringIndex < 0 || stringIndex >= stringCount) {
       throw new Error(`String index out of range: ${stringIndex}`);
     }
-    return padding.top + (STRING_COUNT - 1 - stringIndex) * stringSpacing;
+    return padding.top + (stringCount - 1 - stringIndex) * stringSpacing;
   }
 
   return {
+    stringCount,
     width,
     height,
     beatWidth,

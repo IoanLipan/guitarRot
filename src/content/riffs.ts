@@ -1,3 +1,4 @@
+import { instrumentIdOf, type InstrumentId } from '@/music';
 import type { Riff, TabEvent, Technique } from './types';
 
 /** Ascending run of four consecutive frets on one string, in eighth notes. */
@@ -769,4 +770,9 @@ export const RIFFS: readonly Riff[] = [
 
 export function getRiff(id: string): Riff | undefined {
   return RIFFS.find((riff) => riff.id === id);
+}
+
+/** The feed's riffs for one instrument. Today they are all guitar tabs, so the ukulele's list is empty. */
+export function riffsFor(instrument: InstrumentId): readonly Riff[] {
+  return RIFFS.filter((riff) => instrumentIdOf(riff) === instrument);
 }

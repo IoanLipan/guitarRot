@@ -1,6 +1,6 @@
-import { CHORDS } from './chords';
+import { chordsFor } from './chords';
 import { beatsPerBar, type Riff, type TabEvent, type TimeSignature } from './types';
-import { chordStrings, type ChordShape } from '@/music';
+import { chordStrings, instrumentIdOf, type ChordShape, type InstrumentId } from '@/music';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -26,6 +26,12 @@ export type SongChart = {
 
 export type Song = {
   id: string;
+  /**
+   * Restricts the song to one instrument. Absent, a riff song is for the
+   * guitar (its tab is fingered for six strings) and a chart song is for every
+   * instrument whose chord library has all of its chords: see `songPlayableOn`.
+   */
+  instrument?: InstrumentId;
   title: string;
   /** Who wrote it. "Traditional" for the folk repertoire. */
   artist: string;
@@ -64,8 +70,27 @@ export function isMovieSong(song: Song): boolean {
 /** `-` in a chart means "hold whatever was ringing". */
 export const HOLD = '-';
 
-export function chordByName(name: string): ChordShape | undefined {
-  return CHORDS.find((chord) => chord.name === name);
+/** A chord of the instrument's library by its display name: a chart says "Am", the instrument decides which fingering that is. */
+export function chordByName(name: string, instrument: InstrumentId = 'guitar'): ChordShape | undefined {
+  return chordsFor(instrument).find((chord) => chord.name === name);
+}
+
+/** The instrument a song was written for: the one it names, else the guitar. */
+export function songHome(song: Song): InstrumentId {
+  return instrumentIdOf(song);
+}
+
+/**
+ * Whether a song can be played on an instrument. One that names an instrument
+ * is for that instrument alone. A riff song with no instrument is a guitar
+ * tab. A chart song with no instrument is just chord names, so it plays on
+ * any instrument whose library has a fingering for every one of them, and is
+ * drawn and sounded with that instrument's own shapes.
+ */
+export function songPlayableOn(song: Song, instrument: InstrumentId): boolean {
+  if (song.instrument !== undefined) return song.instrument === instrument;
+  if (song.chart === undefined) return instrument === 'guitar';
+  return chartBars(song.chart).every((bar) => chordByName(bar.chordName, instrument) !== undefined);
 }
 
 /** Every bar of a chart, flattened, with holds resolved to a real chord. */
@@ -108,7 +133,13 @@ export function isUpstroke(hit: number): boolean {
   return Math.abs(hit - Math.round(hit)) > 1e-6;
 }
 
-/** An upstroke brushes only the thin strings; the bass strings are left to ring. */
+/**
+ * An upstroke brushes only the last four strings of the voicing, the ones
+ * nearest the top of the tab. On the guitar those are the thin ones and the
+ * bass strings are left to ring; a ukulele chord has no more than four strings,
+ * so its upstroke brushes them all. "Last" is by string index, the order the
+ * hand meets the strings, not by pitch: the ukulele's high G is first.
+ */
 const UPSTROKE_STRING_COUNT = 4;
 
 /** The strings one stroke picks, in the order the pick meets them. */
@@ -117,8 +148,11 @@ export function strokeStrings(strings: readonly number[], hit: number): number[]
 }
 
 /**
- * Which single string an arpeggio plucks on its nth hit: bass note first,
- * then up and back down the top of the voicing.
+ * Which single string an arpeggio plucks on its nth hit: the first sounding
+ * string, then up and back down the top of the voicing, all by string index.
+ * On the guitar that is the bass note and then the treble strings; on a
+ * ukulele it is the fingerpicker's 4-3-2-1 and back, which is not a climb
+ * in pitch (the high G starts it).
  */
 function arpeggioString(strings: number[], hit: number): number | undefined {
   const n = strings.length;
@@ -138,7 +172,7 @@ const STRUM_SPREAD_BEATS = 0.02;
  * containment around Tone's transport — instead of growing a second,
  * untested audio path.
  */
-export function songToRiff(song: Song): Riff {
+export function songToRiff(song: Song, instrument: InstrumentId = songHome(song)): Riff {
   if (song.riff !== undefined) return song.riff;
   const chart = song.chart;
   if (chart === undefined) throw new Error(`${song.id}: song has neither a chart nor a riff`);
@@ -148,7 +182,7 @@ export function songToRiff(song: Song): Riff {
   const events: TabEvent[] = [];
 
   chartBars(chart).forEach((bar, barIndex) => {
-    const shape = chordByName(bar.chordName);
+    const shape = chordByName(bar.chordName, instrument);
     if (shape === undefined) return;
     const strings = chordStrings(shape);
     const barStart = barIndex * beatsInBar;
@@ -192,6 +226,8 @@ export function songToRiff(song: Song): Riff {
 
   return {
     id: `song-${song.id}`,
+    // Left off for the guitar so a guitar song's riff is exactly what it always was.
+    ...(instrument === 'guitar' ? {} : { instrument }),
     title: song.title,
     style: song.style,
     level: song.difficulty === 'easy' ? 1 : song.difficulty === 'medium' ? 3 : 5,
@@ -226,13 +262,16 @@ export function validateSong(song: Song): string[] {
     errors.push(`${song.id}: needs exactly one of a chart or a riff`);
     return errors;
   }
+  if (song.riff !== undefined && instrumentIdOf(song.riff) !== songHome(song)) {
+    errors.push(`${song.id}: its riff is for the ${instrumentIdOf(song.riff)} but the song is for the ${songHome(song)}`);
+  }
 
   if (song.chart !== undefined) {
     const bars = chartBars(song.chart);
     if (bars.length === 0) errors.push(`${song.id}: chart has no bars`);
     if (bars[0]?.isRepeat === true) errors.push(`${song.id}: chart opens on a hold`);
     for (const bar of bars) {
-      if (chordByName(bar.chordName) === undefined) {
+      if (chordByName(bar.chordName, songHome(song)) === undefined) {
         errors.push(`${song.id}: bar ${bar.index + 1} names an unknown chord "${bar.chordName}"`);
       }
     }

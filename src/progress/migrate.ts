@@ -1,4 +1,5 @@
 import { newlyEarned, unlockAchievements } from './achievements';
+import { isInstrumentId, type InstrumentId } from '@/music';
 import { addDays, isIsoDate, localDateIso } from './dates';
 import { XP } from './game';
 import { dayStreakFromDays, PRACTICE_KEEP_DAYS } from './practice';
@@ -57,6 +58,16 @@ function readDates(value: unknown, today: string): string[] {
   return [...new Set(Array.isArray(value) ? value.filter(isIsoDate) : [])]
     .filter((day) => day >= cutoff)
     .sort();
+}
+
+/** The tones remembered for the instruments not in use; anything that is not an instrument with a tone id is dropped. */
+function readToneShelf(value: unknown): Partial<Record<InstrumentId, string>> {
+  const shelf: Partial<Record<InstrumentId, string>> = {};
+  if (!isRecord(value)) return shelf;
+  for (const [id, tone] of Object.entries(value)) {
+    if (isInstrumentId(id) && typeof tone === 'string') shelf[id] = tone;
+  }
+  return shelf;
 }
 
 function readQuizBests(value: unknown): Record<QuizDifficulty, QuizBest> {
@@ -122,8 +133,17 @@ function readCommon(raw: Record<string, unknown>): ProgressState {
       }
     : base.streak;
 
+  // Progress that was saved is progress of someone who has used the app: before
+  // there was a choice of instrument that meant the guitar, so nothing here
+  // asks them again. Only a fresh install (no blob, `emptyProgressState`) asks.
   const settings = isRecord(raw.settings)
     ? {
+        instrument: isInstrumentId(raw.settings.instrument)
+          ? raw.settings.instrument
+          : DEFAULT_SETTINGS.instrument,
+        instrumentChosen:
+          typeof raw.settings.instrumentChosen === 'boolean' ? raw.settings.instrumentChosen : true,
+        toneByInstrument: readToneShelf(raw.settings.toneByInstrument),
         preferFlats:
           typeof raw.settings.preferFlats === 'boolean'
             ? raw.settings.preferFlats
@@ -137,7 +157,7 @@ function readCommon(raw: Record<string, unknown>): ProgressState {
             ? raw.settings.toneId
             : DEFAULT_SETTINGS.toneId,
       }
-    : { ...DEFAULT_SETTINGS };
+    : { ...DEFAULT_SETTINGS, instrumentChosen: true };
 
   return { ...base, srs, seenContent, streak, daily, lessonsDone, settings };
 }

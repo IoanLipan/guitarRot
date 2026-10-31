@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { useInstrument } from '@/instrument';
 import type { FretPosition } from '@/music';
-import { createFretboardGeometry, Fretboard, STRING_NAMES, type FretMarker, type LabelMode } from '@/render';
+import { createFretboardGeometry, Fretboard, type FretMarker, type LabelMode } from '@/render';
 
 /**
  * Widest board, in pixels, that is drawn scaled to the screen. A board of
@@ -73,9 +74,11 @@ export function Neck({
   ariaLabel,
 }: NeckProps) {
   const interactive = onFretTap !== undefined;
+  const { stringNames, tuning } = useInstrument();
+  const stringCount = tuning.length;
   const natural = useMemo(
-    () => createFretboardGeometry({ orientation: 'horizontal', fretRange, interactive, stringLabels: true }),
-    [fretRange, interactive],
+    () => createFretboardGeometry({ orientation: 'horizontal', fretRange, interactive, stringLabels: true, stringCount }),
+    [fretRange, interactive, stringCount],
   );
   const scrolls = natural.width > fitLimit;
   // How much of its natural size a scrolling board is drawn at: all of it, unless it was asked to be lower.
@@ -127,7 +130,7 @@ export function Neck({
             // negative margin gives the room back to the board.
             style={{ width: `${(NAME_COLUMN / natural.width) * 100}%`, marginRight: `${-(NAME_COLUMN / natural.width) * 100}%` }}
           >
-            {STRING_NAMES.map((name, stringIndex) => {
+            {stringNames.slice(0, stringCount).map((name, stringIndex) => {
               const point = natural.stringLabelPoint(stringIndex);
               return (
                 <span

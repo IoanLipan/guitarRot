@@ -8,7 +8,9 @@ import {
   type GameEvent,
   type ProgressState,
   type Settings,
+  withInstrument,
 } from '@/progress';
+import type { InstrumentId } from '@/music';
 
 /** An award that had something in it, with the event that earned it. */
 export type AwardNotice = {
@@ -38,6 +40,11 @@ export type ProgressHandle = {
    */
   subscribeAwards: (listener: (notice: AwardNotice) => void) => () => void;
   updateSettings: (patch: Partial<Settings>) => void;
+  /**
+   * Switches the instrument being learned (or picks it, the first time). The voicing in use follows:
+   * the one last used on that instrument, else its default. Everything earned stays.
+   */
+  setInstrument: (instrument: InstrumentId) => void;
   /** Marks a course lesson finished. Safe to call twice for the same lesson. */
   completeLesson: (lessonId: string) => void;
   /**
@@ -130,6 +137,16 @@ export function useProgress(): ProgressHandle {
     [commit],
   );
 
+  const setInstrument = useCallback(
+    (instrument: InstrumentId) => {
+      const current = stateRef.current;
+      const settings = withInstrument(current.settings, instrument);
+      if (settings.instrument === current.settings.instrument && current.settings.instrumentChosen) return;
+      commit({ ...current, settings });
+    },
+    [commit],
+  );
+
   const completeLesson = useCallback(
     (lessonId: string) => {
       record({ type: 'lesson-done', lessonId });
@@ -149,6 +166,7 @@ export function useProgress(): ProgressHandle {
     lastAward,
     subscribeAwards,
     updateSettings,
+    setInstrument,
     completeLesson,
     flush,
   };

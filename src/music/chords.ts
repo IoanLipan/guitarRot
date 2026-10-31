@@ -7,7 +7,8 @@ import {
   type PitchClass,
 } from './notes';
 import { fretToMidi } from './fretboard';
-import { MAX_FRET, STRING_COUNT, type Tuning } from './tuning';
+import type { InstrumentId } from './instruments';
+import { MAX_FRET, type Tuning } from './tuning';
 
 export type ChordQuality =
   | 'maj' | 'min' | 'dom7' | 'maj7' | 'min7'
@@ -42,24 +43,30 @@ export const QUALITY_LABELS: Record<ChordQuality, string> = {
 
 export type ChordShape = {
   id: string;
+  /** The instrument this shape is fingered for. Absent means the guitar. */
+  instrument?: InstrumentId;
   /** Display name, e.g. "Am" or "G7". */
   name: string;
   root: PitchClass;
   quality: ChordQuality;
   /** Leftmost fret of the diagram box. 1 for open shapes. */
   baseFret: number;
-  /** Six entries, index 0 = low E. `null` means muted, `0` means open. */
+  /** One entry per string, in string-index order (guitar: index 0 = low E; ukulele: index 0 = the high G). `null` means muted, `0` means open. */
   frets: (number | null)[];
-  /** Six entries. 1-4 are fingers; `null` means open or muted. */
+  /** One entry per string. 1-4 are fingers; `null` means open or muted. */
   fingers: (number | null)[];
   barre?: { fret: number; fromStringIndex: number; toStringIndex: number };
   difficulty: 1 | 2 | 3;
 };
 
-/** Sounding pitches, in string order from the low E string upward, skipping muted strings. */
+/**
+ * Sounding pitches in string-index order (the order a strum meets the
+ * strings), skipping muted strings. On the guitar that is low to high; on a
+ * re-entrant ukulele it is not: the first pitch is the high G.
+ */
 export function chordVoicing(shape: ChordShape, tuning: Tuning): Midi[] {
   const voicing: Midi[] = [];
-  for (let stringIndex = 0; stringIndex < STRING_COUNT; stringIndex += 1) {
+  for (let stringIndex = 0; stringIndex < tuning.length; stringIndex += 1) {
     const fret = shape.frets[stringIndex];
     if (fret === null || fret === undefined) continue;
     voicing.push(fretToMidi(tuning, stringIndex, fret));
@@ -68,12 +75,13 @@ export function chordVoicing(shape: ChordShape, tuning: Tuning): Midi[] {
 }
 
 /**
- * The sounding string indices, low to high — the strings `chordVoicing`'s
- * pitches are played on, in the same order, so the two zip together.
+ * The sounding string indices in ascending order — the strings
+ * `chordVoicing`'s pitches are played on, in the same order, so the two zip
+ * together.
  */
 export function chordStrings(shape: ChordShape): number[] {
   const strings: number[] = [];
-  for (let stringIndex = 0; stringIndex < STRING_COUNT; stringIndex += 1) {
+  for (let stringIndex = 0; stringIndex < shape.frets.length; stringIndex += 1) {
     const fret = shape.frets[stringIndex];
     if (fret !== null && fret !== undefined) strings.push(stringIndex);
   }
@@ -135,11 +143,12 @@ function nameMatchesRoot(name: string, root: PitchClass): boolean {
 export function validateChordShape(shape: ChordShape, tuning: Tuning): string[] {
   const errors: string[] = [];
 
-  if (shape.frets.length !== STRING_COUNT) {
-    errors.push(`${shape.id}: frets must have 6 entries, has ${shape.frets.length}`);
+  const stringCount = tuning.length;
+  if (shape.frets.length !== stringCount) {
+    errors.push(`${shape.id}: frets must have ${stringCount} entries, has ${shape.frets.length}`);
   }
-  if (shape.fingers.length !== STRING_COUNT) {
-    errors.push(`${shape.id}: fingers must have 6 entries, has ${shape.fingers.length}`);
+  if (shape.fingers.length !== stringCount) {
+    errors.push(`${shape.id}: fingers must have ${stringCount} entries, has ${shape.fingers.length}`);
   }
   if (errors.length > 0) return errors;
 
@@ -157,7 +166,7 @@ export function validateChordShape(shape: ChordShape, tuning: Tuning): string[] 
   // authoring mistake into an uncaught exception instead of a reported one.
   let hasFretRangeError = false;
 
-  for (let stringIndex = 0; stringIndex < STRING_COUNT; stringIndex += 1) {
+  for (let stringIndex = 0; stringIndex < stringCount; stringIndex += 1) {
     const fret = shape.frets[stringIndex];
     const finger = shape.fingers[stringIndex];
 
@@ -217,11 +226,11 @@ export function validateChordShape(shape: ChordShape, tuning: Tuning): string[] 
   if (shape.barre !== undefined) {
     const { fret, fromStringIndex, toStringIndex } = shape.barre;
     const isValidStringIndex = (i: number): boolean =>
-      Number.isInteger(i) && i >= 0 && i <= STRING_COUNT - 1;
+      Number.isInteger(i) && i >= 0 && i <= stringCount - 1;
 
     if (!isValidStringIndex(fromStringIndex) || !isValidStringIndex(toStringIndex)) {
       errors.push(
-        `${shape.id}: barre string indices must be integers in [0, ${STRING_COUNT - 1}]`,
+        `${shape.id}: barre string indices must be integers in [0, ${stringCount - 1}]`,
       );
     } else {
       if (fromStringIndex >= toStringIndex) {

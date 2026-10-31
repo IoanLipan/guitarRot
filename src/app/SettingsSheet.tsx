@@ -3,17 +3,33 @@ import { CheckIcon, ExternalLinkIcon } from '@/ui/icons';
 import { prefersReducedMotion } from '@/ui/motion';
 import { Capacitor } from '@capacitor/core';
 import { getToneProfile, toneProfilesFor, type AudioEngine } from '@/audio';
-
-// Guitar tones only until the tone list follows the chosen instrument.
-const TONE_PROFILES = toneProfilesFor('guitar');
 import { SONGS, getChord } from '@/content';
 import { useFocusTrap } from '@/game/useFocusTrap';
-import { chordStrings, chordVoicing, STANDARD_TUNING } from '@/music';
+import { withInstrument } from '@/progress';
+import {
+  INSTRUMENTS,
+  chordStrings,
+  chordVoicing,
+  getInstrument,
+  instrumentOf,
+  stringCountOf,
+  type Instrument,
+  type InstrumentId,
+} from '@/music';
 import type { ProgressHandle } from './useProgress';
+import { InstrumentIcon } from './InstrumentSwitch';
 import { ANDROID_APP_URL, PRIVACY_URL } from './links';
 
-/** Strummed when you audition a tone — an open E, the first chord everyone learns. */
-const PREVIEW_CHORD_ID = 'E-open';
+/** Strummed when you audition a tone or an instrument: the first chord everyone learns on it, an open E or an open C. */
+const PREVIEW_CHORD_ID: Record<InstrumentId, string> = { guitar: 'E-open', ukulele: 'uke-C' };
+
+const STRING_WORDS: Record<number, string> = { 4: 'Four', 6: 'Six' };
+
+/** "Six strings: E A D G B e". */
+function describeStrings(instrument: Instrument): string {
+  const count = stringCountOf(instrument);
+  return `${STRING_WORDS[count] ?? count} strings: ${instrument.stringNames.join(' ')}`;
+}
 
 /** Credits that song editions' licences ask the app to show (Creative Commons Attribution). */
 const EDITION_CREDITS = SONGS.flatMap((song) => (song.credit === undefined ? [] : [song.credit]));
@@ -32,14 +48,28 @@ export function SettingsSheet({
   onClose,
   engine,
   progress,
+  onInstrumentChange,
 }: {
   open: boolean;
   onClose: () => void;
   engine: AudioEngine;
   progress: ProgressHandle;
+  /**
+   * Switches the instrument. The app shell hands in the one that also closes a song or lesson the
+   * new instrument has no counterpart of; without it the sheet only changes the setting.
+   */
+  onInstrumentChange?: (instrument: InstrumentId) => void;
 }) {
-  const activeToneId = progress.state.settings.toneId;
+  const activeInstrument = getInstrument(progress.state.settings.instrument);
+  // Only the tones of the instrument being played are offered: a ukulele voicing is not a guitar tone.
+  const tones = toneProfilesFor(activeInstrument.id);
+  // The tone in use is the one its id names, or the one standing in for it (the ukulele's own, until it has one).
+  const storedToneId = progress.state.settings.toneId;
+  const activeToneId = tones.some((profile) => profile.id === storedToneId)
+    ? storedToneId
+    : getToneProfile(storedToneId).id;
   const titleId = useId();
+  const instrumentHeadId = useId();
   const toneHeadId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const doneRef = useRef<HTMLButtonElement>(null);
@@ -96,31 +126,45 @@ export function SettingsSheet({
     engine.setTone(profile);
 
     // Audition it immediately — a tone you can't hear isn't a choice.
-    const chord = getChord(PREVIEW_CHORD_ID);
+    strumPreview(activeInstrument.id);
+  }
+
+  function strumPreview(id: InstrumentId) {
+    const chord = getChord(PREVIEW_CHORD_ID[id]);
     if (chord !== undefined) {
-      engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
+      engine.strum(chordVoicing(chord, instrumentOf(chord).tuning), { strings: chordStrings(chord) });
     }
   }
 
-  /** Arrow keys inside the group: the next tone is chosen, and heard, and the cursor moves with it. */
-  function handleToneKey(event: KeyboardEvent<HTMLDivElement>) {
-    const step = ARROW_STEP[event.key];
-    if (step === undefined) return;
-    const radios = [...event.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]')];
-    const from = radios.indexOf(event.target as HTMLElement);
-    if (from === -1) return;
-    event.preventDefault();
-    const to = (from + step + radios.length) % radios.length;
-    const profile = TONE_PROFILES[to];
-    if (profile === undefined) return;
-    handlePick(profile.id);
-    radios[to]?.focus();
+  /** Picks an instrument and plays its first chord, in the voicing it will now use. */
+  function handleInstrument(id: InstrumentId) {
+    if (id === activeInstrument.id) return;
+    const next = withInstrument(progress.state.settings, id);
+    engine.stopAll();
+    (onInstrumentChange ?? progress.setInstrument)(id);
+    engine.setTone(getToneProfile(next.toneId));
+    strumPreview(id);
+  }
+
+  /** Arrow keys inside a radio group: the next one is chosen, and heard, and the cursor moves with it. */
+  function arrowKeys(ids: readonly string[], pick: (id: string) => void) {
+    return (event: KeyboardEvent<HTMLDivElement>) => {
+      const step = ARROW_STEP[event.key];
+      if (step === undefined) return;
+      const radios = [...event.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]')];
+      const from = radios.indexOf(event.target as HTMLElement);
+      if (from === -1) return;
+      event.preventDefault();
+      const to = (from + step + radios.length) % radios.length;
+      const id = ids[to];
+      if (id === undefined) return;
+      pick(id);
+      radios[to]?.focus();
+    };
   }
 
   // Only one radio is a Tab stop (the chosen one, or the first if none is): Tab leaves the group, arrows move in it.
-  const tabStopId = TONE_PROFILES.some((profile) => profile.id === activeToneId)
-    ? activeToneId
-    : TONE_PROFILES[0]?.id;
+  const tabStopId = tones.some((profile) => profile.id === activeToneId) ? activeToneId : tones[0]?.id;
 
   if (!open && (!mounted || prefersReducedMotion())) return null;
 
@@ -162,8 +206,61 @@ export function SettingsSheet({
         </div>
 
         <section className="px-6 pt-2">
+          <h3 id={instrumentHeadId} className="label">
+            Instrument
+          </h3>
+          <p className="mt-1 text-meta text-ink-dim">
+            The feed, songs, lessons and quizzes follow it. Your progress stays.
+          </p>
+
+          <div
+            role="radiogroup"
+            aria-labelledby={instrumentHeadId}
+            onKeyDown={arrowKeys(
+              INSTRUMENTS.map((instrument) => instrument.id),
+              (id) => handleInstrument(id as InstrumentId),
+            )}
+            className="mt-4 flex flex-col gap-3"
+          >
+            {INSTRUMENTS.map((instrument) => {
+              const isActive = instrument.id === activeInstrument.id;
+              return (
+                <button
+                  key={instrument.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isActive}
+                  tabIndex={isActive ? 0 : -1}
+                  data-testid={`instrument-${instrument.id}`}
+                  onClick={() => handleInstrument(instrument.id)}
+                  className={`press press-soft flex items-center gap-4 rounded-2xl px-4 py-4 text-left ${
+                    isActive ? 'bg-surface-3 ring-2 ring-accent' : 'bg-surface-2 ring-2 ring-transparent'
+                  }`}
+                >
+                  <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center text-ink">
+                    <InstrumentIcon id={instrument.id} size={26} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-body font-extrabold">{instrument.name}</span>
+                    <span className="block text-meta leading-snug text-ink-dim">{describeStrings(instrument)}</span>
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                      isActive ? 'bg-accent text-ground' : 'ring-2 ring-ink-faint/60 ring-inset'
+                    }`}
+                  >
+                    {isActive && <CheckIcon size={16} strokeWidth={3} />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="px-6 pt-8">
           <h3 id={toneHeadId} className="label">
-            Guitar tone
+            {activeInstrument.name} tone
           </h3>
           <p className="mt-1 text-meta text-ink-dim">
             Changes how every riff, chord, and quiz note sounds. Tap to hear it.
@@ -172,10 +269,13 @@ export function SettingsSheet({
           <div
             role="radiogroup"
             aria-labelledby={toneHeadId}
-            onKeyDown={handleToneKey}
+            onKeyDown={arrowKeys(
+              tones.map((profile) => profile.id),
+              handlePick,
+            )}
             className="mt-4 flex flex-col gap-3"
           >
-            {TONE_PROFILES.map((profile) => {
+            {tones.map((profile) => {
               const isActive = profile.id === activeToneId;
               return (
                 <button
@@ -214,7 +314,7 @@ export function SettingsSheet({
           <h3 className="label">Sound</h3>
           <p className="mt-2 text-meta text-ink-dim">
             Engine: <span className="font-bold text-ink">{engine.backend}</span>. Sampled plays
-            recorded guitar notes; synth is the fallback when samples are unavailable. Both play
+            recorded {activeInstrument.name.toLowerCase()} notes; synth is the fallback when samples are unavailable. Both play
             exact pitches, so quizzes are always in tune.
           </p>
         </section>

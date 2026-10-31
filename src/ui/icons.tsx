@@ -208,3 +208,30 @@ export function SearchIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/**
+ * The two instruments the app teaches, as a button would carry them: an
+ * upright body with its neck and a nut. The guitar is tall and narrow in the
+ * waist; the ukulele has the shorter neck and the rounder, stubbier body, so
+ * the two read apart even at 20px. (The big silhouettes of the first-run
+ * choice are in app/InstrumentArt.tsx.)
+ */
+export function GuitarIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 9.5V2.5M10.4 2.5h3.2" />
+      <path d="M12 9.5c2.3 0 3.4 1.2 3.4 2.9 0 1.6-1.6 1.8-1.6 3 0 .9 2.2 1.4 2.2 3.4 0 2.1-1.9 3.2-4 3.2s-4-1.1-4-3.2c0-2 2.2-2.5 2.2-3.4 0-1.2-1.6-1.4-1.6-3 0-1.7 1.1-2.9 3.4-2.9Z" />
+    </Icon>
+  );
+}
+
+export function UkuleleIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 11V5.5" />
+      <rect x="9.6" y="2" width="4.8" height="3.5" rx="1.6" />
+      <path d="M12 11c2.9 0 4.6 1.1 4.6 2.7 0 1.4-1.8 1.6-1.8 2.6 0 .8 3.4 1.3 3.4 3.2 0 1.8-2.6 2.5-6.2 2.5s-6.2-.7-6.2-2.5c0-1.9 3.4-2.4 3.4-3.2 0-1-1.8-1.2-1.8-2.6C7.4 12.1 9.1 11 12 11Z" />
+      <circle cx="12" cy="17.3" r=".6" />
+    </Icon>
+  );
+}

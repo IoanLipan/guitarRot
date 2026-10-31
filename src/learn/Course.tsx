@@ -2,6 +2,7 @@ import { tapHaptic } from '@/app/haptics';
 import { fillTransform, stagger } from '@/ui/motion';
 import { ArrowRightIcon, CheckIcon } from '@/ui/icons';
 import type { Lesson } from '@/content';
+import { useInstrument } from '@/instrument';
 import { RichText } from './steps/RichText';
 
 export type CourseProps = {
@@ -34,6 +35,7 @@ function groupByUnit(lessons: readonly Lesson[]): { unit: string; lessons: { les
  * old lesson whenever you like.
  */
 export function Course({ lessons, done, onOpen }: CourseProps) {
+  const instrument = useInstrument();
   const doneIds = new Set(done);
   const doneCount = lessons.filter((lesson) => doneIds.has(lesson.id)).length;
   const next = lessons.find((lesson) => !doneIds.has(lesson.id));
@@ -43,7 +45,8 @@ export function Course({ lessons, done, onOpen }: CourseProps) {
   if (lessons.length === 0) {
     return (
       <p className="px-5 text-center text-meta leading-relaxed text-ink-dim" data-testid="course-empty">
-        The lessons are on their way. The Tuner and Explore tabs work in the meantime.
+        {instrument.id === 'guitar' ? 'The' : `The ${instrument.name.toLowerCase()}`} lessons are on their way. The tuner
+        and the chord explorer work in the meantime.
       </p>
     );
   }

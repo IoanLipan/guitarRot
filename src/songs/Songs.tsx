@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { AudioEngine } from '@/audio';
-import { SONGS, getSong } from '@/content';
+import { getSong, songPlayableOn, songsFor } from '@/content';
+import { useInstrument } from '@/instrument';
 import { EMPTY_FILTER, searchSongs, type SongFilter } from './searchSongs';
 import { SongList } from './SongList';
 import { SongPlayer } from './SongPlayer';
@@ -23,10 +24,14 @@ export function Songs({
   /** Told when a song has been heard long enough to count as played; see `SongPlayer`. */
   onSongPlayed?: (songId: string) => void;
 }) {
+  const { id: instrument } = useInstrument();
   const [filter, setFilter] = useState<SongFilter>(EMPTY_FILTER);
 
-  const results = useMemo(() => searchSongs(SONGS, filter), [filter]);
-  const selected = openSongId === null ? undefined : getSong(openSongId);
+  // Only what this instrument can play is listed, searched and opened.
+  const playable = useMemo(() => songsFor(instrument), [instrument]);
+  const results = useMemo(() => searchSongs(playable, filter), [playable, filter]);
+  const found = openSongId === null ? undefined : getSong(openSongId);
+  const selected = found !== undefined && songPlayableOn(found, instrument) ? found : undefined;
 
   if (selected !== undefined) {
     return (

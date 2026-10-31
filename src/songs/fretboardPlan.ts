@@ -1,11 +1,12 @@
 import { beatsPerBar, type Riff, type Song, type TabEvent } from '@/content';
 import {
   MAX_FRET,
-  STANDARD_TUNING,
   fretToMidi,
+  instrumentOf,
   noteLabel,
   stringNumber,
   type FretPosition,
+  type Instrument,
 } from '@/music';
 
 /**
@@ -44,18 +45,20 @@ export function windowFrets([from, to]: FretWindow): number {
  * The frets to draw for some notes. The nut is shown when the lowest fretted
  * note is at fret 4 or below; otherwise the board starts one fret under it, so
  * the hand has a fret of context on the near side. It is at least five frets
- * wide, and wider when the notes reach further. Open strings need no fret.
+ * wide, and wider when the notes reach further. Open strings need no fret. A
+ * board never runs past the last fret of its instrument (`maxFret`, the
+ * guitar's 24 unless told otherwise).
  */
-export function fretWindow(positions: readonly FretPosition[]): FretWindow {
+export function fretWindow(positions: readonly FretPosition[], maxFret: number = MAX_FRET): FretWindow {
   const fretted = positions.map((position) => position.fret).filter((fret) => fret > 0);
   if (fretted.length === 0) return [0, MIN_WINDOW_FRETS];
 
   const lowest = Math.min(...fretted);
   const highest = Math.max(...fretted);
   // A board never starts so high that five frets would run off the neck.
-  const start = lowest <= NUT_FRET_LIMIT ? 0 : Math.min(lowest - 1, MAX_FRET - MIN_WINDOW_FRETS + 1);
+  const start = lowest <= NUT_FRET_LIMIT ? 0 : Math.min(lowest - 1, maxFret - MIN_WINDOW_FRETS + 1);
   const end = Math.max(highest, Math.max(1, start) + MIN_WINDOW_FRETS - 1);
-  return [start, Math.min(end, MAX_FRET)];
+  return [start, Math.min(end, maxFret)];
 }
 
 // ---------------------------------------------------------------------------
@@ -138,6 +141,7 @@ function groupNotes(events: readonly TabEvent[]): NoteGroup[] {
  */
 export function planFretboard(riff: Riff): FretboardPlan {
   const barLength = beatsPerBar(riff.timeSignature);
+  const { maxFret } = instrumentOf(riff);
   const events = [...riff.events].sort((a, b) => a.beat - b.beat);
 
   const bars: BarPlan[] = Array.from({ length: riff.bars }, (_, bar) => {
@@ -146,10 +150,10 @@ export function planFretboard(riff: Riff): FretboardPlan {
     const inBar = events.filter((event) => event.beat >= startBeat - EPSILON && event.beat < endBeat - EPSILON);
     const groups = groupNotes(inBar);
     const positions = distinct(groups.flatMap((group) => group.positions));
-    return { bar, startBeat, endBeat, groups, positions, fretRange: fretWindow(positions) };
+    return { bar, startBeat, endBeat, groups, positions, fretRange: fretWindow(positions, maxFret) };
   });
 
-  const whole = fretWindow(distinct(bars.flatMap((bar) => bar.positions)));
+  const whole = fretWindow(distinct(bars.flatMap((bar) => bar.positions)), maxFret);
   if (windowFrets(whole) <= MAX_WINDOW_FRETS) {
     for (const bar of bars) bar.fretRange = whole;
     return { barLength, bars };
@@ -227,22 +231,22 @@ export function cursorKey(cursor: FretboardCursor): string {
 const ORDINALS = ['', '1st', '2nd', '3rd', '4th', '5th', '6th'];
 
 /** "4th string, open" or "2nd string, fret 1": where a note is played, in plain words. */
-function describeWhere({ stringIndex, fret }: FretPosition): string {
-  return `${ORDINALS[stringNumber(stringIndex)] ?? ''} string, ${fret === 0 ? 'open' : `fret ${fret}`}`;
+function describeWhere({ stringIndex, fret }: FretPosition, instrument: Instrument): string {
+  return `${ORDINALS[stringNumber(stringIndex, instrument)] ?? ''} string, ${fret === 0 ? 'open' : `fret ${fret}`}`;
 }
 
-function labelOf(position: FretPosition): string {
-  return noteLabel(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret));
+function labelOf(position: FretPosition, instrument: Instrument): string {
+  return noteLabel(fretToMidi(instrument.tuning, position.stringIndex, position.fret));
 }
 
 /**
  * What the sounding notes are called, and for a single note where it lives:
- * "D (Re) · 4th string, open". A chord just lists its notes, low to high; the
+ * "D (Re) · 4th string, open". A chord just lists its notes in string order; the
  * board shows where they are.
  */
-export function describeNotes(positions: readonly FretPosition[]): string {
+export function describeNotes(positions: readonly FretPosition[], instrument: Instrument): string {
   const [only, ...rest] = positions;
   if (only === undefined) return '';
-  if (rest.length === 0) return `${labelOf(only)} · ${describeWhere(only)}`;
-  return positions.map(labelOf).join(' + ');
+  if (rest.length === 0) return `${labelOf(only, instrument)} · ${describeWhere(only, instrument)}`;
+  return positions.map((position) => labelOf(position, instrument)).join(' + ');
 }

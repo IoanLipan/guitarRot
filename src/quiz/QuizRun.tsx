@@ -12,6 +12,7 @@ import {
 import { errorHaptic, successHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { ProgressHandle } from '@/app/useProgress';
+import { useInstrument } from '@/instrument';
 import { withSolfege } from '@/music';
 import { FlashWash } from '@/ui/FlashWash';
 import { ArrowRightIcon } from '@/ui/icons';
@@ -59,11 +60,12 @@ export function QuizRun({
   onChangeDifficulty: () => void;
   onPhaseChange?: (phase: RunPhase) => void;
 }) {
+  const { id: instrument } = useInstrument();
   const seen = useRef(new Set<string>());
   const dealQuestion = (): QuizQuestion => {
-    let question = generateQuestion(difficulty);
+    let question = generateQuestion(difficulty, { instrument });
     for (let tries = 0; tries < FRESH_TRIES && seen.current.has(question.id); tries += 1) {
-      question = generateQuestion(difficulty);
+      question = generateQuestion(difficulty, { instrument });
     }
     seen.current.add(question.id);
     return question;

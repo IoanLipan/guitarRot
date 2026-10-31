@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Riff } from '@/content';
+import { instrumentOf, stringCountOf } from '@/music';
 import { TabStaff, TabStringNames } from './TabStaff';
 import { createTabGeometry, stringSpacingForHeight } from './tabGeometry';
 
@@ -21,7 +22,8 @@ export type TabViewProps = {
 
 /**
  * A riff's tab as a panel: the staff, which scrolls sideways to follow the
- * playhead, and beside it the string names E A D G B e, which do not. The
+ * playhead, and beside it the string names (E A D G B e on the guitar, G C E A
+ * on the ukulele), which do not. Its lines are the riff's instrument's. The
  * staff is sized to the room it has instead of being a fixed strip, so on a tall
  * phone it fills the card and on a short one it shrinks to fit.
  *
@@ -43,21 +45,24 @@ export function TabView({ riff, playheadRef, scrollerRef, stringSpacing, classNa
     return () => observer.disconnect();
   }, [stringSpacing]);
 
-  const spacing = stringSpacing ?? (room === null ? undefined : stringSpacingForHeight(room));
+  const instrument = instrumentOf(riff);
+  const stringCount = stringCountOf(instrument);
+  const spacing = stringSpacing ?? (room === null ? undefined : stringSpacingForHeight(room, stringCount));
   const geometry = useMemo(
     () =>
       createTabGeometry({
         bars: riff.bars,
         timeSignature: riff.timeSignature,
+        stringCount,
         ...(spacing === undefined ? {} : { stringSpacing: spacing }),
       }),
-    [riff.bars, riff.timeSignature, spacing],
+    [riff.bars, riff.timeSignature, stringCount, spacing],
   );
 
   return (
     <div ref={boxRef} className={`flex h-full min-h-0 w-full items-center ${className}`}>
       <div className="flex max-h-full min-w-0 flex-1 overflow-hidden rounded-2xl bg-surface">
-        <TabStringNames geometry={geometry} className="shrink-0" />
+        <TabStringNames geometry={geometry} names={instrument.stringNames} className="shrink-0" />
         <div
           ref={scrollerRef}
           data-testid="tab-scroller"

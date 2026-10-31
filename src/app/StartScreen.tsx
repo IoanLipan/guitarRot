@@ -1,4 +1,7 @@
+import { INSTRUMENTS, stringCountOf, type InstrumentId } from '@/music';
 import { stagger } from '@/ui/motion';
+import { tapHaptic } from './haptics';
+import { InstrumentArt } from './InstrumentArt';
 import { LogoMark, Wordmark } from './Logo';
 import type { StartPlan } from './startPlan';
 import { startLabel } from './startPlan';
@@ -18,6 +21,9 @@ export function StartScreen({
   chosen,
   sharedLink,
   onChoose,
+  needsInstrument = false,
+  onPickInstrument,
+  feedLabel: feedIdle,
 }: {
   plan: StartPlan;
   loading: boolean;
@@ -27,9 +33,18 @@ export function StartScreen({
   /** The app was opened from a shared link: the second button opens that instead of the plain Feed. */
   sharedLink: boolean;
   onChoose: (choice: StartChoice) => void;
+  /** A first run: nobody has said what they play yet, so that is asked before anything else. */
+  needsInstrument?: boolean;
+  onPickInstrument?: (instrument: InstrumentId) => void;
+  /** What the second button says when idle, for an instrument whose feed is not riffs. Defaults to "Just scroll riffs". */
+  feedLabel?: string;
 }) {
+  if (needsInstrument && onPickInstrument !== undefined) {
+    return <InstrumentChoice onPick={onPickInstrument} />;
+  }
+
   const learnLabel = labelFor('learn', chosen, loading, failed, startLabel(plan));
-  const feedLabel = labelFor('feed', chosen, loading, failed, sharedLink ? 'Open the shared link' : 'Just scroll riffs');
+  const feedLabel = labelFor('feed', chosen, loading, failed, sharedLink ? 'Open the shared link' : (feedIdle ?? 'Just scroll riffs'));
   // The tapped button is the one that is working: it keeps full brightness and shows the wheel.
   const learnBusy = loading && chosen === 'learn';
   const feedBusy = loading && chosen === 'feed';
@@ -87,6 +102,52 @@ export function StartScreen({
           The sounds could not be loaded. Check your connection and try again.
         </p>
       )}
+    </main>
+  );
+}
+
+const STRING_WORDS: Record<number, string> = { 4: 'Four', 6: 'Six' };
+
+/**
+ * The first thing a new player is asked: guitar or ukulele. Two big cards, each
+ * the instrument drawn standing up, so it can be answered without reading.
+ * Picking one is the whole step; the usual start screen follows.
+ */
+function InstrumentChoice({ onPick }: { onPick: (instrument: InstrumentId) => void }) {
+  return (
+    <main className="flex h-dvh flex-col items-center justify-center gap-6 bg-ground p-8 text-center tight:gap-4 tight:p-5">
+      <LogoMark className="logo-drop h-24 w-auto tight:h-16" />
+      <h1 className="rise-in" style={stagger(2, 70)}>
+        <Wordmark className="text-5xl tight:text-4xl" />
+      </h1>
+
+      <section aria-labelledby="instrument-question" className="flex w-full max-w-xs flex-col items-center gap-4 tight:gap-3">
+        <h2 id="instrument-question" className="rise-in text-title font-black" style={stagger(3, 70)}>
+          What do you play?
+        </h2>
+        <div className="grid w-full grid-cols-2 gap-3">
+          {INSTRUMENTS.map((instrument, index) => {
+            const strings = stringCountOf(instrument);
+            return (
+              <button
+                key={instrument.id}
+                type="button"
+                data-testid={`pick-${instrument.id}`}
+                onClick={() => {
+                  tapHaptic();
+                  onPick(instrument.id);
+                }}
+                style={stagger(4 + index, 70)}
+                className="rise-in press press-soft flex flex-col items-center gap-2 rounded-3xl bg-surface-2 px-3 pt-4 pb-3.5 tight:gap-1.5 tight:pt-3 tight:pb-3"
+              >
+                <InstrumentArt id={instrument.id} className="h-44 w-auto tight:h-36" />
+                <span className="text-lesson font-extrabold">{instrument.name}</span>
+                <span className="label -mt-1.5">{STRING_WORDS[strings] ?? strings} strings</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
     </main>
   );
 }

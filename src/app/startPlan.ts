@@ -9,7 +9,9 @@ export type StartPlan =
   /** Some done: pick up at the first lesson not yet done. */
   | { kind: 'continue'; lesson: Lesson }
   /** Every lesson done: open the course, not a lesson. */
-  | { kind: 'finished' };
+  | { kind: 'finished' }
+  /** The instrument has no course yet: there is no lesson to start, so the tuner and the explorer are what Learn offers. */
+  | { kind: 'empty' };
 
 export function planStart(
   loaded: boolean,
@@ -17,6 +19,7 @@ export function planStart(
   lessons: readonly Lesson[] = COURSE,
 ): StartPlan {
   if (!loaded) return { kind: 'loading' };
+  if (lessons.length === 0) return { kind: 'empty' };
   const done = new Set(lessonsDone);
   const next = lessons.find((lesson) => !done.has(lesson.id));
   if (next === undefined) return { kind: 'finished' };
@@ -36,5 +39,7 @@ export function startLabel(plan: StartPlan): string {
       return `Continue: ${plan.lesson.title}`;
     case 'finished':
       return 'Open the course';
+    case 'empty':
+      return 'Tune up and explore';
   }
 }

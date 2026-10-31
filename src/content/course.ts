@@ -1,4 +1,6 @@
+import { instrumentIdOf, type InstrumentId } from '@/music';
 import type { Lesson } from './lessons';
+import { UKULELE_COURSE } from './ukuleleCourse';
 import { UNIT_1 } from './course/unit1';
 import { UNIT_2 } from './course/unit2';
 import { UNIT_3 } from './course/unit3';
@@ -25,3 +27,11 @@ export const COURSE: readonly Lesson[] = [
   ...UNIT_5,
   ...UNIT_6,
 ];
+
+/** Every lesson of every instrument's course. Ids are unique across all of it. */
+export const ALL_LESSONS: readonly Lesson[] = [...COURSE, ...UKULELE_COURSE];
+
+/** One instrument's course, in teaching order. */
+export function courseFor(instrument: InstrumentId): readonly Lesson[] {
+  return ALL_LESSONS.filter((lesson) => instrumentIdOf(lesson) === instrument);
+}

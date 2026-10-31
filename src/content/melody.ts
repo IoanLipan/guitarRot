@@ -1,9 +1,12 @@
 import {
-  STANDARD_TUNING,
-  STRING_COUNT,
+  GUITAR,
   findPositions,
+  getInstrument,
   parseNoteName,
+  stringCountOf,
   type FretPosition,
+  type Instrument,
+  type InstrumentId,
 } from '@/music';
 import { beatsPerBar, type Riff, type TabEvent, type TimeSignature } from './types';
 
@@ -12,7 +15,9 @@ import { beatsPerBar, type Riff, type TabEvent, type TimeSignature } from './typ
  * twelfth fret). It is where a beginner's hand lives, and keeping the search
  * window small is what makes "the lowest fret" mean "the obvious fret".
  */
-const FIRST_POSITION: readonly [number, number] = [0, 12];
+function firstPosition(instrument: Instrument): readonly [number, number] {
+  return [0, instrument.boardFrets];
+}
 
 /**
  * `E4:1`, `F#3:0.5`, `Bb2:2`, or `r:1` for a rest. Uppercase letter, optional
@@ -39,17 +44,28 @@ function parseStep(token: string): Step {
   return { label: note ?? 'r', midi: note === undefined ? null : parseNoteName(note), duration };
 }
 
-/** The lowest-fret place to play `step`, or its fret on `onString` when pinned. */
-function chooseFret(label: string, midi: number, onString: number | undefined): FretPosition {
+/**
+ * The lowest-fret place to play `step`, or its fret on `onString` when pinned.
+ * Ties (the same fret on two strings) go to the lower string index, which on a
+ * re-entrant ukulele is not the lower string by pitch; the fret is what a
+ * beginner's hand cares about, and the pitch is the same either way.
+ */
+function chooseFret(
+  instrument: Instrument,
+  label: string,
+  midi: number,
+  onString: number | undefined,
+): FretPosition {
+  const window = firstPosition(instrument);
   let lowest: FretPosition | undefined;
-  for (const position of findPositions(STANDARD_TUNING, midi, FIRST_POSITION)) {
+  for (const position of findPositions(instrument.tuning, midi, window)) {
     if (onString !== undefined && position.stringIndex !== onString) continue;
     if (lowest === undefined || position.fret < lowest.fret) lowest = position;
   }
   if (lowest === undefined) {
     const where = onString === undefined ? '' : ` on string index ${onString}`;
     throw new Error(
-      `${label} cannot be played${where} within frets ${FIRST_POSITION[0]}-${FIRST_POSITION[1]}`,
+      `${label} cannot be played${where} within frets ${window[0]}-${window[1]} of the ${instrument.name.toLowerCase()}`,
     );
   }
   return lowest;
@@ -58,12 +74,14 @@ function chooseFret(label: string, midi: number, onString: number | undefined): 
 function parseMelody(
   notes: string,
   onString: number | undefined,
+  instrument: Instrument,
 ): { events: TabEvent[]; totalBeats: number } {
+  const stringCount = stringCountOf(instrument);
   if (
     onString !== undefined &&
-    (!Number.isInteger(onString) || onString < 0 || onString >= STRING_COUNT)
+    (!Number.isInteger(onString) || onString < 0 || onString >= stringCount)
   ) {
-    throw new Error(`onString must be a string index from 0 to ${STRING_COUNT - 1}, got ${onString}`);
+    throw new Error(`onString must be a string index from 0 to ${stringCount - 1}, got ${onString}`);
   }
 
   const events: TabEvent[] = [];
@@ -71,7 +89,7 @@ function parseMelody(
   for (const token of notes.split(/[\s|]+/).filter((part) => part !== '')) {
     const step = parseStep(token);
     if (step.midi !== null) {
-      const { stringIndex, fret } = chooseFret(step.label, step.midi, onString);
+      const { stringIndex, fret } = chooseFret(instrument, step.label, step.midi, onString);
       events.push({ stringIndex, fret, beat, duration: step.duration });
     }
     beat += step.duration;
@@ -96,8 +114,11 @@ function parseMelody(
  * melody should stay on one string — which is how the landmark drills teach
  * a single string's notes.
  */
-export function melodyEvents(notes: string, opts: { onString?: number } = {}): TabEvent[] {
-  return parseMelody(notes, opts.onString).events;
+export function melodyEvents(
+  notes: string,
+  opts: { onString?: number; instrument?: InstrumentId } = {},
+): TabEvent[] {
+  return parseMelody(notes, opts.onString, getInstrument(opts.instrument ?? GUITAR.id)).events;
 }
 
 /** Everything about a riff except what `melodyRiff` works out from the notes. */
@@ -114,7 +135,7 @@ export type MelodyRiffSpec = Omit<Riff, 'events' | 'bars' | 'timeSignature'> & {
  */
 export function melodyRiff(spec: MelodyRiffSpec): Riff {
   const { notes, onString, timeSignature = [4, 4], ...rest } = spec;
-  const { events, totalBeats } = parseMelody(notes, onString);
+  const { events, totalBeats } = parseMelody(notes, onString, getInstrument(spec.instrument ?? GUITAR.id));
   return {
     ...rest,
     timeSignature,

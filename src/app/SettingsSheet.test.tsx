@@ -278,7 +278,8 @@ describe('SettingsSheet tone choice', () => {
   it('is one Tab stop: the chosen tone', () => {
     renderSheet();
 
-    const stops = screen.getAllByRole('radio').filter((radio) => radio.tabIndex === 0);
+    const tones = within(screen.getByRole('radiogroup', { name: 'Guitar tone' }));
+    const stops = tones.getAllByRole('radio').filter((radio) => radio.tabIndex === 0);
     expect(stops).toEqual([screen.getByTestId('tone-acoustic')]);
   });
 

@@ -1,4 +1,8 @@
-import { STRING_COUNT } from '@/music';
+/**
+ * How many strings the synth has a voice for: the guitar's six. A ukulele's
+ * four use the first four, so a string index anywhere under this is valid.
+ */
+export const VOICE_COUNT = 6;
 
 /**
  * Per-string voicing.
@@ -52,9 +56,14 @@ function clamp(value: number, low: number, high: number): number {
   return Math.min(high, Math.max(low, value));
 }
 
-/** 0 for the low E (thickest), 1 for the high e (thinnest). */
+/**
+ * 0 for the thickest string, 1 for the thinnest, by string index. This is the
+ * guitar's voicing (index 0 is the low E): the synth is a fallback for when
+ * recordings cannot load, and a ukulele on it takes its four strings from the
+ * thick end of the same spread.
+ */
 export function thinness(stringIndex: number): number {
-  return clamp(stringIndex, 0, STRING_COUNT - 1) / (STRING_COUNT - 1);
+  return clamp(stringIndex, 0, VOICE_COUNT - 1) / (VOICE_COUNT - 1);
 }
 
 export function stringParams(base: StringParams, stringIndex: number): StringParams {

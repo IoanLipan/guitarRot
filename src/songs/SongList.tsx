@@ -44,7 +44,8 @@ export function SongList({
     <div className="flex h-full min-h-0 flex-col bg-ground">
       {/* The same title every tab has: display face, 48px, the same padding above (see Learn, Quiz). */}
       <div className="shrink-0 px-5 pt-8 pb-3 tight:pt-5">
-        <h1 className="mb-4 pr-12 font-display text-display font-black tight:mb-3">Songs</h1>
+        {/* The gear and the instrument switch float over this corner (see AppShell); the title is short enough to stay clear of both. */}
+        <h1 className="mb-4 pr-28 font-display text-display font-black tight:mb-3">Songs</h1>
 
         <div className="relative">
           <span

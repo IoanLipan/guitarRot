@@ -1,6 +1,6 @@
 import * as Tone from 'tone';
-import { STRING_COUNT, type Midi } from '@/music';
-import { pickParams, stringParams } from './stringVoicing';
+import type { Midi } from '@/music';
+import { VOICE_COUNT, pickParams, stringParams } from './stringVoicing';
 import { DEFAULT_TONE_ID, getToneProfile, type ToneProfile } from './tones';
 import type { GuitarVoice, PlayNoteOptions } from './types';
 
@@ -30,7 +30,7 @@ export class SynthGuitar implements GuitarVoice {
   private nextVoice = 0;
 
   constructor(profile: ToneProfile = getToneProfile(DEFAULT_TONE_ID)) {
-    this.volumes = Array.from({ length: STRING_COUNT }, () => new Tone.Volume(0));
+    this.volumes = Array.from({ length: VOICE_COUNT }, () => new Tone.Volume(0));
 
     this.voices = this.volumes.map((volume, stringIndex) =>
       new Tone.PluckSynth(stringParams(profile.string, stringIndex)).connect(volume),
@@ -93,9 +93,9 @@ export class SynthGuitar implements GuitarVoice {
 
   playNote(midi: Midi, opts: PlayNoteOptions = {}): void {
     const index =
-      opts.stringIndex !== undefined && opts.stringIndex >= 0 && opts.stringIndex < STRING_COUNT
+      opts.stringIndex !== undefined && opts.stringIndex >= 0 && opts.stringIndex < VOICE_COUNT
         ? opts.stringIndex
-        : this.nextVoice++ % STRING_COUNT;
+        : this.nextVoice++ % VOICE_COUNT;
 
     const voice = this.voices[index];
     const volume = this.volumes[index];

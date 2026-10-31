@@ -1,4 +1,4 @@
-import { MAX_FRET, STRING_COUNT } from '@/music';
+import { instrumentOf, stringCountOf, type InstrumentId } from '@/music';
 
 export type Technique = 'hammer' | 'pull' | 'slide' | 'bend' | 'palmMute';
 
@@ -16,6 +16,8 @@ export type TabEvent = {
 
 export type Riff = {
   id: string;
+  /** The instrument this tab is written for: its string indices, frets and tuning. Absent means the guitar. */
+  instrument?: InstrumentId;
   title: string;
   style: string;
   level: 1 | 2 | 3 | 4 | 5;
@@ -83,17 +85,20 @@ export function validateRiff(riff: Riff): string[] {
     return errors;
   }
 
+  const instrument = instrumentOf(riff);
+  const stringCount = stringCountOf(instrument);
+
   const total = riffTotalBeats(riff);
   const seen = new Set<string>();
 
   for (const event of riff.events) {
     const where = `${riff.id}: note on string ${event.stringIndex} at beat ${event.beat}`;
 
-    if (!Number.isInteger(event.stringIndex) || event.stringIndex < 0 || event.stringIndex >= STRING_COUNT) {
+    if (!Number.isInteger(event.stringIndex) || event.stringIndex < 0 || event.stringIndex >= stringCount) {
       errors.push(`${where} has an out-of-range string index`);
       continue;
     }
-    if (!Number.isInteger(event.fret) || event.fret < 0 || event.fret > MAX_FRET) {
+    if (!Number.isInteger(event.fret) || event.fret < 0 || event.fret > instrument.maxFret) {
       errors.push(`${where} has an out-of-range fret (${event.fret})`);
     }
 

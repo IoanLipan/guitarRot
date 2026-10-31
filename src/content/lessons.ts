@@ -1,5 +1,13 @@
-import { MAX_FRET, STRING_COUNT, parseNoteName, type FretPosition } from '@/music';
-import { CHORDS } from './chords';
+import {
+  instrumentIdOf,
+  instrumentOf,
+  parseNoteName,
+  stringCountOf,
+  type FretPosition,
+  type Instrument,
+  type InstrumentId,
+} from '@/music';
+import { ALL_CHORDS } from './chords';
 import { findRiff } from './drills';
 import { isIllustrationName, type IllustrationName } from './illustrations';
 import { plainText, richProblems } from './rich';
@@ -89,8 +97,13 @@ export type LessonStep =
 export type LessonStepKind = LessonStep['kind'];
 
 export type Lesson = {
-  /** Stable: progress is stored against it. Never rename a shipped id. */
+  /**
+   * Stable: progress is stored against it. Never rename a shipped id. Ids are
+   * unique across every course: a ukulele lesson's id starts with `uke-`.
+   */
   id: string;
+  /** The instrument this lesson teaches. Absent means the guitar. */
+  instrument?: InstrumentId;
   /** Unit heading the course list groups lessons under. */
   unit: string;
   title: string;
@@ -108,29 +121,30 @@ function blank(value: string | undefined): boolean {
   return value === undefined || value.trim() === '';
 }
 
-function isString(stringIndex: number): boolean {
-  return Number.isInteger(stringIndex) && stringIndex >= 0 && stringIndex < STRING_COUNT;
+function isString(instrument: Instrument, stringIndex: number): boolean {
+  return Number.isInteger(stringIndex) && stringIndex >= 0 && stringIndex < stringCountOf(instrument);
 }
 
-function rangeProblem(range: readonly [number, number]): string | null {
+function rangeProblem(instrument: Instrument, range: readonly [number, number]): string | null {
   const [lo, hi] = range;
   if (!Number.isInteger(lo) || !Number.isInteger(hi)) return 'has a non-integer fret range';
-  if (lo < 0 || hi > MAX_FRET || lo > hi) return `has an invalid fret range [${lo}, ${hi}]`;
+  if (lo < 0 || hi > instrument.maxFret || lo > hi) return `has an invalid fret range [${lo}, ${hi}]`;
   return null;
 }
 
 function positionProblems(
+  instrument: Instrument,
   where: string,
   positions: readonly FretPosition[],
   range: readonly [number, number] | null,
 ): string[] {
   const problems: string[] = [];
   for (const { stringIndex, fret } of positions) {
-    if (!isString(stringIndex)) {
+    if (!isString(instrument, stringIndex)) {
       problems.push(`${where} names string index ${stringIndex}, which doesn't exist`);
       continue;
     }
-    if (!Number.isInteger(fret) || fret < 0 || fret > MAX_FRET) {
+    if (!Number.isInteger(fret) || fret < 0 || fret > instrument.maxFret) {
       problems.push(`${where} names fret ${fret}, which doesn't exist`);
     } else if (range !== null && (fret < range[0] || fret > range[1])) {
       problems.push(`${where} puts fret ${fret} outside its fret range [${range[0]}, ${range[1]}]`);
@@ -148,31 +162,33 @@ function positionProblems(
 export function validateLesson(lesson: Lesson): string[] {
   const problems: string[] = [];
   const id = lesson.id;
+  const instrument = instrumentOf(lesson);
 
   if (!LESSON_ID.test(id)) problems.push(`lesson id "${id}" must be lowercase letters, digits and dashes`);
   if (blank(lesson.unit)) problems.push(`${id}: unit must not be blank`);
   if (blank(lesson.title)) problems.push(`${id}: title must not be blank`);
   if (blank(lesson.goal)) problems.push(`${id}: goal must not be blank`);
   if (lesson.steps.length === 0) problems.push(`${id}: has no steps`);
+  if (instrument.id !== 'guitar' && !id.startsWith('uke-')) {
+    problems.push(`${id}: a ${instrument.name.toLowerCase()} lesson's id must start with "uke-"`);
+  }
 
   lesson.steps.forEach((step, index) => {
     const where = `${id} step ${index + 1} (${step.kind})`;
     switch (step.kind) {
       case 'explain':
-        problems.push(...explainProblems(where, step));
+        problems.push(...explainProblems(instrument, where, step));
         break;
       case 'fretboard': {
         if (blank(step.caption)) problems.push(`${where} needs a caption`);
-        const bad = rangeProblem(step.fretRange);
+        const bad = rangeProblem(instrument, step.fretRange);
         if (bad !== null) problems.push(`${where} ${bad}`);
         if (step.positions.length === 0) problems.push(`${where} shows no positions`);
-        problems.push(...positionProblems(where, step.positions, bad === null ? step.fretRange : null));
+        problems.push(...positionProblems(instrument, where, step.positions, bad === null ? step.fretRange : null));
         break;
       }
       case 'chord':
-        if (!CHORDS.some((chord) => chord.id === step.chordId)) {
-          problems.push(`${where} names an unknown chord "${step.chordId}"`);
-        }
+        problems.push(...chordProblems(instrument, where, step.chordId));
         break;
       case 'riff':
         if (findRiff(step.riffId) === undefined) problems.push(`${where} names an unknown riff "${step.riffId}"`);
@@ -185,14 +201,14 @@ export function validateLesson(lesson: Lesson): string[] {
       case 'listen':
         if (blank(step.caption)) problems.push(`${where} needs a caption`);
         if (step.targets.length === 0) problems.push(`${where} has nothing to play`);
-        problems.push(...positionProblems(where, step.targets, null));
+        problems.push(...positionProblems(instrument, where, step.targets, null));
         break;
       case 'tuner':
         break;
       case 'drill': {
-        const bad = rangeProblem(step.fretRange);
+        const bad = rangeProblem(instrument, step.fretRange);
         if (bad !== null) problems.push(`${where} ${bad}`);
-        if (step.strings.length === 0 || !step.strings.every(isString)) {
+        if (step.strings.length === 0 || !step.strings.every((s) => isString(instrument, s))) {
           problems.push(`${where} needs real strings to ask about`);
         }
         if (!Number.isInteger(step.count) || step.count < 3) problems.push(`${where} should ask at least 3 questions`);
@@ -228,27 +244,35 @@ function textProblems(where: string, what: string, text: string, limit: number):
   return problems;
 }
 
-function visualProblems(where: string, visual: Visual): string[] {
+/** A chord a lesson names has to exist, and be fingered for the instrument the lesson teaches. */
+function chordProblems(instrument: Instrument, where: string, chordId: string): string[] {
+  const chord = ALL_CHORDS.find((candidate) => candidate.id === chordId);
+  if (chord === undefined) return [`${where} names an unknown chord "${chordId}"`];
+  if (instrumentIdOf(chord) !== instrument.id) {
+    return [`${where} names the ${instrumentIdOf(chord)} chord "${chordId}" in a ${instrument.id} lesson`];
+  }
+  return [];
+}
+
+function visualProblems(instrument: Instrument, where: string, visual: Visual): string[] {
   switch (visual.kind) {
     case 'illustration':
       return isIllustrationName(visual.name) ? [] : [`${where} names an unknown illustration "${visual.name}"`];
     case 'neck': {
-      const bad = rangeProblem(visual.fretRange);
+      const bad = rangeProblem(instrument, visual.fretRange);
       const problems = bad === null ? [] : [`${where} neck ${bad}`];
       if (visual.dots.length === 0 && (visual.highlightStrings ?? []).length === 0) {
         problems.push(`${where} neck shows nothing: give it dots or highlighted strings`);
       }
-      problems.push(...positionProblems(`${where} neck`, visual.dots, bad === null ? visual.fretRange : null));
+      problems.push(...positionProblems(instrument, `${where} neck`, visual.dots, bad === null ? visual.fretRange : null));
       for (const s of visual.highlightStrings ?? []) {
-        if (!isString(s)) problems.push(`${where} neck highlights string index ${s}, which doesn't exist`);
+        if (!isString(instrument, s)) problems.push(`${where} neck highlights string index ${s}, which doesn't exist`);
       }
       return problems;
     }
     case 'chords': {
       const problems = visual.chordIds.length === 0 ? [`${where} chords visual is empty`] : [];
-      for (const chordId of visual.chordIds) {
-        if (!CHORDS.some((chord) => chord.id === chordId)) problems.push(`${where} names an unknown chord "${chordId}"`);
-      }
+      for (const chordId of visual.chordIds) problems.push(...chordProblems(instrument, where, chordId));
       return problems;
     }
     case 'notes': {
@@ -265,7 +289,7 @@ function visualProblems(where: string, visual: Visual): string[] {
   }
 }
 
-function explainProblems(where: string, step: ExplainStep): string[] {
+function explainProblems(instrument: Instrument, where: string, step: ExplainStep): string[] {
   const problems = textProblems(where, 'headline', step.headline, EXPLAIN_LIMITS.headline);
   if (step.points.length === 0 || step.points.length > EXPLAIN_LIMITS.points) {
     problems.push(`${where} has ${step.points.length} points; give it 1 to ${EXPLAIN_LIMITS.points}`);
@@ -282,6 +306,6 @@ function explainProblems(where: string, step: ExplainStep): string[] {
   }
   if (step.tip !== undefined) problems.push(...textProblems(where, 'tip', step.tip, EXPLAIN_LIMITS.callout));
   if (step.warn !== undefined) problems.push(...textProblems(where, 'warn', step.warn, EXPLAIN_LIMITS.callout));
-  problems.push(...visualProblems(where, step.visual));
+  problems.push(...visualProblems(instrument, where, step.visual));
   return problems;
 }

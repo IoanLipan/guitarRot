@@ -1,14 +1,15 @@
-import { CHORDS } from '@/content';
+import { chordsFor } from '@/content';
 import {
   chordToneNames,
   fretToMidi,
+  instrumentIdOf,
+  instrumentOf,
   midiToPitchClass,
   noteLabel,
   noteName,
   openStringMidi,
   parseNoteName,
   QUALITY_LABELS,
-  STANDARD_TUNING,
   stringNumber,
   withSolfege,
   type ChordShape,
@@ -30,10 +31,10 @@ function fretForPitchClass(tuning: Tuning, stringIndex: number, pitchClass: numb
 export function explainNoteAnswer(
   question: NoteQuizQuestion,
   picked: string,
-  tuning: Tuning = STANDARD_TUNING,
+  tuning: Tuning = instrumentOf(question).tuning,
 ): string {
   const { stringIndex, fret } = question.position;
-  const displayString = stringNumber(stringIndex);
+  const displayString = stringNumber(stringIndex, instrumentOf(question));
   const openName = noteLabel(openStringMidi(tuning, stringIndex));
   const correctMidi = fretToMidi(tuning, stringIndex, fret);
   const correct = noteName(correctMidi);
@@ -67,8 +68,8 @@ function chordNotes(shape: ChordShape, tuning: Tuning): string {
 export function explainChordAnswer(
   question: ChordQuizQuestion,
   picked: string,
-  tuning: Tuning = STANDARD_TUNING,
-  library: readonly ChordShape[] = CHORDS,
+  tuning: Tuning = instrumentOf(question.chord).tuning,
+  library: readonly ChordShape[] = chordsFor(instrumentIdOf(question.chord)),
 ): string {
   const shape = question.chord;
   const correctLine = `${shape.name} is ${QUALITY_LABELS[shape.quality]}: ${chordNotes(shape, tuning)}.`;

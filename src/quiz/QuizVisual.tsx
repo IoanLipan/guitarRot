@@ -1,5 +1,5 @@
 import type { AudioEngine } from '@/audio';
-import { chordStrings, chordVoicing, fretToMidi, STANDARD_TUNING, stringNumber, type FretPosition } from '@/music';
+import { chordStrings, chordVoicing, fretToMidi, instrumentOf, stringNumber, type FretPosition } from '@/music';
 import { chordShapeToFretboard, Fretboard, type MarkerTone } from '@/render';
 import type { QuizQuestion } from './generateQuiz';
 
@@ -26,17 +26,20 @@ export function QuizVisual({
   engine,
 }: QuizVisualProps) {
   if (question.kind === 'note') {
+    // The board is the question's own: a ukulele question is a four-string neck.
+    const instrument = instrumentOf(question);
     const handleFretTap =
       engine === undefined
         ? undefined
         : (position: FretPosition) => {
-            engine.playNote(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret), {
+            engine.playNote(fretToMidi(instrument.tuning, position.stringIndex, position.fret), {
               stringIndex: position.stringIndex,
             });
           };
 
     return (
       <Fretboard
+        instrument={instrument}
         orientation="horizontal"
         fretRange={question.fretRange}
         markers={[
@@ -48,7 +51,7 @@ export function QuizVisual({
         popMarkers
         fit={fit}
         className={className}
-        ariaLabel={`Name this note. The dot is on string ${stringNumber(question.position.stringIndex)}, ${
+        ariaLabel={`Name this note. The dot is on string ${stringNumber(question.position.stringIndex, instrument)}, ${
           question.position.fret === 0 ? 'open' : `fret ${question.position.fret}`
         }. Tap any fret to hear it.`}
       />
@@ -57,15 +60,17 @@ export function QuizVisual({
 
   const diagram = chordShapeToFretboard(question.chord);
   const chord = question.chord;
+  const instrument = instrumentOf(chord);
   return (
     <button
       type="button"
       disabled={engine === undefined}
-      onClick={() => engine?.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) })}
+      onClick={() => engine?.strum(chordVoicing(chord, instrument.tuning), { strings: chordStrings(chord) })}
       aria-label={`Hear this chord`}
       className="h-full w-full"
     >
       <Fretboard
+        instrument={instrument}
         orientation="vertical"
         fretRange={diagram.fretRange}
         // The question dots are not notes: the colour of a fretted note would

@@ -1,4 +1,5 @@
-import { STRING_COUNT, type Midi } from '@/music';
+import type { Midi } from '@/music';
+import { VOICE_COUNT } from './stringVoicing';
 import type { Technique } from '@/content';
 
 /**
@@ -164,7 +165,7 @@ export type RingingNote = {
 };
 
 function isStringIndex(value: number | undefined): value is number {
-  return value !== undefined && Number.isInteger(value) && value >= 0 && value < STRING_COUNT;
+  return value !== undefined && Number.isInteger(value) && value >= 0 && value < VOICE_COUNT;
 }
 
 /**

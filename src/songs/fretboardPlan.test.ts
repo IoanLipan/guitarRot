@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SONGS, songToRiff, type Riff, type TabEvent } from '@/content';
-import { MAX_FRET, type FretPosition } from '@/music';
+import { GUITAR, MAX_FRET, type FretPosition } from '@/music';
 import {
   MAX_WINDOW_FRETS,
   MIN_WINDOW_FRETS,
@@ -309,17 +309,17 @@ describe('restingCursor', () => {
 
 describe('describeNotes', () => {
   it('names a note and says where it is, open or fretted', () => {
-    expect(describeNotes([pos(2, 0)])).toBe('D (Re) · 4th string, open');
-    expect(describeNotes([pos(4, 1)])).toBe('C (Do) · 2nd string, fret 1');
-    expect(describeNotes([pos(0, 0)])).toBe('E (Mi) · 6th string, open');
-    expect(describeNotes([pos(5, 3)])).toBe('G (Sol) · 1st string, fret 3');
+    expect(describeNotes([pos(2, 0)], GUITAR)).toBe('D (Re) · 4th string, open');
+    expect(describeNotes([pos(4, 1)], GUITAR)).toBe('C (Do) · 2nd string, fret 1');
+    expect(describeNotes([pos(0, 0)], GUITAR)).toBe('E (Mi) · 6th string, open');
+    expect(describeNotes([pos(5, 3)], GUITAR)).toBe('G (Sol) · 1st string, fret 3');
   });
 
   it('lists the notes of a chord, low to high', () => {
-    expect(describeNotes([pos(1, 3), pos(2, 2), pos(3, 0)])).toBe('C (Do) + E (Mi) + G (Sol)');
+    expect(describeNotes([pos(1, 3), pos(2, 2), pos(3, 0)], GUITAR)).toBe('C (Do) + E (Mi) + G (Sol)');
   });
 
   it('says nothing for no notes', () => {
-    expect(describeNotes([])).toBe('');
+    expect(describeNotes([], GUITAR)).toBe('');
   });
 });
