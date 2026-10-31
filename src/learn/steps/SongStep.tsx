@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { AudioEngine } from '@/audio';
 import { getSong, songToRiff, type LessonStep } from '@/content';
 import { PlayerPanel } from './PlayerPanel';
-import { MissingContent, StepCaption, StepKicker } from './StepHeading';
+import { MissingContent, StepCaption } from './StepHeading';
 
 export function SongStep({
   step,
@@ -18,15 +18,10 @@ export function SongStep({
   if (song === undefined || riff === undefined) return <MissingContent what={`song ${step.songId}`} />;
 
   return (
-    <div className="flex flex-col gap-5" data-testid="step-song">
-      <div className="flex flex-col gap-1.5">
-        <StepKicker>Play a song</StepKicker>
-        {step.caption !== undefined && (
-          <StepCaption>{step.caption}</StepCaption>
-        )}
-      </div>
+    <div className="flex flex-col gap-5 tight:gap-3" data-testid="step-song">
+      {step.caption !== undefined && <StepCaption>{step.caption}</StepCaption>}
       <PlayerPanel riff={riff} title={song.title} chart={song.chart} engine={engine} />
-      <p className="text-sm leading-relaxed text-ink-dim">{song.about}</p>
+      <p className="text-meta text-ink-dim">{song.about}</p>
     </div>
   );
 }

@@ -31,6 +31,21 @@ export function stepGate(step: LessonStep): StepGate {
   }
 }
 
+/**
+ * Why Next is shut, in the words the button wears while it is: a grey "Next"
+ * with no reason sends a learner hunting. `undefined` for a step that is never shut.
+ */
+export function gateReason(step: LessonStep): string | undefined {
+  switch (step.kind) {
+    case 'check':
+      return 'Pick an answer';
+    case 'drill':
+      return `Answer ${step.count} to go on`;
+    default:
+      return undefined;
+  }
+}
+
 /** The one screen a step becomes. Keyed by the caller so each step starts fresh. */
 export function StepView({
   step,

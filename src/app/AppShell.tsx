@@ -148,6 +148,8 @@ export function AppShell() {
   });
 
   const plan = planStart(progress.loaded, progress.state.lessonsDone);
+  // A lesson has its own close button and its own Next bar, and needs every pixel of height: no tab bar, no gear.
+  const inLesson = tab === 'learn' && learnPlace.lessonId !== null;
 
   /**
    * The start screen's two buttons. Where to land is decided now, while the
@@ -222,18 +224,20 @@ export function AppShell() {
           {tab === 'you' && <YouTab progress={progress} openPickId={openPickId} onOpenPickChange={setOpenPickId} />}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Settings"
-          data-testid="open-settings"
-          className="press absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-ground/55 text-ink backdrop-blur-md"
-        >
-          <GearIcon size={22} />
-        </button>
+        {!inLesson && (
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Settings"
+            data-testid="open-settings"
+            className="press absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-surface-2/90 text-ink"
+          >
+            <GearIcon size={22} />
+          </button>
+        )}
       </main>
 
-      <TabBar active={tab} onChange={changeTab} />
+      {!inLesson && <TabBar active={tab} onChange={changeTab} />}
 
       <AwardLayer progress={progress} phase={awardPhase} onOpenPick={showPick} />
 
