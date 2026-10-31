@@ -1,5 +1,6 @@
 export * from './types';
 export * from './riffs';
+export * from './ukuleleRiffs';
 export * from './chords';
 export * from './ukuleleChords';
 export * from './songs';

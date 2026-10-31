@@ -112,9 +112,11 @@ describe('songs per instrument', () => {
 });
 
 describe('riffs and drills per instrument', () => {
-  it('keeps the feed riffs on the guitar and has none for the ukulele yet', () => {
+  it('keeps the guitar\'s feed riffs exactly as they were, and gives the ukulele its own', () => {
     expect(riffsFor('guitar')).toEqual(RIFFS);
-    expect(riffsFor('ukulele')).toEqual([]);
+    expect(riffsFor('ukulele').length).toBeGreaterThan(0);
+    expect(riffsFor('ukulele').every((riff) => instrumentIdOf(riff) === 'ukulele')).toBe(true);
+    expect(RIFFS.some((riff) => riff.instrument === 'ukulele')).toBe(false);
   });
 
   it('writes a ukulele riff on four strings and holds it to the ukulele\'s neck', () => {
