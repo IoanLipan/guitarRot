@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { MicPitchHandle } from '@/app/useMicPitch';
 import type { ProgressHandle } from '@/app/useProgress';
-import { COURSE, chordsFor, type LessonStep } from '@/content';
+import { COURSE, UKULELE_COURSE, chordsFor, type LessonStep } from '@/content';
 import { InstrumentProvider } from '@/instrument';
 import { emptyProgressState } from '@/progress';
 import { UKULELE, noteName, type InstrumentId } from '@/music';
@@ -33,7 +33,7 @@ const { VisualView } = await import('./steps/VisualView');
 
 const on = (id: InstrumentId, ui: React.ReactElement) => <InstrumentProvider id={id}>{ui}</InstrumentProvider>;
 
-function LearnHarness({ instrument }: { instrument: InstrumentId }) {
+function LearnHarness({ instrument, lessons }: { instrument: InstrumentId; lessons?: Parameters<typeof Learn>[0]['lessons'] }) {
   const [place, setPlace] = useState<LearnPlace>(START_PLACE);
   const progress: Pick<ProgressHandle, 'state' | 'completeLesson'> = {
     state: emptyProgressState(),
@@ -41,13 +41,23 @@ function LearnHarness({ instrument }: { instrument: InstrumentId }) {
   };
   return on(
     instrument,
-    <Learn engine={fakeEngine()} progress={progress} place={place} onPlaceChange={setPlace} />,
+    <Learn engine={fakeEngine()} progress={progress} place={place} onPlaceChange={setPlace} lessons={lessons} />,
   );
 }
 
 describe('Learn on the ukulele', () => {
-  it('says plainly that its course is not written yet, and what works meanwhile, instead of a blank list', () => {
+  it('lists its own course: the ukulele lessons, from lesson 1, and none of the guitar\'s', () => {
     render(<LearnHarness instrument="ukulele" />);
+
+    expect(screen.queryByTestId('course-empty')).toBeNull();
+    expect(screen.getByTestId('course-progress')).toHaveTextContent(`0 of ${UKULELE_COURSE.length} lessons`);
+    expect(screen.getByTestId('course-continue')).toHaveTextContent(UKULELE_COURSE[0]?.title ?? '');
+    for (const lesson of UKULELE_COURSE) expect(screen.getByTestId(`lesson-row-${lesson.id}`)).toBeInTheDocument();
+    for (const lesson of COURSE) expect(screen.queryByTestId(`lesson-row-${lesson.id}`)).toBeNull();
+  });
+
+  it('says plainly that a course is not written yet, and what works meanwhile, when an instrument has no lessons', () => {
+    render(<LearnHarness instrument="ukulele" lessons={[]} />);
 
     expect(screen.getByTestId('course-empty')).toHaveTextContent(
       'The ukulele lessons are on their way. The tuner and the chord explorer work in the meantime.',

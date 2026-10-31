@@ -117,10 +117,11 @@ describe('riffs and drills per instrument', () => {
 });
 
 describe('courses per instrument', () => {
-  it('keeps the guitar course exactly as before and has no ukulele lessons yet', () => {
+  it('keeps the guitar course exactly as before, and gives the ukulele a course of its own', () => {
     expect(courseFor('guitar')).toEqual(COURSE);
     expect(courseFor('ukulele')).toEqual(UKULELE_COURSE);
-    expect(courseFor('ukulele')).toEqual([]);
+    expect(UKULELE_COURSE.length).toBeGreaterThan(0);
+    expect(courseFor('ukulele').some((lesson) => COURSE.includes(lesson))).toBe(false);
   });
 
   it('keeps lesson ids unique across every course, and a ukulele lesson\'s id prefixed uke-', () => {
