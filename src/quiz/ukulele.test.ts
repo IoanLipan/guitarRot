@@ -4,6 +4,7 @@ import { UKULELE, fretToMidi, noteName } from '@/music';
 import { mulberry32 } from '@/feed/generator';
 import { explainChordAnswer, explainNoteAnswer } from './explainAnswer';
 import {
+  DIFFICULTY_PROFILES,
   chordPoolFor,
   generateChordQuestion,
   generateNoteQuestion,
@@ -153,5 +154,105 @@ describe('explaining a ukulele answer', () => {
     const line = explainChordAnswer(q, other?.name ?? 'Zz');
     expect(line.startsWith(`${q.chord.name} is `)).toBe(true);
     if (other !== undefined) expect(line).toContain('shares the same root');
+  });
+});
+
+describe('the three difficulties on the ukulele', () => {
+  const ALL = chordsFor('ukulele');
+  const ask = (difficulty: 'easy' | 'medium' | 'hard', count: number, seed: number) => {
+    const random = mulberry32(seed);
+    return Array.from({ length: count }, () => generateQuestion(difficulty, { random, instrument: 'ukulele' }));
+  };
+  const notes = (questions: ReturnType<typeof ask>) =>
+    questions.flatMap((q) => (q.kind === 'note' ? [q] : []));
+  const chords = (questions: ReturnType<typeof ask>) =>
+    questions.flatMap((q) => (q.kind === 'chord' ? [q] : []));
+
+  it('easy asks the natural notes in the first four frets, on all four strings, from four answers that are naturals too', () => {
+    const questions = notes(ask('easy', 800, 31));
+    expect(questions.length).toBeGreaterThan(300);
+    expect(DIFFICULTY_PROFILES.easy.fretRange).toEqual([0, 3]);
+    for (const q of questions) {
+      expect(q.position.fret).toBeLessThanOrEqual(3);
+      expect(q.options).toHaveLength(4);
+      for (const option of q.options) expect(option, `${q.id}`).not.toContain('#');
+    }
+    expect(new Set(questions.map((q) => q.position.stringIndex))).toEqual(new Set([0, 1, 2, 3]));
+  });
+
+  it('easy asks the core chords: open major and minor shapes on natural roots, and nothing that needs a barre or a stretch', () => {
+    const pool = chordPoolFor('easy', ALL).map((chord) => chord.name);
+    for (const core of ['C', 'Am', 'F', 'G', 'Em', 'Dm', 'D', 'A']) expect(pool, core).toContain(core);
+    for (const hard of ['E', 'Bm', 'Bb', 'F#m', 'G7', 'Am7', 'Asus4', 'Fmaj7']) expect(pool, hard).not.toContain(hard);
+    for (const chord of chordPoolFor('easy', ALL)) {
+      expect(chord.difficulty).toBeLessThanOrEqual(2);
+      expect(['maj', 'min']).toContain(chord.quality);
+    }
+    for (const q of chords(ask('easy', 300, 32))) {
+      expect(pool).toContain(q.correctAnswer);
+      expect(q.options).toHaveLength(4);
+    }
+  });
+
+  it('medium asks every note in the first seven frets, sharps included, and brings in the sevenths and the suspended chords', () => {
+    const questions = notes(ask('medium', 1200, 33));
+    expect(DIFFICULTY_PROFILES.medium.fretRange).toEqual([0, 7]);
+    expect(Math.max(...questions.map((q) => q.position.fret))).toBe(7);
+    expect(questions.some((q) => q.correctAnswer.includes('#'))).toBe(true);
+    for (const q of questions) expect(q.options).toHaveLength(4);
+
+    const pool = chordPoolFor('medium', ALL).map((chord) => chord.name);
+    for (const seventh of ['G7', 'C7', 'A7', 'E7', 'D7', 'Am7', 'Em7', 'Cmaj7']) expect(pool, seventh).toContain(seventh);
+    for (const sus of ['Asus4', 'Dsus4']) expect(pool, sus).toContain(sus);
+    for (const name of ['E', 'Bm', 'B7', 'Dm7', 'Fmaj7']) expect(pool, name).not.toContain(name);
+  });
+
+  it('hard asks the whole first octave of the neck from six answers, and the whole ukulele library', () => {
+    const questions = notes(ask('hard', 1500, 34));
+    expect(DIFFICULTY_PROFILES.hard.fretRange).toEqual([0, 12]);
+    expect(Math.max(...questions.map((q) => q.position.fret))).toBe(12);
+    expect(new Set(questions.map((q) => q.position.stringIndex))).toEqual(new Set([0, 1, 2, 3]));
+    for (const q of questions) {
+      expect(q.options).toHaveLength(6);
+      expect(new Set(q.options).size).toBe(6);
+    }
+
+    expect(chordPoolFor('hard', ALL)).toHaveLength(ALL.length);
+    const names = new Set(chords(ask('hard', 1500, 35)).map((q) => q.correctAnswer));
+    // Every shape of the library, the barres and stretches included, comes up.
+    expect([...names].sort()).toEqual(ALL.map((chord) => chord.name).sort());
+    for (const q of chords(ask('hard', 200, 36))) expect(q.options).toHaveLength(6);
+  });
+
+  it('never offers two answers that read the same, at any difficulty', () => {
+    for (const difficulty of ['easy', 'medium', 'hard'] as const) {
+      for (const q of ask(difficulty, 400, 37)) expect(new Set(q.options).size, `${difficulty} ${q.id}`).toBe(q.options.length);
+    }
+  });
+});
+
+describe('explaining a ukulele note in words', () => {
+  it('says which string, counting from the top line of the tab, and names its open note: G is 4, C is 3, E is 2, A is 1', () => {
+    const lines = [0, 1, 2, 3].map((stringIndex) => explainNoteAnswer(noteQuestionAt(stringIndex, 3, ukulele), 'B'));
+    expect(lines[0]).toContain('String 4 is G (Sol) open, so 3 frets up is A# (La#).');
+    expect(lines[1]).toContain('String 3 is C (Do) open, so 3 frets up is D# (Re#).');
+    expect(lines[2]).toContain('String 2 is E (Mi) open, so 3 frets up is G (Sol).');
+    expect(lines[3]).toContain('String 1 is A (La) open, so 3 frets up is C (Do).');
+  });
+
+  it('puts the wrong answer on that string too, a fret count away: the re-entrant G is not the C below it', () => {
+    // The C string at its second fret is D; E is two frets further along the same string.
+    const q = noteQuestionAt(1, 2, ukulele);
+    const line = explainNoteAnswer(q, 'E');
+    expect(line).toContain('String 3 is C (Do) open, so 2 frets up is D (Re).');
+    expect(line).toContain('E (Mi) is at fret 4 on that string — 2 frets higher.');
+  });
+
+  it('explains a ukulele chord with the notes the shape really sounds, from its own tuning', () => {
+    const e = chordsFor('ukulele').find((chord) => chord.name === 'E');
+    if (e === undefined) throw new Error('no ukulele E');
+    const q = { kind: 'chord' as const, id: `chord-${e.id}`, prompt: 'Which chord is this?', chord: e, correctAnswer: 'E', options: ['E', 'Em', 'E7', 'A'] };
+    expect(explainChordAnswer(q, 'E')).toBe('E is major: E (Mi), G# (Sol#), B (Si).');
+    expect(explainChordAnswer(q, 'Em')).toContain('Em shares the same root but is minor: E (Mi), G (Sol), B (Si).');
   });
 });

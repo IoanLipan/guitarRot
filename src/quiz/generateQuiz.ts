@@ -247,11 +247,18 @@ export function generateChordQuestion(opts: ChordQuestionOptions = {}): ChordQui
   return chordQuestionFor(correct, { ...opts, random });
 }
 
+/** A chord whose root is a natural note: "Am" and "G7" are, "Bb" and "F#m" are not. */
+function hasNaturalRoot(chord: ChordShape): boolean {
+  const accidental = chord.name.charAt(1);
+  return accidental !== '#' && accidental !== 'b';
+}
+
 /**
  * The chords a difficulty asks about. Easy is the open major and minor chords
- * a beginner meets first; medium adds the sevenths and suspended chords that
- * are still open shapes; hard is everything in the library, barres and power
- * chords included.
+ * a beginner meets first, on natural roots (as the easy note questions are
+ * natural notes); medium adds the sevenths, suspended chords and flat or sharp
+ * roots that are still open shapes; hard is everything in the library,
+ * barres and power chords included.
  */
 export function chordPoolFor(
   difficulty: QuizDifficulty,
@@ -259,7 +266,9 @@ export function chordPoolFor(
 ): ChordShape[] {
   switch (difficulty) {
     case 'easy':
-      return library.filter((chord) => (chord.quality === 'maj' || chord.quality === 'min') && chord.difficulty <= 2);
+      return library.filter(
+        (chord) => (chord.quality === 'maj' || chord.quality === 'min') && chord.difficulty <= 2 && hasNaturalRoot(chord),
+      );
     case 'medium':
       return library.filter((chord) => chord.quality !== 'power' && chord.difficulty <= 2);
     case 'hard':
