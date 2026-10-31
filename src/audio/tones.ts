@@ -13,11 +13,17 @@ export type ToneProfile = {
   /** One line, shown under the name in settings. */
   blurb: string;
   /**
+   * Which instrument this voicing is for. Settings lists the tones of the
+   * instrument being played (see `toneProfilesFor`), so a ukulele voicing is
+   * never offered as a guitar tone, nor a guitar one for the ukulele.
+   */
+  instrument: ToneInstrument;
+  /**
    * Which recorded instrument this tone plays, by name in the sample
    * manifest. Ignored by the synth backend, which has no samples to pick
    * from, and falls back to whatever set exists if the named one is absent.
    */
-  sampleSet: 'acoustic' | 'nylon' | 'electric';
+  sampleSet: 'acoustic' | 'nylon' | 'electric' | 'ukulele';
   string: {
     /** Pick attack noisiness. Higher is scratchier and more aggressive. */
     attackNoise: number;
@@ -55,13 +61,16 @@ export type ToneProfile = {
   };
 };
 
-export type ToneId = 'acoustic' | 'classical' | 'clean' | 'rock' | 'blues' | 'country';
+export type ToneInstrument = 'guitar' | 'ukulele';
+
+export type ToneId = 'acoustic' | 'classical' | 'clean' | 'rock' | 'blues' | 'country' | 'ukulele';
 
 export const TONE_PROFILES: readonly ToneProfile[] = [
   {
     id: 'acoustic',
     name: 'Acoustic',
     blurb: 'Steel strings over a wooden box. Woody, open, rings on.',
+    instrument: 'guitar',
     sampleSet: 'acoustic',
     // Soft pick, long ring, and plenty of top: an acoustic's brightness
     // comes from the strings and the top resonating, not from a bright amp.
@@ -76,6 +85,7 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     id: 'classical',
     name: 'Classical',
     blurb: 'Nylon strings and fingertips. Warm, round, soft attack.',
+    instrument: 'guitar',
     sampleSet: 'nylon',
     // Synth half, which only plays when no recordings load: the acoustic's
     // string, darker and softer — nylon has far less top end than steel and
@@ -89,6 +99,7 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     id: 'clean',
     name: 'Clean',
     blurb: 'Bare strings, no colour. Every note exactly as it is.',
+    instrument: 'guitar',
     sampleSet: 'electric',
     string: { attackNoise: 0.9, dampening: 3600, resonance: 0.965 },
     amp: { drive: 0, filterHz: 6000, reverbWet: 0.1, gain: 0.79, bodyHz: 200, bodyQ: 1, bodyGainDb: 0 },
@@ -97,6 +108,7 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     id: 'rock',
     name: 'Rock',
     blurb: 'Driven and tight. Power chords bite, notes stop when you do.',
+    instrument: 'guitar',
     sampleSet: 'electric',
     // Drive needs top end to read as crunch: the old filterHz of 4200 muffled
     // this preset's own distortion, which is how Country ended up sounding
@@ -110,6 +122,7 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     id: 'blues',
     name: 'Blues',
     blurb: 'Warm, mid-heavy, just breaking up. Bends sing.',
+    instrument: 'guitar',
     sampleSet: 'electric',
     string: { attackNoise: 1.2, dampening: 3200, resonance: 0.972 },
     amp: { drive: 0.18, filterHz: 3400, reverbWet: 0.18, gain: 0.33, bodyHz: 200, bodyQ: 1, bodyGainDb: 0 },
@@ -118,6 +131,7 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     id: 'country',
     name: 'Country',
     blurb: 'Bright twang with a spring-tank shimmer. Snappy and clean.',
+    instrument: 'guitar',
     sampleSet: 'electric',
     // Twang is a bright attack over a clean, ringing string. The old 0.985
     // sat on the edge of runaway feedback and built into a harsh sustain that
@@ -125,6 +139,24 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     // Still bright, still rings, but no drive and no squeal.
     string: { attackNoise: 0.55, dampening: 6200, resonance: 0.958 },
     amp: { drive: 0, filterHz: 7600, reverbWet: 0.24, gain: 1.1, bodyHz: 200, bodyQ: 1, bodyGainDb: 0 },
+  },
+  {
+    id: 'ukulele',
+    name: 'Ukulele',
+    blurb: 'Four nylon strings on a small box. Bright, and quick to fade.',
+    instrument: 'ukulele',
+    sampleSet: 'ukulele',
+    // Synth half, only heard when no recordings load: a nylon string that is
+    // brighter than the classical (a short scale and a small top give it far
+    // less warmth) and lets go sooner. Resonance stays inside the 0.93+ band
+    // the string voicing needs to read as a note at all.
+    string: { attackNoise: 0.4, dampening: 5200, resonance: 0.95 },
+    // The recording is already a bright, short-lived tenor, so the amp only
+    // opens the top a little past the classical's, adds the smallest room
+    // (a ukulele sounds close and dry), and trims level to match the nylon
+    // set. The air resonance of a small body sits near 250Hz, which is only
+    // the synth's business: recordings skip the boost.
+    amp: { drive: 0, filterHz: 8200, reverbWet: 0.1, gain: 0.6, bodyHz: 250, bodyQ: 1, bodyGainDb: 4 },
   },
 ];
 
@@ -137,6 +169,11 @@ export function getToneProfile(id: string | undefined): ToneProfile {
     TONE_PROFILES.find((profile) => profile.id === DEFAULT_TONE_ID) ??
     (TONE_PROFILES[0] as ToneProfile)
   );
+}
+
+/** The voicings for one instrument, in display order. */
+export function toneProfilesFor(instrument: ToneInstrument): readonly ToneProfile[] {
+  return TONE_PROFILES.filter((profile) => profile.instrument === instrument);
 }
 
 /**
