@@ -208,8 +208,8 @@ describe('strumming a chord', () => {
 
     rerender(<ChordCard chord={chord} engine={fakeEngine()} isActive={false} />);
     expect(screen.getByTestId(`chord-card-${chord.id}`).querySelectorAll('.rise-in')).toHaveLength(0);
-    // Either way the content is there at once.
-    expect(screen.getByText(chord.name)).toBeInTheDocument();
+    // Either way the content is there at once. (The name also appears inside the note chips: it is the big one.)
+    expect(screen.getByText(chord.name, { selector: 'div' })).toBeInTheDocument();
   });
 });
 

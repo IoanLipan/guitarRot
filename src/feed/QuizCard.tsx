@@ -57,23 +57,14 @@ export function QuizCard({
   const rise = isActive ? 'rise-in' : '';
 
   return (
-    <div
-      className="relative flex h-full min-h-0 flex-col overflow-y-auto px-6 pt-3 pb-6 tight:pb-4"
-      style={{
-        background: correct
-          ? 'radial-gradient(circle at 50% 38%, rgba(53,208,127,0.22), var(--color-ground) 65%)'
-          : answered
-            ? 'radial-gradient(circle at 50% 38%, rgba(255,90,95,0.2), var(--color-ground) 65%)'
-            : 'radial-gradient(circle at 50% 30%, rgba(255,176,32,0.14), var(--color-ground) 65%)',
-      }}
-    >
+    // A flat card: the answer's colour is on the buttons and in the flash that crosses the card
+    // once, not in a tint that stays behind the question.
+    <div className="relative flex h-full min-h-0 flex-col overflow-y-auto bg-ground px-6 pt-3 pb-6 tight:pb-4">
       {/* On the row the share icon and the settings gear float on (see Feed),
-          at the left like the riff card's chips: centred, it ran under the
+          at the left like the riff card's facts: centred, it ran under the
           pair on a 320px phone. */}
       <div className={`${rise} flex min-h-11 shrink-0 items-center pr-24`} style={stagger(0)}>
-        <span className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-black tracking-wider text-ground uppercase">
-          Quick quiz
-        </span>
+        <span className="label">Quick quiz</span>
       </div>
 
       <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-5 tight:gap-3">
@@ -86,7 +77,7 @@ export function QuizCard({
           <QuizVisual question={question} engine={engine} fit />
         </div>
 
-        <h2 className={`${rise} shrink-0 text-center text-2xl font-black`} style={stagger(2)}>
+        <h2 className={`${rise} shrink-0 text-center text-title font-black`} style={stagger(2)}>
           {question.prompt}
         </h2>
 
@@ -100,10 +91,15 @@ export function QuizCard({
           />
         </div>
 
-        <div className="flex min-h-16 w-full shrink-0 flex-col items-center justify-center gap-3">
+        {/* Announced as it appears: a screen reader user hears whether they were right, and why not. */}
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex min-h-16 w-full shrink-0 flex-col items-center justify-center gap-3"
+        >
           {correct && (
             <>
-              <p className="pop-in text-base font-extrabold tracking-wide text-good">Nice — next one…</p>
+              <p className="pop-in text-body font-extrabold text-good">Nice — next one…</p>
               {/* Fills over exactly the wait, so moving on reads as a decision, not a glitch. */}
               <span
                 className="advance-sweep max-w-40"
@@ -116,14 +112,15 @@ export function QuizCard({
             <>
               <p
                 data-testid="quiz-explanation"
-                className="text-center text-sm leading-relaxed text-ink-dim"
+                className="text-center text-meta leading-relaxed text-ink-dim"
               >
+                <span className="sr-only">Not quite. </span>
                 {explainAnswer(question, picked)}
               </p>
               <button
                 type="button"
                 onClick={onAdvance}
-                className="press flex min-h-11 items-center justify-center gap-2 rounded-full bg-surface-2 px-6 py-3 text-sm font-bold text-ink"
+                className="press flex min-h-11 items-center justify-center gap-2 rounded-full bg-surface-2 px-6 py-3 text-meta font-bold text-ink"
               >
                 Got it
                 <ArrowRightIcon size={18} />

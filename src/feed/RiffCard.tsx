@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRiffPlayer, type AudioEngine, type RiffPlayer } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
 import type { Riff } from '@/content';
-import { createTabGeometry, TabStaff, useFollowPlayhead } from '@/render';
+import { createTabGeometry, TabView, useFollowPlayhead } from '@/render';
 import { stagger } from '@/ui/motion';
 import { PlayPauseIcon } from '@/ui/PlayPauseIcon';
+import { MetaLine } from '@/songs/MetaLine';
 
 /**
  * A card that believes it is playing but hears nothing (the transport is not
@@ -145,31 +146,24 @@ export function RiffCard({
   const rise = isActive ? 'rise-in' : '';
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 bg-linear-to-b from-surface to-ground px-6 pt-3 pb-6 tight:gap-3 tight:pb-4">
-      {/* The chips take the row the share icon and the settings gear float on
-          (44px tall, 12px down, 120px in from the right): pr-24 keeps them
-          clear of the pair, and a phone too narrow for all three wraps them
-          rather than sliding them under. */}
-      <div className={`${rise} flex min-h-11 flex-wrap content-center gap-1.5 pr-24`} style={stagger(0)}>
-        <Chip>{riff.style}</Chip>
-        <Chip>Lvl {riff.level}</Chip>
-        <Chip>{riff.bpm} BPM</Chip>
+    <div className="flex h-full min-h-0 flex-col gap-4 bg-ground px-6 pt-3 pb-6 tight:gap-3 tight:pb-4">
+      {/* One plain line on the row the share icon and the settings gear float on
+          (44px tall, 12px down, 120px in from the right): pr-24 keeps it clear
+          of the pair, and a phone too narrow for all of it breaks it between
+          the facts rather than sliding it under them. */}
+      <div className={`${rise} flex min-h-11 shrink-0 items-center pr-24`} style={stagger(0)}>
+        <MetaLine facts={[riff.style, `Level ${riff.level}`, `${riff.bpm} bpm`]} />
       </div>
 
-      <h2 className={`${rise} text-3xl leading-tight font-black tight:text-2xl`} style={stagger(1)}>
+      <h2 className={`${rise} text-headline font-black tight:text-title`} style={stagger(1)}>
         {riff.title}
       </h2>
 
-      <div className={`${rise} flex min-h-0 flex-1 items-center`} style={stagger(2)}>
-        {/* overscroll-x-contain: a sideways swipe that runs out of staff must
-            stop here, not chain on into the vertical feed. */}
-        <div
-          ref={scrollerRef}
-          data-testid="tab-scroller"
-          className="max-h-full w-full overflow-x-auto overscroll-x-contain rounded-2xl bg-ground/60 py-4 ring-1 ring-white/8 tight:py-2"
-        >
-          <TabStaff riff={riff} geometry={geometry} showPlayhead playheadRef={playheadRef} />
-        </div>
+      {/* The tab fills the room the card has left: its lines grow with it (see
+          TabView), and a sideways swipe that runs out of staff stops there
+          instead of chaining on into the vertical feed. */}
+      <div className={`${rise} min-h-0 flex-1`} style={stagger(2)}>
+        <TabView riff={riff} playheadRef={playheadRef} scrollerRef={scrollerRef} />
       </div>
 
       <div className={`${rise} flex shrink-0 items-center gap-4`} style={stagger(3)}>
@@ -177,13 +171,13 @@ export function RiffCard({
           type="button"
           onClick={handleToggle}
           aria-label={playing ? 'Pause' : 'Play'}
-          className="press flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent text-ground shadow-[0_6px_18px_rgba(255,176,32,0.35)]"
+          className="press flex h-13 w-13 shrink-0 items-center justify-center rounded-full bg-accent text-ground"
         >
           <PlayPauseIcon playing={playing} size={24} />
         </button>
 
         <label className="flex-1">
-          <div className="mb-1.5 flex justify-between text-xs font-bold tracking-wider text-ink-dim uppercase">
+          <div className="label mb-1.5 flex justify-between">
             <span>Speed</span>
             <span className="tabular-nums">{Math.round(speed * 100)}%</span>
           </div>
@@ -200,14 +194,6 @@ export function RiffCard({
         </label>
       </div>
     </div>
-  );
-}
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full bg-surface-2 px-3 py-1.5 text-xs font-bold tracking-wider text-ink-dim uppercase narrow:px-2.5">
-      {children}
-    </span>
   );
 }
 

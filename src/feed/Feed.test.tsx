@@ -107,6 +107,15 @@ describe('Feed', () => {
     expect(screen.getAllByTestId('share-button')).toHaveLength(cards.length);
   });
 
+  it('draws the share control on a solid surface, not a blur of what is behind it', () => {
+    render(<Feed engine={fakeEngine()} progress={fakeProgress()} />);
+
+    for (const button of screen.getAllByTestId('share-button')) {
+      expect(button.className).not.toContain('backdrop-blur');
+      expect(button.className).toContain('bg-surface-2');
+    }
+  });
+
   it('starts audio for the active card only, never for every riff on screen', () => {
     // Three riff cards render, but only the active one may make sound —
     // the spec's hard rule. Without an IntersectionObserver (jsdom has

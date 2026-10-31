@@ -104,7 +104,7 @@ export function Feed({
             target={shareTargetOf(item)}
             title={shareTitleOf(item)}
             iconOnly
-            className="absolute top-3 right-[4.25rem] z-20 bg-ground/55 backdrop-blur-md"
+            className="absolute top-3 right-[4.25rem] z-20 bg-surface-2/90"
           />
           {item.kind === 'riff' && (
             <RiffCard riff={item.riff} engine={engine} isActive={index === activeIndex} />

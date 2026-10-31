@@ -163,4 +163,89 @@ describe('QuizCard fretboard', () => {
 
     expect(engine.strum).toHaveBeenCalledTimes(1);
   });
+
+  describe('the question does not print its answer, to the eye or to a screen reader', () => {
+    it('shows a dot with nothing in it', () => {
+      render(<QuizCard question={noteQuestion} engine={fakeEngine()} onAnswered={vi.fn()} onAdvance={vi.fn()} />);
+      expect(screen.getByTestId('marker-s0f3')).toHaveTextContent('');
+    });
+
+    it('has tap targets that say where they are and not what they play', () => {
+      render(<QuizCard question={noteQuestion} engine={fakeEngine()} onAnswered={vi.fn()} onAdvance={vi.fn()} />);
+      const cells = screen.getAllByTestId(/^cell-/);
+      expect(cells.length).toBeGreaterThan(30);
+      for (const cell of cells) {
+        expect(cell.getAttribute('aria-label')).toMatch(/^String \d, (fret \d+|open)$/);
+      }
+      expect(screen.getByTestId('cell-s0f3')).toHaveAttribute('aria-label', 'String 6, fret 3');
+    });
+
+    it('describes the board by where the dot is: the position, never the note', () => {
+      render(<QuizCard question={noteQuestion} engine={fakeEngine()} onAnswered={vi.fn()} onAdvance={vi.fn()} />);
+      const label = screen.getByRole('group', { name: /Name this note/ }).getAttribute('aria-label') ?? '';
+      expect(label).toContain('string 6, fret 3');
+      expect(label).not.toMatch(/\bG\b|Sol/);
+    });
+
+    it('is not coloured by note either: a chord question draws plain markers with the finger', () => {
+      const { container } = render(
+        <QuizCard question={chordQuestion()} engine={fakeEngine()} onAnswered={vi.fn()} onAdvance={vi.fn()} />,
+      );
+      const fills = [...container.querySelectorAll('[data-testid^="marker-"]')].map((text) =>
+        text.previousElementSibling?.getAttribute('fill'),
+      );
+      expect(fills.length).toBeGreaterThan(0);
+      for (const fill of fills) expect(fill).toBe('var(--color-marker)');
+    });
+  });
+});
+
+describe('QuizCard result', () => {
+  it('is announced: the explanation of a miss sits in a polite live region, with "Not quite" for a reader', () => {
+    render(<QuizCard question={noteQuestion} engine={fakeEngine()} onAnswered={vi.fn()} onAdvance={vi.fn()} />);
+    const region = screen.getByRole('status');
+    expect(region).toHaveAttribute('aria-live', 'polite');
+    expect(region).toBeEmptyDOMElement();
+
+    fireEvent.click(screen.getByRole('button', { name: 'A (La)' }));
+
+    expect(region).toContainElement(screen.getByTestId('quiz-explanation'));
+    expect(region).toHaveTextContent(/Not quite\. String 6 is E \(Mi\) open/);
+  });
+
+  it('is announced when it is right, too', () => {
+    vi.useFakeTimers();
+    try {
+      render(<QuizCard question={noteQuestion} engine={fakeEngine()} onAnswered={vi.fn()} onAdvance={vi.fn()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'G (Sol)' }));
+      expect(screen.getByRole('status')).toHaveTextContent('Nice — next one…');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps the right answer lit when a wrong one is picked', () => {
+    render(<QuizCard question={noteQuestion} engine={fakeEngine()} onAnswered={vi.fn()} onAdvance={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'A (La)' }));
+    expect(screen.getByRole('button', { name: 'G (Sol)' })).toHaveAttribute('data-correct', 'true');
+    expect(screen.getByRole('button', { name: 'A (La)' })).not.toHaveAttribute('data-correct');
+  });
+
+  it('is a flat card: no gradient behind the question, before or after an answer', () => {
+    const { container } = render(
+      <QuizCard question={noteQuestion} engine={fakeEngine()} onAnswered={vi.fn()} onAdvance={vi.fn()} />,
+    );
+    const card = container.firstElementChild as HTMLElement;
+    expect(card.getAttribute('style') ?? '').not.toContain('gradient');
+    expect(card.className).not.toContain('gradient');
+    fireEvent.click(screen.getByRole('button', { name: 'A (La)' }));
+    expect(card.getAttribute('style') ?? '').not.toContain('gradient');
+  });
+
+  it('names the card as a label, not an amber pill', () => {
+    render(<QuizCard question={noteQuestion} engine={fakeEngine()} onAnswered={vi.fn()} onAdvance={vi.fn()} />);
+    const label = screen.getByText('Quick quiz');
+    expect(label.className).not.toContain('bg-accent');
+    expect(label.className).not.toContain('uppercase');
+  });
 });
