@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chordShapeToFretboard } from './chordAdapter';
+import { noteColor } from './noteColors';
 import { STANDARD_TUNING, validateChordShape, type ChordShape } from '@/music';
 
 const aMinorOpen: ChordShape = {
@@ -34,6 +35,27 @@ describe('chordShapeToFretboard', () => {
   it('labels markers with finger numbers', () => {
     const { markers } = chordShapeToFretboard(aMinorOpen);
     expect(markers.map((m) => m.label)).toEqual(['2', '3', '1']);
+  });
+
+  it('colours each dot by the note it is, as every other board does, and keeps the finger in the dot', () => {
+    // Am open: the dots are on the D, G and B strings (indexes 2, 3, 4).
+    const { markers } = chordShapeToFretboard(aMinorOpen);
+    expect(markers.map((m) => m.color)).toEqual([
+      noteColor('E'), // D string (index 2), fret 2 -> E
+      noteColor('A'), // G string (index 3), fret 2 -> A
+      noteColor('C'), // B string (index 4), fret 1 -> C
+    ]);
+    expect(markers.map((m) => m.label)).toEqual(['2', '3', '1']);
+    // Never the amber of the play button: a chord's dots are notes, not actions.
+    for (const marker of markers) expect(marker.color).not.toBe('#ffb020');
+  });
+
+  it('colours a note by its letter, so the same note is the same colour in every shape', () => {
+    const colourOf = (shape: ChordShape, stringIndex: number) =>
+      chordShapeToFretboard(shape).markers.find((m) => m.stringIndex === stringIndex)?.color;
+    // Low E fret 1 in F is F; the high e fret 1 in F is F too.
+    expect(colourOf(fMajorBarre, 0)).toBe(noteColor('F'));
+    expect(colourOf(fMajorBarre, 5)).toBe(noteColor('F'));
   });
 
   it('separates muted from open strings', () => {

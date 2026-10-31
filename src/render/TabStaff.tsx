@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import type { Riff, TabEvent, Technique } from '@/content';
+import { STRING_NAMES } from './stringNames';
 import type { TabGeometry } from './tabGeometry';
 
 export type TabStaffProps = {
@@ -15,8 +16,8 @@ export type TabStaffProps = {
   className?: string;
 };
 
-/** Display letters for the six strings, low to high. */
-const STRING_LABELS = ['E', 'A', 'D', 'G', 'B', 'e'];
+/** Width of the column of string names that stands beside the staff. */
+export const TAB_NAMES_WIDTH = 28;
 
 const TECHNIQUE_GLYPH: Record<Technique, string> = {
   hammer: 'h',
@@ -26,6 +27,13 @@ const TECHNIQUE_GLYPH: Record<Technique, string> = {
   palmMute: 'P.M.',
 };
 
+/**
+ * The staff itself: lines, bar lines, fret numbers, technique marks and the
+ * playhead. The string names are not part of it (see TabStringNames): this is
+ * what scrolls sideways with the song, and names that scroll away are no use.
+ * It draws on `--color-surface`, the panel it sits in; the knock-out behind
+ * each number is that colour.
+ */
 export const TabStaff = forwardRef<SVGSVGElement, TabStaffProps>(function TabStaff(
   { riff, geometry, showPlayhead = false, playheadRef, className },
   ref,
@@ -41,31 +49,20 @@ export const TabStaff = forwardRef<SVGSVGElement, TabStaffProps>(function TabSta
       aria-label={`Tab for ${riff.title}`}
       data-testid="tab-staff"
     >
-      {STRING_LABELS.map((label, stringIndex) => {
+      {STRING_NAMES.map((_, stringIndex) => {
         const line = geometry.staffLine(stringIndex);
         return (
-          <g key={`staff-${stringIndex}`}>
-            <line
-              data-testid={`staff-line-${stringIndex}`}
-              x1={line.x1}
-              y1={line.y1}
-              x2={line.x2}
-              y2={line.y2}
-              stroke="var(--color-surface-2)"
-              strokeWidth={1.2}
-            />
-            <text
-              data-testid={`string-label-${stringIndex}`}
-              x={line.x1 - 14}
-              y={line.y1}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fontSize={12}
-              fill="var(--color-ink-dim)"
-            >
-              {label}
-            </text>
-          </g>
+          <line
+            key={`staff-${stringIndex}`}
+            data-testid={`staff-line-${stringIndex}`}
+            x1={line.x1}
+            y1={line.y1}
+            x2={line.x2}
+            y2={line.y2}
+            stroke="var(--color-fret)"
+            strokeOpacity={0.4}
+            strokeWidth={1.2}
+          />
         );
       })}
 
@@ -77,9 +74,9 @@ export const TabStaff = forwardRef<SVGSVGElement, TabStaffProps>(function TabSta
           y1={geometry.staffTop}
           x2={x}
           y2={geometry.staffBottom}
-          stroke="var(--color-ink-dim)"
+          stroke="var(--color-fret)"
           strokeWidth={i === 0 ? 2.4 : 1.2}
-          opacity={0.6}
+          opacity={0.7}
         />
       ))}
 
@@ -128,6 +125,40 @@ export const TabStaff = forwardRef<SVGSVGElement, TabStaffProps>(function TabSta
   );
 });
 
+/**
+ * E A D G B e, one name per staff line, in a column that stays where it is
+ * while the staff scrolls. Its lines are the staff's own (same height, same
+ * spacing), so each name sits level with its line.
+ */
+export function TabStringNames({ geometry, className }: { geometry: TabGeometry; className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox={`0 0 ${TAB_NAMES_WIDTH} ${geometry.height}`}
+      width={TAB_NAMES_WIDTH}
+      height={geometry.height}
+      aria-hidden="true"
+      data-testid="tab-string-names"
+    >
+      {STRING_NAMES.map((name, stringIndex) => (
+        <text
+          key={name + stringIndex}
+          data-testid={`string-label-${stringIndex}`}
+          x={TAB_NAMES_WIDTH / 2 + 2}
+          y={geometry.yForString(stringIndex)}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={13}
+          fontWeight={600}
+          fill="var(--color-ink-dim)"
+        >
+          {name}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
 function TabNote({
   index,
   event,
@@ -140,17 +171,20 @@ function TabNote({
   const x = geometry.xForBeat(event.beat);
   const y = geometry.yForString(event.stringIndex);
   const text = String(event.fret);
-  const boxWidth = 9 + text.length * 5;
+  const size = geometry.fretFontSize;
+  // Digits are about 0.6 of the type size wide; the box adds a little air.
+  const boxWidth = text.length * size * 0.62 + 8;
+  const boxHeight = size + 4;
 
   return (
     <g>
       {/* Knock a hole in the staff line so the number stays readable. */}
       <rect
         x={x - boxWidth / 2}
-        y={y - 8}
+        y={y - boxHeight / 2}
         width={boxWidth}
-        height={16}
-        fill="var(--color-ground)"
+        height={boxHeight}
+        fill="var(--color-surface)"
       />
       <text
         data-testid={`tab-note-${index}`}
@@ -158,7 +192,7 @@ function TabNote({
         y={y}
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize={13}
+        fontSize={size}
         fontWeight={600}
         fill="var(--color-ink)"
       >
@@ -168,10 +202,11 @@ function TabNote({
         <text
           data-testid={`technique-${index}`}
           x={x}
-          y={geometry.staffTop - 10}
+          y={geometry.staffTop - 13}
           textAnchor="middle"
           dominantBaseline="central"
-          fontSize={9}
+          fontSize={geometry.techniqueFontSize}
+          fontWeight={600}
           fill="var(--color-ink-dim)"
         >
           {TECHNIQUE_GLYPH[event.technique]}

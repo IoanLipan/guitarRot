@@ -10,6 +10,11 @@ export const TOUCH_MIN = 44;
 
 const STRING_COUNT = 6;
 
+/** Extra room, in viewBox units, a horizontal board gives the column of string names at its nut end. */
+export const NAME_GUTTER = 8;
+/** Where the string names' middle sits along the fret axis of a horizontal board. */
+const NAME_X = 12;
+
 export const INLAY_FRETS = [3, 5, 7, 9, 15, 17, 19, 21] as const;
 export const DOUBLE_INLAY_FRETS = [12, 24] as const;
 
@@ -34,7 +39,8 @@ const BASE = {
   horizontal: {
     stringSpacing: 30,
     fretSpacing: 56,
-    padding: { top: 22, right: 16, bottom: 26, left: 58 } satisfies Padding,
+    // The bottom band holds the fret numbers: tall enough for 18-unit digits.
+    padding: { top: 22, right: 16, bottom: 32, left: 58 } satisfies Padding,
     openOffset: 26,
   },
   vertical: {
@@ -61,6 +67,10 @@ export type FretboardGeometry = {
   stringLine(stringIndex: number): Line;
   cellRect(p: FretPosition): Rect;
   fretNumberPoint(fret: number): Point;
+  /** Whether this board reserved a column for the string names (horizontal boards only). */
+  readonly hasStringLabels: boolean;
+  /** Where the name of a string goes: in the nut-side gutter of a horizontal board, above the nut of a vertical one. */
+  stringLabelPoint(stringIndex: number): Point;
   inlayPoints(fret: number): Point[];
 };
 
@@ -68,8 +78,11 @@ export function createFretboardGeometry(opts: {
   orientation: Orientation;
   fretRange: [number, number];
   interactive?: boolean;
+  /** Reserve a column at the nut end for the string names (E A D G B e). Horizontal boards only. */
+  stringLabels?: boolean;
 }): FretboardGeometry {
   const { orientation, fretRange, interactive = false } = opts;
+  const stringLabels = opts.stringLabels === true && orientation === 'horizontal';
   const [lowFret, highFret] = fretRange;
   if (!Number.isInteger(lowFret) || !Number.isInteger(highFret)) {
     throw new Error(`Fret range must use integer frets: ${lowFret}-${highFret}`);
@@ -97,7 +110,7 @@ export function createFretboardGeometry(opts: {
   const padding: Padding =
     orientation === 'horizontal'
       ? {
-          left: Math.max(base.padding.left, fretAxisPad),
+          left: Math.max(base.padding.left, fretAxisPad) + (stringLabels ? NAME_GUTTER : 0),
           right: base.padding.right,
           top: Math.max(base.padding.top, stringAxisPad),
           bottom: Math.max(base.padding.bottom, stringAxisPad),
@@ -199,8 +212,15 @@ export function createFretboardGeometry(opts: {
 
     fretNumberPoint(fret) {
       return orientation === 'horizontal'
-        ? { x: fretCoord(fret), y: padding.top + stringSpan + 17 }
+        ? { x: fretCoord(fret), y: padding.top + stringSpan + 20 }
         : { x: padding.left - 14, y: fretCoord(fret) };
+    },
+
+    hasStringLabels: stringLabels,
+
+    stringLabelPoint(stringIndex) {
+      const along = stringCoord(stringIndex);
+      return orientation === 'horizontal' ? { x: NAME_X, y: along } : { x: along, y: 10 };
     },
 
     inlayPoints(fret) {

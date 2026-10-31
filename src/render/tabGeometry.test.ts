@@ -1,5 +1,57 @@
 import { describe, expect, it } from 'vitest';
-import { createTabGeometry } from './tabGeometry';
+import {
+  STRING_SPACING_MAX,
+  STRING_SPACING_MIN,
+  createTabGeometry,
+  stringSpacingForHeight,
+} from './tabGeometry';
+
+describe('stringSpacingForHeight', () => {
+  const chrome = createTabGeometry({ bars: 1, timeSignature: [4, 4], stringSpacing: 30 }).height - 5 * 30;
+
+  it('fills the room it is given, to the pixel', () => {
+    const spacing = stringSpacingForHeight(chrome + 5 * 31);
+    expect(spacing).toBe(31);
+    expect(createTabGeometry({ bars: 1, timeSignature: [4, 4], stringSpacing: spacing }).height).toBeLessThanOrEqual(chrome + 5 * 31);
+  });
+
+  it('never draws lines closer than 22 or further apart than 40', () => {
+    expect(stringSpacingForHeight(60)).toBe(STRING_SPACING_MIN);
+    expect(stringSpacingForHeight(0)).toBe(22);
+    expect(stringSpacingForHeight(900)).toBe(STRING_SPACING_MAX);
+    expect(STRING_SPACING_MIN).toBe(22);
+    expect(STRING_SPACING_MAX).toBe(40);
+  });
+
+  it('falls back to a sensible size for a height that is not a number', () => {
+    expect(stringSpacingForHeight(Number.NaN)).toBe(createTabGeometry({ bars: 1, timeSignature: [4, 4] }).stringSpacing);
+  });
+});
+
+describe('fret numbers and technique marks', () => {
+  it('draw 16 to 18px, growing with the staff, and technique marks at 12px or more', () => {
+    for (const stringSpacing of [22, 28, 31, 32, 40]) {
+      const g = createTabGeometry({ bars: 1, timeSignature: [4, 4], stringSpacing });
+      expect(g.fretFontSize).toBeGreaterThanOrEqual(16);
+      expect(g.fretFontSize).toBeLessThanOrEqual(18);
+      expect(g.techniqueFontSize).toBeGreaterThanOrEqual(12);
+    }
+    expect(createTabGeometry({ bars: 1, timeSignature: [4, 4], stringSpacing: 40 }).fretFontSize).toBe(18);
+    expect(createTabGeometry({ bars: 1, timeSignature: [4, 4], stringSpacing: 22 }).fretFontSize).toBe(16);
+  });
+
+  it('leave the x of a beat alone, whatever the line spacing, so a playhead can use any geometry', () => {
+    const tight = createTabGeometry({ bars: 2, timeSignature: [4, 4], stringSpacing: 22 });
+    const roomy = createTabGeometry({ bars: 2, timeSignature: [4, 4], stringSpacing: 40 });
+    expect(roomy.xForBeat(5)).toBe(tight.xForBeat(5));
+    expect(roomy.width).toBe(tight.width);
+    expect(roomy.height).toBeGreaterThan(tight.height);
+  });
+
+  it('refuse a line spacing that is not positive', () => {
+    expect(() => createTabGeometry({ bars: 1, timeSignature: [4, 4], stringSpacing: 0 })).toThrow();
+  });
+});
 
 describe('createTabGeometry', () => {
   const g = createTabGeometry({ bars: 4, timeSignature: [4, 4] });
