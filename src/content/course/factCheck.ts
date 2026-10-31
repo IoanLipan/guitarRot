@@ -150,7 +150,9 @@ export function problemWith(world: FactWorld, lessonId: string, f: Fact): string
     case 'key': {
       const root = pitchClassOf(f.root);
       const degree = (n: number): number => (root + SCALES.major.intervals[n]!) % 12;
-      const named = (pc: number): string => noteName(pc);
+      // A key whose chords are spelled with flats (F: F, Bb, C) must be named with flats.
+      const preferFlat = [f.one, f.four, f.five, f.six].some((name) => name.length === 2 && name.endsWith('b'));
+      const named = (pc: number): string => noteName(pc, { preferFlat });
       const got = [named(root), named(degree(3)), named(degree(4)), named(degree(5))];
       const want = [f.one, f.four, f.five, f.six];
       return got.join(' ') === want.join(' ') ? null : `I IV V vi are ${got.join(' ')}`;

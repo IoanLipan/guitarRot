@@ -10,6 +10,7 @@ import {
   noteName,
   parseNoteName,
   spellingSolfege,
+  stringNumber,
   withSolfege,
   type ChordShape,
 } from '@/music';
@@ -19,13 +20,14 @@ import { UKE_UNITS } from './course/uke';
 import { UKE_UNIT_1_FACTS } from './course/uke/unit1.facts';
 import { UKE_UNIT_2_FACTS } from './course/uke/unit2.facts';
 import { UKE_UNIT_3_FACTS } from './course/uke/unit3.facts';
+import { UKE_UNIT_4_FACTS } from './course/uke/unit4.facts';
 import { findCheck, problemWith } from './course/factCheck';
 import type { LessonFacts } from './course/facts';
 import { findRiff } from './drills';
 import { validateLesson, type Lesson, type LessonStep } from './lessons';
 import { parseRich, plainText, richProblems } from './rich';
 import { SONGS, getSong } from './songCatalog';
-import { chartBars, chordByName, songPlayableOn } from './songs';
+import { chartBars, chordByName, songPlayableOn, songToRiff, type Song } from './songs';
 import { UKULELE_COURSE } from './ukuleleCourse';
 
 /** The plan's outline, in teaching order. Lesson ids are stored in progress, so never rename a shipped one. */
@@ -44,15 +46,20 @@ const EXPECTED_ORDER = [
   'uke-chunk',
   'uke-one-four-five',
   'uke-waltz',
+  'uke-notes',
+  'uke-tab',
+  'uke-fingerpicking',
+  'uke-first-melody',
 ];
 
 const EXPECTED_UNITS: readonly (readonly [string, number])[] = [
   ['Meet the ukulele', 4],
   ['Your first chords', 5],
   ['More chords and rhythm', 5],
+  ['Notes and melody', 4],
 ];
 
-const ALL_FACTS: readonly LessonFacts[] = [...UKE_UNIT_1_FACTS, ...UKE_UNIT_2_FACTS, ...UKE_UNIT_3_FACTS];
+const ALL_FACTS: readonly LessonFacts[] = [...UKE_UNIT_1_FACTS, ...UKE_UNIT_2_FACTS, ...UKE_UNIT_3_FACTS, ...UKE_UNIT_4_FACTS];
 
 const WORLD = { instrument: UKULELE, lessons: UKULELE_COURSE };
 
@@ -420,6 +427,35 @@ describe('answers derived from the theory core', () => {
     const beats = [1, 2, 3, 4];
     expect(beats.filter((beat) => beat % 2 === 0)).toEqual([2, 4]);
     expect(answerOf('uke-chunk', 'On which beats do you chop')).toBe('Beats 2 and 4');
+  });
+
+  it('plucks the pattern in the order the app plucks an arpeggio on a ukulele chord: by string number 4, 3, 2, 1, 2, 3', () => {
+    const song: Song = {
+      id: 'uke-pattern-check',
+      instrument: 'ukulele',
+      title: 'x',
+      artist: 'x',
+      difficulty: 'easy',
+      style: 'x',
+      key: 'C',
+      bpm: 80,
+      source: 'original',
+      tags: [],
+      about: 'x',
+      chart: { pattern: 'arpeggio', timeSignature: [4, 4], sections: [{ label: 'x', bars: ['C'] }] },
+    };
+    const order = [...songToRiff(song, 'ukulele').events]
+      .sort((a, b) => a.beat - b.beat)
+      .slice(0, 6)
+      .map((event) => stringNumber(event.stringIndex, UKULELE))
+      .join(', ');
+    expect(answerOf('uke-fingerpicking', 'In which order does the pattern pluck')).toBe(order);
+  });
+
+  it('gives the thumb the two strings nearest the chin: the highest string numbers, 4 and 3', () => {
+    const nearestChin = [0, 1].map((index) => UKULELE.stringNames[index]);
+    expect(nearestChin).toEqual(['G', 'C']);
+    expect(answerOf('uke-fingerpicking', 'Which strings does the thumb play')).toBe('The G (Sol) and C (Do) strings');
   });
 
   it('puts the open strings in the order the lessons say, by pitch and by string', () => {
