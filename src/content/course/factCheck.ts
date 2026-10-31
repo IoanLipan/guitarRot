@@ -257,7 +257,7 @@ export function problemWith(world: FactWorld, lessonId: string, f: Fact): string
     }
     case 'check-chord-tones': {
       const check = findCheck(lessons, lessonId, f.ask);
-      const want = chordToneNames(chordById(f.chordId), T).map(withSolfege).join(', ');
+      const want = chordToneNames(chordById(f.chordId), T, { preferFlat: f.flat }).map(withSolfege).join(', ');
       return check.answer === want ? null : `answer is "${check.answer}", the chord is "${want}"`;
     }
     case 'check-fret': {

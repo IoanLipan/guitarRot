@@ -83,8 +83,8 @@ export type Fact = { says: string } & (
       octavesUp: number;
       format: 'ordinal' | 'string-fret';
     }
-  /** The check's answer is the chord's tones, root first, with solfège. */
-  | { kind: 'check-chord-tones'; ask: string; chordId: string }
+  /** The check's answer is the chord's tones, root first, with solfège; `flat` spells them with flats (Bb, not A#). */
+  | { kind: 'check-chord-tones'; ask: string; chordId: string; flat: boolean }
   /** The check's answer names the fret where `note` sits on this string. */
   | { kind: 'check-fret'; ask: string; stringIndex: number; note: string }
 );
@@ -343,11 +343,12 @@ export const fact = {
     format,
   }),
 
-  checkChordTones: (ask: string, chordId: string): Fact => ({
+  checkChordTones: (ask: string, chordId: string, flat = false): Fact => ({
     kind: 'check-chord-tones',
     says: `check "${ask}" answers the tones of ${chordId}`,
     ask,
     chordId,
+    flat,
   }),
 
   checkFret: (ask: string, stringIndex: number, note: string): Fact => ({

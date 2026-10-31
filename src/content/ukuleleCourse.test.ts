@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   QUALITY_LABELS,
+  SCALES,
   UKULELE,
   chordSolfegeName,
   fretToMidi,
   instrumentIdOf,
+  midiToPitchClass,
+  noteName,
+  parseNoteName,
   spellingSolfege,
+  withSolfege,
   type ChordShape,
 } from '@/music';
 import { ALL_CHORDS, chordsFor, getChord } from './chords';
@@ -13,6 +18,7 @@ import { ALL_LESSONS, COURSE, courseFor } from './course';
 import { UKE_UNITS } from './course/uke';
 import { UKE_UNIT_1_FACTS } from './course/uke/unit1.facts';
 import { UKE_UNIT_2_FACTS } from './course/uke/unit2.facts';
+import { UKE_UNIT_3_FACTS } from './course/uke/unit3.facts';
 import { findCheck, problemWith } from './course/factCheck';
 import type { LessonFacts } from './course/facts';
 import { findRiff } from './drills';
@@ -33,14 +39,20 @@ const EXPECTED_ORDER = [
   'uke-g-chord',
   'uke-island-strum',
   'uke-first-song',
+  'uke-minors',
+  'uke-sevenths',
+  'uke-chunk',
+  'uke-one-four-five',
+  'uke-waltz',
 ];
 
 const EXPECTED_UNITS: readonly (readonly [string, number])[] = [
   ['Meet the ukulele', 4],
   ['Your first chords', 5],
+  ['More chords and rhythm', 5],
 ];
 
-const ALL_FACTS: readonly LessonFacts[] = [...UKE_UNIT_1_FACTS, ...UKE_UNIT_2_FACTS];
+const ALL_FACTS: readonly LessonFacts[] = [...UKE_UNIT_1_FACTS, ...UKE_UNIT_2_FACTS, ...UKE_UNIT_3_FACTS];
 
 const WORLD = { instrument: UKULELE, lessons: UKULELE_COURSE };
 
@@ -263,6 +275,9 @@ describe('what the ukulele course teaches about chords', () => {
     'uke-c-am': ['C', 'Am'],
     'uke-f-chord': ['F'],
     'uke-g-chord': ['G', 'G7'],
+    'uke-minors': ['Dm', 'Em'],
+    'uke-sevenths': ['C7', 'A7'],
+    'uke-one-four-five': ['D'],
   };
 
   /** The chords a riff of the course strums, from its tags: a chord drill is tagged with each chord it uses. */
@@ -375,6 +390,36 @@ describe('answers derived from the theory core', () => {
 
   it('times a beat at 60 and 120 bpm', () => {
     expect(answerOf('uke-first-strum', 'At 120 bpm')).toBe(60 / 120 === 0.5 ? 'Half a second' : '?');
+  });
+
+  /** "G (Sol)" for a pitch class. */
+  const label = (pc: number): string => withSolfege(noteName(pc));
+  const pitchClassOf = (name: string): number => midiToPitchClass(parseNoteName(name));
+  /** I, IV, V of a major key, as the lesson writes them. */
+  const oneFourFive = (root: string): string => {
+    const pc = pitchClassOf(root);
+    return [0, 3, 4].map((degree) => label(pc + SCALES.major.intervals[degree]!)).join(', ');
+  };
+
+  it('names the I, IV and V of each key the checks ask about', () => {
+    expect(answerOf('uke-one-four-five', 'key of C (Do)?')).toBe(oneFourFive('C'));
+    expect(answerOf('uke-one-four-five', 'key of G (Sol)?')).toBe(oneFourFive('G'));
+  });
+
+  it('names the relative minor of C major as the chord on the 6th note', () => {
+    const sixth = pitchClassOf('C') + SCALES.major.intervals[5]!;
+    expect(answerOf('uke-one-four-five', 'relative minor (vi)')).toBe(`${noteName(sixth)}m (${spellingSolfege(noteName(sixth))} minor)`);
+  });
+
+  it('counts the beats of a 3/4 bar and leans on the first', () => {
+    expect(answerOf('uke-waltz', 'How many beats are in a bar of 3/4')).toBe('Three');
+    expect(answerOf('uke-waltz', 'Which beat do you lean on')).toBe('Beat 1');
+  });
+
+  it('chops on the beats the strum pattern leaves ringing apart: 2 and 4 of a bar of four', () => {
+    const beats = [1, 2, 3, 4];
+    expect(beats.filter((beat) => beat % 2 === 0)).toEqual([2, 4]);
+    expect(answerOf('uke-chunk', 'On which beats do you chop')).toBe('Beats 2 and 4');
   });
 
   it('puts the open strings in the order the lessons say, by pitch and by string', () => {
