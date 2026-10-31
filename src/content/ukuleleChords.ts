@@ -11,6 +11,15 @@ import type { ChordShape } from '@/music';
  * beside it, and a '#' would end a share link's query string, so a sharp is
  * spelled out ('uke-Fsharp').
  *
+ * Twenty-seven shapes: the beginner's set (C Am F G Em Dm D A, the sevenths G7
+ * C7 A7 E7, Bb), the E that eight of the guitar chart songs need (4442, the
+ * first-position E; its mini-barre at the fourth fret makes it difficulty 3),
+ * and the next steps (Gm Cm F#m Bm, D7 B7, Am7 Em7 Dm7 Cmaj7 Fmaj7, Asus4
+ * Dsus4). Left out on purpose: the power chords (two-note guitar shapes),
+ * Dsus2 (note for note the Asus4, so a quiz would offer two names for one
+ * shape) and Asus2 (no comfortable shape on four strings). A name has one
+ * shape, so a chart that says "E" means this E.
+ *
  * `content/ukuleleChords.test.ts` derives every shape's notes from the tuning
  * and compares them with its name, so a wrong fret cannot ship.
  */
@@ -104,6 +113,66 @@ export const UKULELE_CHORDS: readonly ChordShape[] = [
     fingers: [2, 1, null, null],
     difficulty: 1,
   },
+  {
+    id: 'uke-E',
+    instrument: 'ukulele',
+    name: 'E',
+    root: 4,
+    quality: 'maj',
+    baseFret: 1,
+    frets: [4, 4, 4, 2],
+    fingers: [3, 3, 3, 1],
+    barre: { fret: 4, fromStringIndex: 0, toStringIndex: 2 },
+    difficulty: 3,
+  },
+
+  // --- More minors ----------------------------------------------------------
+  {
+    id: 'uke-Gm',
+    instrument: 'ukulele',
+    name: 'Gm',
+    root: 7,
+    quality: 'min',
+    baseFret: 1,
+    frets: [0, 2, 3, 1],
+    fingers: [null, 2, 3, 1],
+    difficulty: 2,
+  },
+  {
+    id: 'uke-Cm',
+    instrument: 'ukulele',
+    name: 'Cm',
+    root: 0,
+    quality: 'min',
+    baseFret: 1,
+    frets: [0, 3, 3, 3],
+    fingers: [null, 3, 3, 3],
+    barre: { fret: 3, fromStringIndex: 1, toStringIndex: 3 },
+    difficulty: 2,
+  },
+  {
+    id: 'uke-Fsharpm',
+    instrument: 'ukulele',
+    name: 'F#m',
+    root: 6,
+    quality: 'min',
+    baseFret: 1,
+    frets: [2, 1, 2, 0],
+    fingers: [2, 1, 3, null],
+    difficulty: 2,
+  },
+  {
+    id: 'uke-Bm',
+    instrument: 'ukulele',
+    name: 'Bm',
+    root: 11,
+    quality: 'min',
+    baseFret: 1,
+    frets: [4, 2, 2, 2],
+    fingers: [3, 1, 1, 1],
+    barre: { fret: 2, fromStringIndex: 1, toStringIndex: 3 },
+    difficulty: 3,
+  },
 
   // --- Dominant sevenths ----------------------------------------------------
   {
@@ -149,6 +218,111 @@ export const UKULELE_CHORDS: readonly ChordShape[] = [
     frets: [1, 2, 0, 2],
     fingers: [1, 2, null, 3],
     difficulty: 2,
+  },
+  {
+    id: 'uke-D7',
+    instrument: 'ukulele',
+    name: 'D7',
+    root: 2,
+    quality: 'dom7',
+    baseFret: 1,
+    frets: [2, 2, 2, 3],
+    fingers: [1, 1, 1, 2],
+    barre: { fret: 2, fromStringIndex: 0, toStringIndex: 2 },
+    difficulty: 2,
+  },
+  {
+    id: 'uke-B7',
+    instrument: 'ukulele',
+    name: 'B7',
+    root: 11,
+    quality: 'dom7',
+    baseFret: 1,
+    frets: [2, 3, 2, 2],
+    fingers: [1, 3, 1, 1],
+    barre: { fret: 2, fromStringIndex: 0, toStringIndex: 3 },
+    difficulty: 3,
+  },
+
+  // --- Minor and major sevenths ---------------------------------------------
+  {
+    id: 'uke-Am7',
+    instrument: 'ukulele',
+    name: 'Am7',
+    root: 9,
+    quality: 'min7',
+    baseFret: 1,
+    frets: [0, 0, 0, 0],
+    fingers: [null, null, null, null],
+    difficulty: 1,
+  },
+  {
+    id: 'uke-Em7',
+    instrument: 'ukulele',
+    name: 'Em7',
+    root: 4,
+    quality: 'min7',
+    baseFret: 1,
+    frets: [0, 2, 0, 2],
+    fingers: [null, 1, null, 2],
+    difficulty: 1,
+  },
+  {
+    id: 'uke-Dm7',
+    instrument: 'ukulele',
+    name: 'Dm7',
+    root: 2,
+    quality: 'min7',
+    baseFret: 1,
+    frets: [2, 2, 1, 3],
+    fingers: [2, 3, 1, 4],
+    difficulty: 3,
+  },
+  {
+    id: 'uke-Cmaj7',
+    instrument: 'ukulele',
+    name: 'Cmaj7',
+    root: 0,
+    quality: 'maj7',
+    baseFret: 1,
+    frets: [0, 0, 0, 2],
+    fingers: [null, null, null, 2],
+    difficulty: 1,
+  },
+  {
+    id: 'uke-Fmaj7',
+    instrument: 'ukulele',
+    name: 'Fmaj7',
+    root: 5,
+    quality: 'maj7',
+    baseFret: 1,
+    frets: [2, 4, 1, 3],
+    fingers: [2, 4, 1, 3],
+    difficulty: 3,
+  },
+
+  // --- Suspended chords -----------------------------------------------------
+  {
+    id: 'uke-Asus4',
+    instrument: 'ukulele',
+    name: 'Asus4',
+    root: 9,
+    quality: 'sus4',
+    baseFret: 1,
+    frets: [2, 2, 0, 0],
+    fingers: [1, 2, null, null],
+    difficulty: 1,
+  },
+  {
+    id: 'uke-Dsus4',
+    instrument: 'ukulele',
+    name: 'Dsus4',
+    root: 2,
+    quality: 'sus4',
+    baseFret: 1,
+    frets: [0, 2, 3, 0],
+    fingers: [null, 1, 2, null],
+    difficulty: 1,
   },
 
   // --- Barre ----------------------------------------------------------------

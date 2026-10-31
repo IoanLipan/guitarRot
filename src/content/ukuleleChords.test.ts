@@ -12,7 +12,7 @@ import {
 import { ALL_CHORDS, CHORDS, GUITAR_CHORDS, chordsFor, getChord } from './chords';
 import { UKULELE_CHORDS } from './ukuleleChords';
 
-/** The shapes a beginner's first ukulele chord book has, as the familiar G-C-E-A tab digits. */
+/** The shapes a ukulele chord book has, as the familiar G-C-E-A tab digits. */
 const CORE: Record<string, string> = {
   C: '0003',
   Am: '2000',
@@ -27,6 +27,52 @@ const CORE: Record<string, string> = {
   A: '2100',
   E7: '1202',
   Bb: '3211',
+  // The rest of the set: the chords a song with an E in it needs, and the usual next steps.
+  E: '4442',
+  Gm: '0231',
+  Cm: '0333',
+  'F#m': '2120',
+  Bm: '4222',
+  D7: '2223',
+  B7: '2322',
+  Am7: '0000',
+  Em7: '0202',
+  Dm7: '2213',
+  Cmaj7: '0002',
+  Fmaj7: '2413',
+  Asus4: '2200',
+  Dsus4: '0230',
+};
+
+/** What each shape's name says it is, spelled from the root. The test works the notes out of the tuning and compares. */
+const SPELLED: Record<string, string[]> = {
+  C: ['C', 'E', 'G'],
+  Am: ['A', 'C', 'E'],
+  F: ['F', 'A', 'C'],
+  G: ['G', 'B', 'D'],
+  Em: ['E', 'G', 'B'],
+  Dm: ['D', 'F', 'A'],
+  G7: ['G', 'B', 'D', 'F'],
+  C7: ['C', 'E', 'G', 'A#'],
+  A7: ['A', 'C#', 'E', 'G'],
+  D: ['D', 'F#', 'A'],
+  A: ['A', 'C#', 'E'],
+  E7: ['E', 'G#', 'B', 'D'],
+  Bb: ['A#', 'D', 'F'],
+  E: ['E', 'G#', 'B'],
+  Gm: ['G', 'A#', 'D'],
+  Cm: ['C', 'D#', 'G'],
+  'F#m': ['F#', 'A', 'C#'],
+  Bm: ['B', 'D', 'F#'],
+  D7: ['D', 'F#', 'A', 'C'],
+  B7: ['B', 'D#', 'F#', 'A'],
+  Am7: ['A', 'C', 'E', 'G'],
+  Em7: ['E', 'G', 'B', 'D'],
+  Dm7: ['D', 'F', 'A', 'C'],
+  Cmaj7: ['C', 'E', 'G', 'B'],
+  Fmaj7: ['F', 'A', 'C', 'E'],
+  Asus4: ['A', 'D', 'E'],
+  Dsus4: ['D', 'G', 'A'],
 };
 
 describe('the ukulele chord library', () => {
@@ -63,6 +109,38 @@ describe('the ukulele chord library', () => {
     expect(tones('G7')).toEqual(['G', 'B', 'D', 'F']);
     expect(tones('Bb')).toEqual(['Bb', 'D', 'F']);
     expect(tones('C')).toEqual(['C', 'E', 'G']);
+  });
+
+  it('spells every shape\'s tones right, worked out from the tuning and not from its name', () => {
+    for (const chord of UKULELE_CHORDS) {
+      expect(chordToneNames(chord, UKULELE.tuning), chord.name).toEqual(SPELLED[chord.name]);
+    }
+  });
+
+  it('has the E every song with an E in it needs, as the first-position E (4442) and E7 (1202)', () => {
+    const e = UKULELE_CHORDS.find((chord) => chord.name === 'E');
+    const e7 = UKULELE_CHORDS.find((chord) => chord.name === 'E7');
+    expect(e?.frets).toEqual([4, 4, 4, 2]);
+    expect(e7?.frets).toEqual([1, 2, 0, 2]);
+    // The mini-barre at the fourth fret is the hardest shape in the set, and says so.
+    expect(e?.difficulty).toBe(3);
+    expect(e7?.difficulty).toBe(2);
+  });
+
+  it('has one shape per name, so a quiz never offers two answers that read the same', () => {
+    const names = UKULELE_CHORDS.map((chord) => chord.name);
+    expect(new Set(names).size).toBe(names.length);
+    // ...and no two shapes are the same four frets under different names.
+    const voicings = UKULELE_CHORDS.map((chord) => chord.frets.join(','));
+    expect(new Set(voicings).size).toBe(voicings.length);
+  });
+
+  it('marks the barre shapes as barres and calls the shapes with no finger down easy', () => {
+    for (const chord of UKULELE_CHORDS) {
+      if (chord.barre !== undefined) expect(chord.difficulty, chord.name).toBeGreaterThanOrEqual(2);
+      const fingered = chord.fingers.filter((finger) => finger !== null);
+      if (fingered.length === 0) expect(chord.difficulty, chord.name).toBe(1);
+    }
   });
 
   it('voices a shape in string order, not pitch order: C is G4 C4 E4 C5, the high G first', () => {

@@ -28,6 +28,21 @@ describe('songs per instrument', () => {
     }
   });
 
+  it('plays every chart song on the ukulele: the library has a shape for every chord any chart names', () => {
+    for (const song of charts) expect(songPlayableOn(song, 'ukulele'), song.id).toBe(true);
+    expect(charts.filter((song) => songsFor('ukulele').includes(song))).toEqual(charts);
+  });
+
+  it('has a ukulele shape for every guitar chord by name but the power chords and the two suspended seconds', () => {
+    const ukulele = new Set(chordsFor('ukulele').map((chord) => chord.name));
+    const missing = chordsFor('guitar')
+      .map((chord) => chord.name)
+      .filter((name) => !ukulele.has(name));
+    // Power chords are two-note guitar shapes; Dsus2 is note for note the Asus4 the library has (a quiz must not
+    // offer two names for one shape); Asus2 has no comfortable first-position shape on four strings.
+    expect(missing.sort()).toEqual(['A5', 'Asus2', 'D5', 'Dsus2', 'E5', 'G5']);
+  });
+
   it('has some chart songs to play on the ukulele today, and never a song with a chord it cannot finger', () => {
     const playable = songsFor('ukulele');
     expect(playable.length).toBeGreaterThan(0);
