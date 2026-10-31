@@ -21,9 +21,11 @@ import { UKE_UNIT_1_FACTS } from './course/uke/unit1.facts';
 import { UKE_UNIT_2_FACTS } from './course/uke/unit2.facts';
 import { UKE_UNIT_3_FACTS } from './course/uke/unit3.facts';
 import { UKE_UNIT_4_FACTS } from './course/uke/unit4.facts';
+import { UKE_UNIT_5_FACTS } from './course/uke/unit5.facts';
 import { findCheck, problemWith } from './course/factCheck';
 import type { LessonFacts } from './course/facts';
 import { findRiff } from './drills';
+import { ILLUSTRATIONS } from './illustrations';
 import { validateLesson, type Lesson, type LessonStep } from './lessons';
 import { parseRich, plainText, richProblems } from './rich';
 import { SONGS, getSong } from './songCatalog';
@@ -50,6 +52,9 @@ const EXPECTED_ORDER = [
   'uke-tab',
   'uke-fingerpicking',
   'uke-first-melody',
+  'uke-campanella',
+  'uke-bb',
+  'uke-practice',
 ];
 
 const EXPECTED_UNITS: readonly (readonly [string, number])[] = [
@@ -57,9 +62,10 @@ const EXPECTED_UNITS: readonly (readonly [string, number])[] = [
   ['Your first chords', 5],
   ['More chords and rhythm', 5],
   ['Notes and melody', 4],
+  ['The ukulele\'s own tricks', 3],
 ];
 
-const ALL_FACTS: readonly LessonFacts[] = [...UKE_UNIT_1_FACTS, ...UKE_UNIT_2_FACTS, ...UKE_UNIT_3_FACTS, ...UKE_UNIT_4_FACTS];
+const ALL_FACTS: readonly LessonFacts[] = [...UKE_UNIT_1_FACTS, ...UKE_UNIT_2_FACTS, ...UKE_UNIT_3_FACTS, ...UKE_UNIT_4_FACTS, ...UKE_UNIT_5_FACTS];
 
 const WORLD = { instrument: UKULELE, lessons: UKULELE_COURSE };
 
@@ -271,6 +277,11 @@ describe('the pictures of the ukulele course', () => {
     expect(used().filter((name) => GUITAR_ONLY_PICTURES.has(name))).toEqual([]);
   });
 
+  it('uses every picture drawn for it, so none is left over', () => {
+    const drawnForUkulele = ILLUSTRATIONS.filter((i) => i.group === 'c').map((i) => i.name);
+    expect(drawnForUkulele.filter((name) => !used().includes(name))).toEqual([]);
+  });
+
   it('has a picture on every explain card', () => {
     for (const lesson of UKULELE_COURSE) for (const card of explainCards(lesson)) expect(card.visual, `${lesson.id}: ${card.headline}`).toBeDefined();
   });
@@ -285,6 +296,7 @@ describe('what the ukulele course teaches about chords', () => {
     'uke-minors': ['Dm', 'Em'],
     'uke-sevenths': ['C7', 'A7'],
     'uke-one-four-five': ['D'],
+    'uke-bb': ['Bb'],
   };
 
   /** The chords a riff of the course strums, from its tags: a chord drill is tagged with each chord it uses. */
@@ -399,18 +411,23 @@ describe('answers derived from the theory core', () => {
     expect(answerOf('uke-first-strum', 'At 120 bpm')).toBe(60 / 120 === 0.5 ? 'Half a second' : '?');
   });
 
-  /** "G (Sol)" for a pitch class. */
-  const label = (pc: number): string => withSolfege(noteName(pc));
   const pitchClassOf = (name: string): number => midiToPitchClass(parseNoteName(name));
   /** I, IV, V of a major key, as the lesson writes them. */
-  const oneFourFive = (root: string): string => {
+  const oneFourFive = (root: string, flats = false): string => {
     const pc = pitchClassOf(root);
-    return [0, 3, 4].map((degree) => label(pc + SCALES.major.intervals[degree]!)).join(', ');
+    return [0, 3, 4].map((degree) => withSolfege(noteName(pc + SCALES.major.intervals[degree]!, { preferFlat: flats }))).join(', ');
   };
 
   it('names the I, IV and V of each key the checks ask about', () => {
     expect(answerOf('uke-one-four-five', 'key of C (Do)?')).toBe(oneFourFive('C'));
     expect(answerOf('uke-one-four-five', 'key of G (Sol)?')).toBe(oneFourFive('G'));
+    // F's IV is spelled with a flat: Bb, not A#.
+    expect(answerOf('uke-bb', 'key of F (Fa)?')).toBe(oneFourFive('F', true));
+  });
+
+  it('plans a 15-minute session, and gives the new thing its five', () => {
+    expect(3 + 5 + 4 + 3).toBe(15);
+    expect(answerOf('uke-practice', 'how many minutes go to something new')).toBe(`${5} minutes`);
   });
 
   it('names the relative minor of C major as the chord on the 6th note', () => {
