@@ -366,7 +366,7 @@ const TWINKLE_ATTRIBUTION = 'French melody "Ah! vous dirai-je, maman", published
 
 /** The whole of the tune, in first position on the ukulele: mostly open strings. */
 const twinkle = melodyDrill({
-  id: 'uke-twinkle',
+  id: 'uke-twinkle-first-melody',
   title: 'Twinkle, Twinkle, Little Star',
   level: 1,
   bpm: 90,
@@ -381,7 +381,7 @@ const twinkle = melodyDrill({
 
 /** The opening phrase of the tune, four bars. */
 const odeToJoy = melodyDrill({
-  id: 'uke-ode-to-joy',
+  id: 'uke-ode-first-phrase',
   title: 'Ode to Joy, first phrase',
   level: 2,
   bpm: 90,

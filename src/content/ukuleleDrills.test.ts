@@ -41,7 +41,7 @@ describe('the ukulele course\'s drills', () => {
     for (const riff of UKULELE_DRILLS) {
       if (riff.source === 'public-domain') expect((riff.attribution ?? '').length, riff.id).toBeGreaterThan(20);
     }
-    expect(UKULELE_DRILLS.filter((riff) => riff.source === 'public-domain').map((riff) => riff.id)).toEqual(['uke-twinkle', 'uke-ode-to-joy']);
+    expect(UKULELE_DRILLS.filter((riff) => riff.source === 'public-domain').map((riff) => riff.id)).toEqual(['uke-twinkle-first-melody', 'uke-ode-first-phrase']);
   });
 
   it('play the open strings G C E A, up and back, then strum all four on every beat', () => {
@@ -103,14 +103,14 @@ describe('the ukulele course\'s drills', () => {
   });
 
   it('play Twinkle, Twinkle as it goes, in first position, with every open string but the G one doing its part', () => {
-    const tune = drill('uke-twinkle');
+    const tune = drill('uke-twinkle-first-melody');
     expect(letters(tune).slice(0, 14).join(' ')).toBe('C C G G A A G F F E E D D C');
     expect(tune.bars).toBe(12);
     expect(Math.max(...tune.events.map((event) => event.fret))).toBeLessThanOrEqual(2);
   });
 
   it('open Ode to Joy on E E F G, G F E D, and end the phrase on D', () => {
-    const tune = drill('uke-ode-to-joy');
+    const tune = drill('uke-ode-first-phrase');
     expect(letters(tune).join(' ')).toBe('E E F G G F E D C C D E E D D');
     expect(tune.bars).toBe(4);
   });
