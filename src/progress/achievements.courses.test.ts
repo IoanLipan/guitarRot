@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_LESSONS, COURSE, type Lesson } from '@/content';
+import { ALL_LESSONS, COURSE, UKULELE_COURSE, type Lesson } from '@/content';
 import { ACHIEVEMENTS, courseUnits, getAchievement, unitsFinished, wholeCourseProgress } from './achievements';
 import { emptyProgressState, type ProgressState } from './types';
 
@@ -31,9 +31,10 @@ describe('course units across courses', () => {
     ]);
   });
 
-  it('are the guitar course\'s units when that is the only course there is', () => {
-    expect(courseUnits()).toEqual(courseUnits(COURSE));
-    expect(ALL_LESSONS).toEqual(COURSE);
+  it('are every course\'s units, the guitar\'s and the ukulele\'s, when no lessons are given', () => {
+    expect(courseUnits()).toEqual(courseUnits(ALL_LESSONS));
+    expect(ALL_LESSONS).toEqual([...COURSE, ...UKULELE_COURSE]);
+    expect(courseUnits()).toEqual([...courseUnits(COURSE), ...courseUnits(UKULELE_COURSE)]);
   });
 
   it('count units finished in any course', () => {
@@ -63,7 +64,7 @@ describe('the course achievements, with the lessons of either course', () => {
     expect(earned('whole-course', withDone(['uke-not-a-lesson']))).toBe(false);
   });
 
-  it('the whole course is the guitar one when only that is written: it needs every unit, and says how far along', () => {
+  it('the whole course is the guitar one for a player who has finished nothing: it needs every unit, and says how far along', () => {
     const all = COURSE.map((lesson) => lesson.id);
     const units = courseUnits(COURSE).length;
 
@@ -73,8 +74,15 @@ describe('the course achievements, with the lessons of either course', () => {
     expect(getAchievement('whole-course')?.progress?.(withDone([]))).toEqual({ have: 0, need: units });
   });
 
+  it('is earned by finishing the ukulele course alone, and not by all but one lesson of it', () => {
+    const uke = UKULELE_COURSE.map((lesson) => lesson.id);
+    expect(earned('whole-course', withDone(uke))).toBe(true);
+    expect(earned('whole-course', withDone(uke.slice(1)))).toBe(false);
+    expect(earned('first-unit', withDone(courseUnits(UKULELE_COURSE)[0]?.lessonIds ?? []))).toBe(true);
+  });
+
   it('is not earned by an instrument with no course: nothing written is nothing finished', () => {
-    // The ukulele course is empty today; it must not make "every unit of it" vacuously true.
+    // An instrument with no lessons must not make "every unit of it" vacuously true.
     expect(wholeCourseProgress(withDone([])).need).toBeGreaterThan(0);
     expect(earned('whole-course', emptyProgressState())).toBe(false);
   });

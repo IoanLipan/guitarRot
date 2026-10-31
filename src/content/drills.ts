@@ -1,6 +1,7 @@
 import { melodyRiff } from './melody';
 import { ALL_RIFFS } from './riffs';
 import { songToRiff, type Song, type StrumPattern } from './songs';
+import { UKULELE_DRILLS } from './ukuleleDrills';
 import type { Riff, TabEvent, Technique } from './types';
 
 /**
@@ -350,9 +351,9 @@ export const DRILLS: readonly Riff[] = [
   folkPatternGC,
 ];
 
-const PRACTICE_RIFFS: readonly Riff[] = [...ALL_RIFFS, ...DRILLS];
+const PRACTICE_RIFFS: readonly Riff[] = [...ALL_RIFFS, ...DRILLS, ...UKULELE_DRILLS];
 
-/** Looks a riff up across the Feed's library and the course's drills. */
+/** Looks a riff up across the Feed's library and the courses' drills (the guitar's and the ukulele's). */
 export function findRiff(id: string): Riff | undefined {
   return PRACTICE_RIFFS.find((riff) => riff.id === id);
 }

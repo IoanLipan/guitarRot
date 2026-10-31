@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COURSE, SONGS, isMovieSong } from '@/content';
+import { ALL_LESSONS, COURSE, SONGS, isMovieSong } from '@/content';
 import {
   ACHIEVEMENTS,
   courseUnits,
@@ -14,7 +14,9 @@ import { emptyProgressState, type ProgressState } from './types';
 
 const units = courseUnits();
 const lessonIdsOfUnits = (count: number): string[] => units.slice(0, count).flatMap((unit) => unit.lessonIds);
-const allLessonIds = COURSE.map((lesson) => lesson.id);
+const allLessonIds = ALL_LESSONS.map((lesson) => lesson.id);
+/** One whole course: finishing every lesson of it, and no other, is what the whole-course achievement asks. */
+const guitarLessonIds = COURSE.map((lesson) => lesson.id);
 
 const songIds = SONGS.map((song) => song.id);
 const movieId = SONGS.find((song) => isMovieSong(song))?.id ?? '';
@@ -51,8 +53,8 @@ const CASES: Record<string, { earned: ProgressState; short: ProgressState }> = {
     short: state({ lessonsDone: lessonIdsOfUnits(3).slice(1) }),
   },
   'whole-course': {
-    earned: state({ lessonsDone: allLessonIds }),
-    short: state({ lessonsDone: allLessonIds.slice(1) }),
+    earned: state({ lessonsDone: guitarLessonIds }),
+    short: state({ lessonsDone: guitarLessonIds.slice(1) }),
   },
   'first-correct': {
     earned: state({ streak: { current: 0, longest: 1, lastActiveDate: null } }),

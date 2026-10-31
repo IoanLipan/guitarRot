@@ -214,19 +214,19 @@ describe('the first run', () => {
   });
 });
 
-describe('the start screen for an instrument with no course', () => {
-  it('offers the tuner and the explorer instead of a first lesson, and lands on the tuner', async () => {
+describe('the start screen on the ukulele', () => {
+  it('starts the ukulele course at its own lesson 1, not the tuner and the explorer a course-less instrument would get', async () => {
     const ukulele = withInstrument(returningState().settings, 'ukulele');
     world.initial = { ...returningState(), settings: ukulele };
     render(<AppShell />);
 
-    expect(screen.getByTestId('start-learn')).toHaveTextContent('Tune up and explore');
+    expect(screen.getByTestId('start-learn')).toHaveTextContent('Start lesson 1');
 
     await act(async () => {
       fireEvent.click(screen.getByTestId('start-learn'));
     });
-    expect(screen.getByTestId('learn-section')).toHaveTextContent('tuner');
-    expect(screen.getByTestId('learn-lesson')).toHaveTextContent('none');
+    expect(screen.getByTestId('learn-section')).toHaveTextContent('course');
+    expect(screen.getByTestId('learn-lesson')).toHaveTextContent('uke-meet');
   });
 
   it('is still lesson 1 for the guitar', () => {
