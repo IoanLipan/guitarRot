@@ -42,7 +42,7 @@ export function ChangeEarly() {
                 stroke={hot ? ACCENT : DIM}
                 strokeWidth={2}
               />
-              <Label x={beatX(bar, beat)} y={BEAT_Y - 11} size={16} color={hot ? '#0b0b0f' : INK} weight={900} anchor="middle">
+              <Label x={beatX(bar, beat)} y={BEAT_Y - 11} size={16} color={hot ? 'var(--color-ground)' : INK} weight={900} anchor="middle">
                 {beat + 1}
               </Label>
             </g>

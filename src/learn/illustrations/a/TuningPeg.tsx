@@ -89,28 +89,28 @@ export function TuningPeg() {
       <RingArrow cx={ZOOM.x} cy={ZOOM.y} r={RING} from={205} to={335} color={ACCENT} />
       <RingArrow cx={ZOOM.x} cy={ZOOM.y} r={RING} from={155} to={25} color={DIM} />
 
-      <text x={288} y={36} fill={ACCENT} fontSize={14} fontWeight={800} dominantBaseline="middle">
+      <text x={288} y={36} fill={ACCENT} fontSize={15} fontWeight={800} dominantBaseline="middle">
         tighten
       </text>
-      <text x={288} y={53} fill={INK} fontSize={12} fontWeight={700} dominantBaseline="middle">
+      <text x={288} y={53} fill={INK} fontSize={15} fontWeight={700} dominantBaseline="middle">
         pitch ↑
       </text>
-      <text x={288} y={80} fill={DIM} fontSize={14} fontWeight={800} dominantBaseline="middle">
+      <text x={288} y={80} fill={DIM} fontSize={15} fontWeight={800} dominantBaseline="middle">
         loosen
       </text>
-      <text x={288} y={97} fill={DIM} fontSize={12} fontWeight={700} dominantBaseline="middle">
+      <text x={288} y={97} fill={DIM} fontSize={15} fontWeight={700} dominantBaseline="middle">
         pitch ↓
       </text>
 
       {/* the pitch graph */}
       <line x1={40} y1={206} x2={40} y2={134} stroke={DIM} strokeWidth={1.6} strokeLinecap="round" />
       <polygon points="40,128 35.5,137 44.5,137" fill={DIM} />
-      <text x={24} y={170} fill={DIM} fontSize={12} fontWeight={700} textAnchor="middle" dominantBaseline="middle" transform="rotate(-90 24 170)">
+      <text x={24} y={170} fill={DIM} fontSize={15} fontWeight={700} textAnchor="middle" dominantBaseline="middle" transform="rotate(-90 24 170)">
         pitch
       </text>
       <line x1={40} y1={206} x2={346} y2={206} stroke={DIM} strokeWidth={1.6} strokeLinecap="round" />
       <line x1={46} y1={160} x2={346} y2={160} stroke={INK} strokeOpacity={0.75} strokeWidth={1.6} strokeDasharray="5 5" strokeLinecap="round" />
-      <text x={346} y={149} fill={INK} fontSize={12} fontWeight={700} textAnchor="end" dominantBaseline="middle">
+      <text x={346} y={149} fill={INK} fontSize={15} fontWeight={700} textAnchor="end" dominantBaseline="middle">
         target
       </text>
       <path
@@ -122,7 +122,7 @@ export function TuningPeg() {
         strokeLinejoin="round"
       />
       <circle cx={48} cy={198} r={4} fill={ACCENT} />
-      <text x={194} y={226} fill={ACCENT} fontSize={14} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+      <text x={194} y={226} fill={ACCENT} fontSize={15} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
         come up to the note
       </text>
     </Art>

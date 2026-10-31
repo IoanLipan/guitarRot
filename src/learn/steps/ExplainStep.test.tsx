@@ -95,9 +95,21 @@ describe('ExplainStep', () => {
     const warn = screen.getByTestId('explain-warn');
     expect(warn).toHaveTextContent('Common mistake');
     expect(warn).toHaveTextContent('Pressing in the middle of the gap buzzes.');
-    expect(warn.getAttribute('style')).toContain('--rich-strong: var(--color-bad)');
+    expect(warn).toHaveClass('bg-bad/10', '[--rich-strong:var(--color-bad)]');
+    expect(warn).toHaveTextContent('Common mistake');
     const tip = screen.getByTestId('explain-tip');
     expect(tip.compareDocumentPosition(warn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('keeps amber for the one thing to tap: a tip is a step up in tone, not a colour', () => {
+    show(card({ tip: 'A tip.', warn: 'A mistake.' }));
+    for (const id of ['explain-tip', 'explain-warn']) {
+      const callout = screen.getByTestId(id);
+      expect(callout.className).not.toMatch(/accent/);
+      // Sentence case, no tracked capitals.
+      expect(callout.querySelector('p')?.className).not.toMatch(/uppercase|tracking-/);
+    }
+    expect(screen.getByTestId('explain-tip')).toHaveClass('bg-surface-2');
   });
 
   it('brings each element in 80ms after the one before, picture first', () => {

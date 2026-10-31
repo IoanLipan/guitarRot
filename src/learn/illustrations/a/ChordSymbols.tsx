@@ -31,7 +31,7 @@ export function ChordSymbols() {
 
       {/* where the strum starts */}
       <Arrow x1={grid.stringX(5)} y1={12} x2={grid.stringX(5)} y2={ORIGIN.y - 29} color={ACCENT} width={4} headSize={11} />
-      <text x={grid.stringX(5) + 14} y={20} fill={ACCENT} fontSize={14} fontWeight={800} dominantBaseline="middle">
+      <text x={grid.stringX(5) + 14} y={20} fill={ACCENT} fontSize={15} fontWeight={800} dominantBaseline="middle">
         start here
       </text>
 
@@ -41,26 +41,26 @@ export function ChordSymbols() {
         <line x1={legendX - 7} y1={92 - 7} x2={legendX + 7} y2={92 + 7} />
         <line x1={legendX + 7} y1={92 - 7} x2={legendX - 7} y2={92 + 7} />
       </g>
-      <text x={legendX + 24} y={86} fill={INK} fontSize={13} fontWeight={700} dominantBaseline="middle">
+      <text x={legendX + 24} y={86} fill={INK} fontSize={15} fontWeight={700} dominantBaseline="middle">
         don&apos;t play
       </text>
-      <text x={legendX + 24} y={102} fill={INK} fontSize={13} fontWeight={700} dominantBaseline="middle">
+      <text x={legendX + 24} y={102} fill={INK} fontSize={15} fontWeight={700} dominantBaseline="middle">
         this string
       </text>
 
       <circle cx={legendX} cy={142} r={7} fill="none" stroke={INK} strokeWidth={2.6} />
-      <text x={legendX + 24} y={142} fill={INK} fontSize={13} fontWeight={700} dominantBaseline="middle">
+      <text x={legendX + 24} y={142} fill={INK} fontSize={15} fontWeight={700} dominantBaseline="middle">
         play it open
       </text>
 
       <circle cx={legendX} cy={188} r={11} fill={INK} />
-      <text x={legendX} y={188.5} fill="#0b0b0f" fontSize={13} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
+      <text x={legendX} y={188.5} fill="var(--color-ground)" fontSize={15} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
         2
       </text>
-      <text x={legendX + 24} y={181} fill={INK} fontSize={13} fontWeight={700} dominantBaseline="middle">
+      <text x={legendX + 24} y={181} fill={INK} fontSize={15} fontWeight={700} dominantBaseline="middle">
         number =
       </text>
-      <text x={legendX + 24} y={197} fill={INK} fontSize={13} fontWeight={700} dominantBaseline="middle">
+      <text x={legendX + 24} y={197} fill={INK} fontSize={15} fontWeight={700} dominantBaseline="middle">
         which finger
       </text>
       <line x1={legendX - 18} y1={116} x2={legendX + 124} y2={116} stroke={DIM} strokeOpacity={0.25} strokeWidth={1} />

@@ -13,7 +13,7 @@ import {
 import { noteColor } from '@/render';
 import { Neck } from './Neck';
 import { RichText } from './RichText';
-import { StepCaption, StepKicker } from './StepHeading';
+import { StepCaption } from './StepHeading';
 
 function where(position: FretPosition, withString: boolean): string {
   const fret = position.fret === 0 ? 'open' : `fret ${position.fret}`;
@@ -41,11 +41,8 @@ export function FretboardStep({
   }
 
   return (
-    <div className="flex flex-col gap-5" data-testid="step-fretboard">
-      <div className="flex flex-col gap-1.5">
-        <StepKicker>Look</StepKicker>
-        <StepCaption>{step.caption}</StepCaption>
-      </div>
+    <div className="flex flex-col gap-5 tight:gap-3" data-testid="step-fretboard">
+      <StepCaption>{step.caption}</StepCaption>
 
       <Neck
         fretRange={step.fretRange}
@@ -59,12 +56,12 @@ export function FretboardStep({
       />
 
       {interactive && (
-        <p className="min-h-6 text-center text-sm text-ink-dim" aria-live="polite" data-testid="neck-heard">
+        <p className="label min-h-6 text-center" aria-live="polite" data-testid="neck-heard">
           {tapped === null ? (
             'Tap any fret to hear it.'
           ) : (
             <>
-              <strong className="text-base">
+              <strong className="text-body">
                 <RichText>{noteLabel(fretToMidi(STANDARD_TUNING, tapped.stringIndex, tapped.fret))}</RichText>
               </strong>{' '}
               — {where(tapped, true)}
@@ -77,12 +74,12 @@ export function FretboardStep({
         {step.positions.map((position) => (
           <li
             key={`${position.stringIndex}-${position.fret}`}
-            className="flex flex-col items-start rounded-2xl bg-surface px-3 py-2.5"
+            className="flex flex-col items-start rounded-2xl bg-surface px-3 py-2.5 tight:py-2"
           >
-            <span className="text-base">
+            <span className="text-body">
               <RichText>{noteLabel(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret))}</RichText>
             </span>
-            <span className="mt-1 text-xs text-ink-dim">{where(position, manyStrings)}</span>
+            <span className="label mt-1">{where(position, manyStrings)}</span>
           </li>
         ))}
       </ul>

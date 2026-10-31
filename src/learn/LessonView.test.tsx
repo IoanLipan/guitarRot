@@ -149,7 +149,14 @@ describe('LessonView: moving through a lesson', () => {
   });
 
   it('labels the last step Finish', () => {
+    view(lesson('x', [card(['Only.'])]));
+    expect(next()).toHaveTextContent('Finish');
+  });
+
+  it('labels a last step that asks a question Finish once it is answered', () => {
     view(lesson('x', [CHECK]));
+    fireEvent.click(screen.getByText('String 1'));
+    expect(next()).toBeEnabled();
     expect(next()).toHaveTextContent('Finish');
   });
 
@@ -808,5 +815,257 @@ describe('LessonView: explain steps and marked-up text', () => {
     const end = screen.getByTestId('lesson-complete');
     expect(end.querySelector('strong')).toHaveTextContent('string 6');
     expect(end.querySelector('[data-note-chip="E"]')).toBeInTheDocument();
+  });
+});
+
+describe('LessonView: a shut Next says why', () => {
+  const DRILL: LessonStep = { kind: 'drill', strings: [5], fretRange: [0, 3], count: 6 };
+
+  it('names the way through a question instead of sitting there grey', () => {
+    view(lesson('x', [CHECK, card(['After.'])]));
+
+    expect(next()).toBeDisabled();
+    expect(next()).toHaveTextContent('Pick an answer');
+    expect(next()).toHaveAccessibleName('Pick an answer');
+    expect(next()).not.toHaveTextContent('Next');
+    // No arrow on a button that cannot be pressed yet.
+    expect(next().querySelector('svg')).toBeNull();
+  });
+
+  it('keeps saying it through a wrong answer, and turns into Next when the answer is right', () => {
+    view(lesson('x', [CHECK, card(['After.'])]));
+
+    fireEvent.click(screen.getByText('String 6'));
+    expect(next()).toBeDisabled();
+    expect(next()).toHaveTextContent('Pick an answer');
+
+    fireEvent.click(screen.getByText('String 1'));
+    expect(next()).toBeEnabled();
+    expect(next()).toHaveTextContent('Next');
+    expect(next().querySelector('svg')).not.toBeNull();
+  });
+
+  it('says how many a drill wants', () => {
+    view(lesson('x', [DRILL, card(['After.'])]));
+
+    expect(next()).toBeDisabled();
+    expect(next()).toHaveTextContent('Answer 6 to go on');
+  });
+
+  it('says it again when you go back to a step that is still shut', () => {
+    view(lesson('x', [card(['First.']), CHECK, CHECK]));
+    clickNext();
+    fireEvent.click(screen.getByText('String 1'));
+    clickNext();
+    expect(next()).toHaveTextContent('Pick an answer');
+
+    fireEvent.click(screen.getByTestId('lesson-back'));
+    expect(next()).toHaveTextContent('Next');
+  });
+
+  it('does not make a step that is never shut say anything but Next', () => {
+    view(lesson('x', [card(['First.']), card(['Second.'])]));
+    expect(next()).toHaveTextContent('Next');
+  });
+});
+
+describe('LessonView: a new step is announced', () => {
+  const announce = () => screen.getByTestId('lesson-announce');
+
+  it('says which step it is in a polite, screen-reader-only status', () => {
+    view(lesson('x', [card(['First.']), card(['Second.']), card(['Third.'])]));
+
+    expect(announce()).toHaveAttribute('role', 'status');
+    expect(announce()).toHaveAttribute('aria-live', 'polite');
+    expect(announce()).toHaveClass('sr-only');
+    expect(announce()).toHaveTextContent('Step 1 of 3');
+  });
+
+  it('changes the words on every move, forward and back, so it is read out again', () => {
+    view(lesson('x', [card(['First.']), card(['Second.']), card(['Third.'])]));
+
+    clickNext();
+    expect(announce()).toHaveTextContent('Step 2 of 3');
+    clickNext();
+    expect(announce()).toHaveTextContent('Step 3 of 3');
+    fireEvent.click(screen.getByTestId('lesson-back'));
+    expect(announce()).toHaveTextContent('Step 2 of 3');
+  });
+
+  it('is the same element throughout, because a live region only reads what changes inside it', () => {
+    view(lesson('x', [card(['First.']), card(['Second.'])]));
+    const before = announce();
+    clickNext();
+    expect(announce()).toBe(before);
+  });
+
+  it('says so when the last step is done', () => {
+    view(lesson('x', [card(['Only.'])]));
+    clickNext();
+    expect(screen.getByTestId('lesson-complete')).toBeInTheDocument();
+    expect(announce()).toHaveTextContent('All 1 steps done');
+  });
+});
+
+describe('LessonView: what is left to scroll to', () => {
+  const fake = (name: 'scrollHeight' | 'clientHeight', value: number) =>
+    Object.defineProperty(HTMLElement.prototype, name, { configurable: true, get: () => value });
+
+  afterEach(() => {
+    // Back to what jsdom does itself: no layout, everything 0.
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>).scrollHeight;
+    delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientHeight;
+  });
+
+  it('shows no fade or cue on a step that fits', () => {
+    view(lesson('x', [card(['Short.'])]));
+    expect(screen.getByTestId('lesson-more')).toHaveAttribute('data-visible', 'false');
+  });
+
+  it('shows the fade, with a cue in words, on a step that runs past the footer', () => {
+    fake('scrollHeight', 900);
+    fake('clientHeight', 400);
+    view(lesson('x', [card(['Long.'])]));
+
+    const more = screen.getByTestId('lesson-more');
+    expect(more).toHaveAttribute('data-visible', 'true');
+    expect(more).toHaveTextContent('More below');
+    expect(more).toHaveAttribute('aria-hidden', 'true');
+    // A cue, not a control: it must never take a tap meant for the step underneath.
+    expect(more).toHaveClass('pointer-events-none');
+    // 32px of fade.
+    expect(more).toHaveClass('h-8');
+  });
+
+  it('lets go of the fade once the step has been scrolled to its end', () => {
+    fake('scrollHeight', 900);
+    fake('clientHeight', 400);
+    view(lesson('x', [card(['Long.'])]));
+    const scroller = screen.getByTestId('lesson-scroll');
+    expect(screen.getByTestId('lesson-more')).toHaveAttribute('data-visible', 'true');
+
+    Object.defineProperty(scroller, 'scrollTop', { configurable: true, value: 500 });
+    fireEvent.scroll(scroller);
+
+    expect(screen.getByTestId('lesson-more')).toHaveAttribute('data-visible', 'false');
+  });
+});
+
+describe('LessonView: the words on the screen', () => {
+  it('has no eyebrow label above a step: the step\'s own heading says what it is', () => {
+    view(lesson('x', [CHECK]));
+    expect(screen.queryByText(/quick check/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/your turn/i)).not.toBeInTheDocument();
+    // The question is the heading.
+    expect(screen.getByRole('heading', { name: 'Which string is the thinnest?' })).toBeInTheDocument();
+  });
+
+  it('sets the lesson title and the end-screen label in sentence case, without tracked capitals', () => {
+    view(lesson('x', [card(['Only.'])]));
+    expect(screen.getByText('Lesson x')).toHaveClass('label');
+    expect(screen.getByText('Lesson x').className).not.toMatch(/uppercase|tracking-/);
+
+    clickNext();
+    const goal = screen.getByText('Goal reached');
+    expect(goal).toHaveClass('label');
+    expect(goal.className).not.toMatch(/uppercase|tracking-/);
+  });
+
+  it('has no resting shadow on Next or the next-lesson button', () => {
+    view(lesson('x', [card(['Only.'])]), { nextLesson: lesson('y', [card(['Y.'])]), onOpenNext: vi.fn() });
+    expect(next().className).not.toMatch(/shadow-\[/);
+    clickNext();
+    expect(screen.getByTestId('lesson-next-lesson').className).not.toMatch(/shadow-\[/);
+  });
+
+  it('keeps the one amber fill on Next: Skip and Back are quiet', () => {
+    setMic('idle');
+    view(
+      lesson('x', [
+        card(['First.']),
+        { kind: 'listen', caption: 'Play it.', targets: [{ stringIndex: 5, fret: 0 }] },
+      ]),
+    );
+    expect(next()).toHaveClass('bg-accent');
+    clickNext();
+    expect(screen.getByTestId('lesson-back')).not.toHaveClass('bg-accent');
+    expect(screen.getByTestId('lesson-skip')).not.toHaveClass('bg-accent');
+  });
+});
+
+describe('LessonView: one amber button, and room for it on a short phone', () => {
+  const AMBER_FILL = /(^|\s)bg-accent(?![\w/-])/;
+
+  it('makes Strum it a secondary action: dark, amber text, an amber hairline, no shadow', () => {
+    view(lesson('x', [{ kind: 'chord', chordId: 'Em-open' }, CHECK]));
+    const strum = screen.getByTestId('chord-strum');
+    expect(strum).toHaveClass('bg-surface-2', 'text-accent', 'ring-1', 'ring-accent/40');
+    expect(strum.className).not.toMatch(AMBER_FILL);
+    expect(strum.className).not.toMatch(/shadow-/);
+    expect(next()).toHaveClass('bg-accent');
+  });
+
+  it('makes the listen buttons secondary, and shows listening as a ring rather than a fill', () => {
+    view(lesson('x', [{ kind: 'listen', caption: 'Play it.', targets: [{ stringIndex: 5, fret: 0 }] }, CHECK]));
+    expect(screen.getByTestId('listen-mic').className).not.toMatch(AMBER_FILL);
+    expect(screen.getByTestId('listen-hear').className).not.toMatch(AMBER_FILL);
+
+    cleanup();
+    setMic('listening');
+    view(lesson('x', [{ kind: 'listen', caption: 'Play it.', targets: [{ stringIndex: 5, fret: 0 }] }, CHECK]));
+    expect(screen.getByTestId('listen-mic')).toHaveClass('ring-2', 'ring-accent');
+    expect(screen.getByTestId('listen-mic').className).not.toMatch(AMBER_FILL);
+  });
+
+  it('quiets the tuner step\'s Start button, which is the Learn tab\'s amber one', () => {
+    view(lesson('x', [{ kind: 'tuner' }, CHECK]));
+    const step = screen.getByTestId('step-tuner');
+    expect(step.className).toContain('[&_[data-testid=tuner-start]]:bg-surface-2');
+    expect(step.className).toContain('[&_[data-testid=tuner-start]]:text-accent');
+    expect(screen.getByTestId('tuner-start')).toBeInTheDocument();
+  });
+
+  it('trims a check question under tight: a smaller headline, shorter options, closer together', () => {
+    view(lesson('x', [CHECK]));
+    const step = screen.getByTestId('step-check');
+    const headline = within(step).getByRole('heading', { level: 2 });
+    expect(headline).toHaveClass('text-headline', 'tight:text-title');
+    const options = within(screen.getByRole('group', { name: 'Answers' })).getAllByRole('button');
+    for (const option of options) {
+      expect(option).toHaveClass('min-h-14', 'tight:min-h-12', 'text-lesson', 'tight:text-body');
+    }
+    expect(screen.getByRole('group', { name: 'Answers' })).toHaveClass('gap-3', 'tight:gap-2');
+  });
+
+  it('holds no space back for the answer to a check: it arrives under the options and scrolls itself into view', () => {
+    view(lesson('x', [CHECK]));
+    const status = within(screen.getByTestId('step-check')).getByRole('status');
+    expect(status.className).not.toMatch(/min-h-/);
+    expect(status).toBeEmptyDOMElement();
+
+    fireEvent.click(screen.getByText('String 6'));
+    expect(within(status).getByTestId('check-feedback')).toBeInTheDocument();
+  });
+
+  it('draws the check options from tokens: no raw hex greys', () => {
+    view(lesson('x', [CHECK]));
+    const options = within(screen.getByRole('group', { name: 'Answers' })).getAllByRole('button');
+    for (const option of options) expect(option.className).not.toMatch(/#[0-9a-f]{6}/i);
+    expect(options[0]).toHaveClass('border-line', 'bg-surface-2');
+  });
+
+  it('gives an explain headline 24px under tight: and keeps its points readable', () => {
+    view(lesson('x', [card(['One.', 'Two.'], 'A headline'), CHECK]));
+    expect(screen.getByRole('heading', { name: 'A headline' }).className).toContain('tight:text-[24px]');
+    for (const point of screen.getAllByTestId('explain-point')) {
+      expect(point.querySelector('p')).toHaveClass('text-lesson', 'tight:text-body');
+    }
+  });
+
+  it('puts the end-screen and footer below the system navigation bar: the tab bar that used to sit there is gone', () => {
+    view(lesson('x', [card(['Only.'])]));
+    expect(screen.getByRole('contentinfo').className).toContain('safe-area-inset-bottom');
+    clickNext();
+    expect(screen.getByTestId('lesson-complete').className).toContain('safe-area-inset-bottom');
   });
 });

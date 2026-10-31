@@ -17,7 +17,7 @@ import {
 } from '@/music';
 import { chordShapeToFretboard, Fretboard, noteColor } from '@/render';
 import { RichText } from './RichText';
-import { MissingContent, StepKicker } from './StepHeading';
+import { MissingContent, StepCaption } from './StepHeading';
 
 /** How long the "just strummed" highlight holds after a tap. */
 const STRUM_FLASH_MS = 700;
@@ -57,7 +57,7 @@ export function ChordStep({
     if (chord === undefined) return;
     tapHaptic();
     // The button ripples under the finger and the diagram's strings shiver.
-    ripple(event.currentTarget, { x: event.clientX, y: event.clientY }, 'rgba(11, 11, 15, 0.22)');
+    ripple(event.currentTarget, { x: event.clientX, y: event.clientY }, 'rgba(255, 176, 32, 0.22)');
     vibrateStrings(diagramRef.current);
     engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
     setStrumming(true);
@@ -66,16 +66,15 @@ export function ChordStep({
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 text-center" data-testid="step-chord">
-      <div className="flex flex-col items-center gap-1.5">
-        <StepKicker>Chord</StepKicker>
-        <div className="text-5xl leading-none font-black">{chord.name}</div>
-        <div className="text-sm tracking-wider text-ink-dim uppercase">{chordSolfegeName(chord)}</div>
+    <div className="flex flex-col items-center gap-4 text-center tight:gap-3" data-testid="step-chord">
+      <div className="flex flex-col items-center gap-1">
+        <h2 className="text-display font-black tight:text-headline">{chord.name}</h2>
+        <p className="label">{chordSolfegeName(chord)}</p>
       </div>
 
       <div
         ref={diagramRef}
-        className={`h-52 w-40 rounded-3xl transition-[scale,background-color,box-shadow] duration-200 ${
+        className={`h-52 w-40 rounded-3xl transition-[scale,background-color,box-shadow] duration-200 tight:h-44 tight:w-36 [@media(max-height:600px)]:h-36 [@media(max-height:600px)]:w-28 ${
           strumming ? 'scale-[1.03] bg-accent/10 ring-2 ring-accent/60' : 'ring-2 ring-transparent'
         }`}
       >
@@ -97,7 +96,7 @@ export function ChordStep({
         />
       </div>
 
-      <ul className="flex flex-wrap justify-center gap-2 text-[17px]" aria-label="Notes in the chord" data-testid="chord-tones">
+      <ul className="flex flex-wrap justify-center gap-2 text-lesson" aria-label="Notes in the chord" data-testid="chord-tones">
         {tones.map((tone) => (
           <li key={tone}>
             <RichText>{tone}</RichText>
@@ -105,22 +104,19 @@ export function ChordStep({
         ))}
       </ul>
 
+      {/* Secondary on purpose: Next is the one amber button on a lesson screen. */}
       <button
         type="button"
         onClick={handleStrum}
         data-testid="chord-strum"
-        className="press fx-host flex h-14 items-center gap-2.5 rounded-full bg-accent px-8 text-base font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.3)]"
+        className="press fx-host flex h-14 items-center gap-2.5 rounded-full bg-surface-2 px-8 text-body font-extrabold text-accent ring-1 ring-accent/40 tight:h-12"
       >
         <NoteIcon size={22} />
         {strumming ? 'Strumming…' : 'Strum it'}
       </button>
 
-      <p className="text-sm leading-relaxed text-ink-dim">{strumAdvice}</p>
-      {step.caption !== undefined && (
-        <p className="text-[17px] leading-[1.6] font-medium text-ink">
-          <RichText>{step.caption}</RichText>
-        </p>
-      )}
+      <p className="text-meta text-ink-dim">{strumAdvice}</p>
+      {step.caption !== undefined && <StepCaption>{step.caption}</StepCaption>}
     </div>
   );
 }

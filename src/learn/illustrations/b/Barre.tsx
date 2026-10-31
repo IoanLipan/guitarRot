@@ -65,7 +65,7 @@ export function Barre() {
       {FINGERS.map((f) => (
         <g key={f.finger}>
           <circle cx={stringX(f.stringIndex)} cy={rowY(f.fret)} r={DOT_R} fill={INK} />
-          <Label x={stringX(f.stringIndex)} y={rowY(f.fret) + 0.5} size={14} color="#0b0b0f" weight={900} anchor="middle">
+          <Label x={stringX(f.stringIndex)} y={rowY(f.fret) + 0.5} size={14} color="var(--color-ground)" weight={900} anchor="middle">
             {f.finger}
           </Label>
         </g>
@@ -73,7 +73,7 @@ export function Barre() {
 
       {/* the barre: one long flat finger across all six strings at fret 1 */}
       <rect x={BAR_X1} y={rowY(1) - 12} width={BAR_X2 - BAR_X1} height={24} rx={12} fill={ACCENT} />
-      <Label x={(BAR_X1 + BAR_X2) / 2} y={rowY(1) + 0.5} size={16} color="#0b0b0f" weight={900} anchor="middle">
+      <Label x={(BAR_X1 + BAR_X2) / 2} y={rowY(1) + 0.5} size={16} color="var(--color-ground)" weight={900} anchor="middle">
         1
       </Label>
 

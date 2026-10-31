@@ -24,19 +24,19 @@ export function SharpFlat() {
 
       {/* the middle fret and both its names */}
       <rect x={mid - 40} y={STRING_Y - 25} width={80} height={50} rx={13} fill={ACCENT} fillOpacity={0.14} stroke={ACCENT} strokeWidth={2.8} />
-      <text x={mid} y={STRING_Y - 9} fill={noteColor('C')} fontSize={14} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+      <text x={mid} y={STRING_Y - 9} fill={noteColor('C')} fontSize={15} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
         C# (Do#)
       </text>
-      <text x={mid} y={STRING_Y + 11} fill={noteColor('D')} fontSize={14} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+      <text x={mid} y={STRING_Y + 11} fill={noteColor('D')} fontSize={15} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
         Db (Reb)
       </text>
 
       <NoteDot x={c} y={STRING_Y} name="C" r={16} />
       <NoteDot x={d} y={STRING_Y} name="D" r={16} />
-      <text x={c} y={STRING_Y + 36} fill={noteColor('C')} fontSize={13} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+      <text x={c} y={STRING_Y + 36} fill={noteColor('C')} fontSize={15} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
         Do
       </text>
-      <text x={d} y={STRING_Y - 36} fill={noteColor('D')} fontSize={13} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+      <text x={d} y={STRING_Y - 36} fill={noteColor('D')} fontSize={15} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
         Re
       </text>
 

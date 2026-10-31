@@ -40,7 +40,7 @@ export function BeatsBar() {
               stroke={strong ? ACCENT : INK}
               strokeWidth={strong ? 0 : 2.5}
             />
-            <Label x={x} y={BEAT_Y + 1} size={strong ? 30 : 24} color={strong ? '#0b0b0f' : INK} weight={900} anchor="middle">
+            <Label x={x} y={BEAT_Y + 1} size={strong ? 30 : 24} color={strong ? 'var(--color-ground)' : INK} weight={900} anchor="middle">
               {i + 1}
             </Label>
             <StrumArrow x={x} top={118} bottom={150} dir="down" color={strong ? ACCENT : INK} />

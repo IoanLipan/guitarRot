@@ -54,7 +54,7 @@ export function TunerNeedle() {
       {/* the needle */}
       <line x1={CX} y1={CY} x2={tip.x} y2={tip.y} stroke={ACCENT} strokeWidth={5} strokeLinecap="round" />
       <circle cx={CX} cy={CY} r={10} fill={INK} />
-      <circle cx={CX} cy={CY} r={4} fill="#0b0b0f" />
+      <circle cx={CX} cy={CY} r={4} fill="var(--color-ground)" />
 
       {/* the note it hears */}
       <NotePill x={CX} y={CY + 50} name="E" solfege="Mi" size={26} />

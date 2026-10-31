@@ -14,7 +14,7 @@ import {
 import type { FretMarker } from '@/render';
 import { Neck } from './Neck';
 import { RichText } from './RichText';
-import { StepCaption, StepKicker } from './StepHeading';
+import { StepCaption } from './StepHeading';
 
 /** How long the right pitch has to be held before it counts: a pluck passing through is not a played note. */
 const HOLD_MS = 250;
@@ -134,27 +134,24 @@ export function ListenStep({
   const fretRange: [number, number] = [0, Math.max(4, ...step.targets.map((p) => p.fret + 1))];
 
   return (
-    <div className="flex flex-col gap-4" data-testid="step-listen">
-      <div className="flex flex-col gap-1.5">
-        <StepKicker>Your turn</StepKicker>
-        <StepCaption>{step.caption}</StepCaption>
-      </div>
+    <div className="flex flex-col gap-4 tight:gap-3" data-testid="step-listen">
+      <StepCaption>{step.caption}</StepCaption>
 
       {complete || target === undefined || targetMidi === undefined ? (
         <div
           className="flex flex-col items-center gap-1 rounded-3xl bg-good/12 px-5 py-7 text-center"
           data-testid="listen-complete"
         >
-          <p className="flex items-center justify-center gap-2 text-3xl font-black text-good">
+          <p className="flex items-center justify-center gap-2 text-headline font-black text-good">
             <CheckIcon size={30} strokeWidth={3} />
             Played
           </p>
-          <p className="text-sm text-ink-dim">
+          <p className="text-meta text-ink-dim">
             {total === 1 ? 'That note' : `All ${total} notes`} heard. Nicely done.
           </p>
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-1 rounded-3xl bg-surface px-5 py-5 text-center">
+        <div className="flex flex-col items-center gap-1 rounded-3xl bg-surface px-5 py-5 text-center tight:py-4">
           <ol className="flex w-full gap-1.5" aria-label="Notes to play" data-testid="listen-progress">
             {step.targets.map((_, index) => (
               <li
@@ -172,13 +169,13 @@ export function ListenStep({
               />
             ))}
           </ol>
-          <p className="mt-2 text-xs font-bold tracking-wider text-ink-dim uppercase tabular-nums">
+          <p className="label mt-2 tabular-nums">
             Note {ticked + 1} of {total}
           </p>
-          <p className="text-3xl leading-tight font-black" data-testid="listen-target">
+          <p className="text-headline leading-tight font-black" data-testid="listen-target">
             <RichText>{`Play ${noteLabel(targetMidi)}`}</RichText>
           </p>
-          <p className="text-base text-ink-dim" data-testid="listen-where">
+          <p className="text-body text-ink-dim" data-testid="listen-where">
             {whereToPlay(target)}
           </p>
         </div>
@@ -191,7 +188,7 @@ export function ListenStep({
               type="button"
               onClick={handleHear}
               data-testid="listen-hear"
-              className="press flex h-13 items-center justify-center gap-2 rounded-full bg-surface-2 text-base font-extrabold"
+              className="press flex h-13 items-center justify-center gap-2 rounded-full bg-surface-2 text-body font-extrabold text-ink tight:h-12"
             >
               <SpeakerIcon size={20} />
               Hear it
@@ -203,8 +200,9 @@ export function ListenStep({
                 disabled={mic.status === 'starting'}
                 data-testid="listen-mic"
                 aria-pressed={mic.status === 'listening'}
-                className={`press flex h-13 items-center justify-center gap-2 rounded-full text-base font-extrabold disabled:opacity-60 ${
-                  mic.status === 'listening' ? 'bg-accent text-ground' : 'bg-surface-2'
+                // The in-step action is secondary: Next is the one amber fill. Listening is a ring, not a fill.
+                className={`press flex h-13 items-center justify-center gap-2 rounded-full bg-surface-2 text-body font-extrabold text-accent disabled:opacity-60 tight:h-12 ${
+                  mic.status === 'listening' ? 'ring-2 ring-accent' : 'ring-1 ring-accent/40'
                 }`}
               >
                 <MicIcon size={20} />
@@ -218,7 +216,7 @@ export function ListenStep({
           </div>
 
           <p
-            className="min-h-10 text-center text-sm leading-relaxed text-ink-dim"
+            className="min-h-10 text-center text-meta text-ink-dim"
             role="status"
             aria-live="polite"
             data-testid="listen-status"

@@ -5,8 +5,8 @@ const LEFT = 50;
 const CELL = 60;
 const FIRST_FRET = 3;
 const FRETS = 5;
-const TOP = 50;
-const GAP = 24;
+const TOP = 48;
+const GAP = 30;
 const rowY = (stringNumber: number) => TOP + (stringNumber - 1) * GAP;
 const colX = (fret: number) => LEFT + (fret - FIRST_FRET + 0.5) * CELL;
 const BOTTOM = rowY(6) + 16;
@@ -15,14 +15,14 @@ const BOTTOM = rowY(6) + 16;
 export function OctaveShape() {
   return (
     <Art
-      height={240}
+      height={250}
       label="A neck window showing frets 3 to 7: G on string 6 fret 3 and G again on string 4 fret 5 are joined by an L-shaped arrow, two frets up and two strings thinner, which makes an octave; a fainter C on string 5 fret 3 and string 3 fret 5 shows the same shape."
     >
-      <text x={26} y={24} fill={DIM} fontSize={12} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
+      <text x={26} y={24} fill={DIM} fontSize={15} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
         fret
       </text>
       {Array.from({ length: FRETS }, (_, i) => (
-        <text key={i} x={colX(FIRST_FRET + i)} y={24} fill={DIM} fontSize={12} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
+        <text key={i} x={colX(FIRST_FRET + i)} y={24} fill={DIM} fontSize={15} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
           {FIRST_FRET + i}
         </text>
       ))}
@@ -33,8 +33,8 @@ export function OctaveShape() {
       ))}
       {[1, 2, 3, 4, 5, 6].map((n) => (
         <g key={n}>
-          <circle cx={26} cy={rowY(n)} r={9.5} fill={SURFACE_2} stroke={DIM} strokeOpacity={0.6} strokeWidth={1.2} />
-          <text x={26} y={rowY(n) + 0.5} fill={INK} fontSize={12} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+          <circle cx={26} cy={rowY(n)} r={11.5} fill={SURFACE_2} stroke={DIM} strokeOpacity={0.6} strokeWidth={1.2} />
+          <text x={26} y={rowY(n) + 0.5} fill={INK} fontSize={15} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
             {n}
           </text>
           <line x1={LEFT} y1={rowY(n)} x2={LEFT + CELL * FRETS} y2={rowY(n)} stroke={STEEL} strokeWidth={STRING_WIDTHS[n - 1]} strokeLinecap="round" />
@@ -43,8 +43,8 @@ export function OctaveShape() {
 
       {/* the second example, faint: C on string 5 fret 3, then string 3 fret 5 */}
       <Arrow x1={colX(3) + 26} y1={rowY(5) - 8} x2={colX(5) - 28} y2={rowY(3) + 9} color={DIM} width={2} dashed headSize={7} />
-      <NoteMark x={colX(3)} y={rowY(5)} name="C" text="C (Do)" opacity={0.5} />
-      <NoteMark x={colX(5)} y={rowY(3)} name="C" text="C (Do)" opacity={0.5} />
+      <NoteMark x={colX(3)} y={rowY(5)} name="C" text="C" opacity={0.5} />
+      <NoteMark x={colX(5)} y={rowY(3)} name="C" text="C" opacity={0.5} />
 
       {/* the main example: G on string 6 fret 3, then string 4 fret 5 */}
       <path d={`M${colX(3) + 31},${rowY(6)} H${colX(5)}`} fill="none" stroke={ACCENT} strokeWidth={3.4} strokeLinecap="round" />
@@ -52,11 +52,8 @@ export function OctaveShape() {
       <NoteMark x={colX(3)} y={rowY(6)} name="G" text="G (Sol)" />
       <NoteMark x={colX(5)} y={rowY(4)} name="G" text="G (Sol)" />
 
-      <Leader x1={colX(5)} y1={BOTTOM + 8} x2={colX(5)} y2={rowY(6) + 3} color={ACCENT} />
+      <Leader x1={colX(5)} y1={BOTTOM + 7} x2={colX(5)} y2={rowY(6) + 3} color={ACCENT} />
       <Tag x={colX(5)} y={BOTTOM + 20} text="2 strings thinner, 2 frets up" color={ACCENT} stroke={ACCENT} />
-      <text x={180} y={BOTTOM + 46} fill={DIM} fontSize={12} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
-        (from strings 6 and 5)
-      </text>
     </Art>
   );
 }

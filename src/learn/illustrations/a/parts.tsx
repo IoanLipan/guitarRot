@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ACCENT, BAD, DIM, GOOD, INK, STEEL, STRING_WIDTHS, SURFACE_2, noteColor } from '../kit';
+import { ACCENT, BAD, DIM, GOOD, GROUND, INK, MIN_TEXT, STEEL, STRING_WIDTHS, SURFACE_2, noteColor } from '../kit';
 
 /**
  * Pieces only the group-a illustrations share: label tags with leader
@@ -8,7 +8,7 @@ import { ACCENT, BAD, DIM, GOOD, INK, STEEL, STRING_WIDTHS, SURFACE_2, noteColor
  */
 
 /** The page behind the cards; used to knock a line out behind a label. */
-export const GROUND = 'var(--color-ground)';
+export { GROUND };
 /** A lighter brown for wood outlines, so a dark body still reads on the dark card. */
 export const WOOD_EDGE = '#8a6a48';
 /** The simplified people in the posture and hand pictures. */
@@ -27,10 +27,11 @@ export function textWidth(text: string, size: number, weight = 700): number {
 export type TagAnchor = 'start' | 'middle' | 'end';
 
 /** The rectangle a Tag occupies; use it to start a leader line on the tag's edge. */
-export function tagBox(x: number, y: number, lines: readonly string[], size = 12, anchor: TagAnchor = 'middle') {
-  const widest = Math.max(...lines.map((line) => textWidth(line, size)));
+export function tagBox(x: number, y: number, lines: readonly string[], size = 15, anchor: TagAnchor = 'middle') {
+  const type = Math.max(size, MIN_TEXT);
+  const widest = Math.max(...lines.map((line) => textWidth(line, type)));
   const w = widest + 14;
-  const h = lines.length * size * 1.25 + 10;
+  const h = lines.length * type * 1.25 + 10;
   const cx = anchor === 'start' ? x + w / 2 : anchor === 'end' ? x - w / 2 : x;
   return { cx, cy: y, w, h, left: cx - w / 2, right: cx + w / 2, top: y - h / 2, bottom: y + h / 2 };
 }
@@ -40,7 +41,7 @@ export function Tag({
   x,
   y,
   text,
-  size = 12,
+  size = 15,
   anchor = 'middle',
   color = INK,
   stroke = DIM,
@@ -56,8 +57,9 @@ export function Tag({
   fill?: string;
 }) {
   const lines = typeof text === 'string' ? [text] : text;
-  const box = tagBox(x, y, lines, size, anchor);
-  const lineHeight = size * 1.25;
+  const type = Math.max(size, MIN_TEXT);
+  const box = tagBox(x, y, lines, type, anchor);
+  const lineHeight = type * 1.25;
   const first = y - ((lines.length - 1) * lineHeight) / 2;
   return (
     <g>
@@ -78,7 +80,7 @@ export function Tag({
           x={box.cx}
           y={first + i * lineHeight + 0.5}
           fill={color}
-          fontSize={size}
+          fontSize={type}
           fontWeight={700}
           textAnchor="middle"
           dominantBaseline="middle"
@@ -236,13 +238,13 @@ export function VerdictBadge({
         <polyline
           points={`${x - s},${y} ${x - s * 0.25},${y + s * 0.75} ${x + s},${y - s * 0.7}`}
           fill="none"
-          stroke="#0b0b0f"
+          stroke="var(--color-ground)"
           strokeWidth={r * 0.26}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
       ) : (
-        <g stroke="#0b0b0f" strokeWidth={r * 0.26} strokeLinecap="round">
+        <g stroke="var(--color-ground)" strokeWidth={r * 0.26} strokeLinecap="round">
           <line x1={x - s} y1={y - s} x2={x + s} y2={y + s} />
           <line x1={x + s} y1={y - s} x2={x - s} y2={y + s} />
         </g>
@@ -284,7 +286,7 @@ export function NoteMark({
   y,
   name,
   text,
-  size = 11,
+  size = 15,
   opacity = 1,
 }: {
   x: number;
@@ -295,8 +297,9 @@ export function NoteMark({
   opacity?: number;
 }) {
   const color = noteColor(name);
-  const w = textWidth(text, size, 800) + size * 1.1;
-  const h = size * 1.9;
+  const type = Math.max(size, MIN_TEXT);
+  const w = textWidth(text, type, 800) + type * 1.1;
+  const h = type * 1.9;
   return (
     <g opacity={opacity}>
       <rect x={x - w / 2} y={y - h / 2} width={w} height={h} rx={h / 2} fill={GROUND} />
@@ -311,7 +314,7 @@ export function NoteMark({
         stroke={color}
         strokeWidth={1.2}
       />
-      <text x={x} y={y + 0.5} fill={color} fontSize={size} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+      <text x={x} y={y + 0.5} fill={color} fontSize={type} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
         {text}
       </text>
     </g>
@@ -452,8 +455,8 @@ export function ChordDiagram({
             <text
               x={cx}
               y={cy + 0.5}
-              fill="#0b0b0f"
-              fontSize={r * 1.15}
+              fill="var(--color-ground)"
+              fontSize={Math.max(r * 1.15, MIN_TEXT)}
               fontWeight={900}
               textAnchor="middle"
               dominantBaseline="middle"

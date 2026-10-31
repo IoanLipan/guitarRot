@@ -1,12 +1,12 @@
 import { ACCENT, Art, DIM, INK, Label } from '../kit';
 import { n, NoteGlyph, type NoteKind } from './parts';
 
-const X0 = 98;
+const X0 = 118;
 const X1 = 346;
 const BEAT = (X1 - X0) / 4;
-const ROW_H = 34;
-const FIRST_ROW = 34;
-const ROW_GAP = 6;
+const ROW_H = 36;
+const FIRST_ROW = 32;
+const ROW_GAP = 5;
 const GAP = 3;
 
 /** Each note value as a row of blocks: how many fit in one 4-beat bar, and how long each lasts. */
@@ -36,7 +36,7 @@ export function NoteLengths() {
           {i + 1}
         </Label>
       ))}
-      <Label x={14} y={16} size={11} color={DIM}>
+      <Label x={10} y={16} color={DIM}>
         beat
       </Label>
 
@@ -47,10 +47,10 @@ export function NoteLengths() {
         const color = hot ? ACCENT : INK;
         return (
           <g key={row.kind}>
-            <Label x={14} y={y + 12} size={13} color={hot ? ACCENT : INK} weight={900}>
+            <Label x={10} y={y + 11} color={hot ? ACCENT : INK} weight={900}>
               {row.name}
             </Label>
-            <Label x={14} y={y + 27} size={11} color={DIM}>
+            <Label x={10} y={y + 27} color={DIM}>
               {row.each}
             </Label>
             {Array.from({ length: row.count }, (_, k) => {
@@ -69,7 +69,7 @@ export function NoteLengths() {
                     strokeOpacity={hot ? 1 : 0.4}
                     strokeWidth={hot ? 2 : 1.5}
                   />
-                  <NoteGlyph x={n(bx + (row.kind === 'eighth' ? 10 : 15))} y={y + (row.kind === 'whole' ? ROW_H / 2 : 26)} kind={row.kind} color={color} />
+                  <NoteGlyph x={n(bx + (row.kind === 'eighth' ? 10 : 15))} y={y + (row.kind === 'whole' ? ROW_H / 2 : 27)} kind={row.kind} color={color} />
                 </g>
               );
             })}
@@ -78,23 +78,23 @@ export function NoteLengths() {
       })}
 
       {/* the dot: half again, so a dotted half lasts 2 + 1 = 3 beats */}
-      <Label x={14} y={DOT_ROW + 10} size={13} color={INK} weight={900}>
+      <Label x={10} y={DOT_ROW + 11} color={INK} weight={900}>
         dotted half
       </Label>
-      <Label x={14} y={DOT_ROW + 26} size={11} color={DIM}>
+      <Label x={10} y={DOT_ROW + 27} color={DIM}>
         + half again
       </Label>
       <rect x={n(X0 + GAP / 2)} y={DOT_ROW} width={n(BEAT * 2 - GAP)} height={ROW_H} rx={7} fill={INK} fillOpacity={0.1} stroke={INK} strokeOpacity={0.4} strokeWidth={1.5} />
-      <NoteGlyph x={n(X0 + 16)} y={DOT_ROW + 26} kind="half" />
-      <circle cx={n(X0 + 30)} cy={DOT_ROW + 26} r={2.6} fill={ACCENT} />
-      <Label x={n(X0 + BEAT)} y={DOT_ROW + 17} size={12} color={DIM} weight={700} anchor="middle">
+      <NoteGlyph x={n(X0 + 16)} y={DOT_ROW + 27} kind="half" />
+      <circle cx={n(X0 + 30)} cy={DOT_ROW + 27} r={2.6} fill={ACCENT} />
+      <Label x={n(X0 + BEAT * 1.2)} y={DOT_ROW + 18} color={DIM} weight={700} anchor="middle">
         2 beats
       </Label>
       <rect x={n(X0 + BEAT * 2 + GAP / 2)} y={DOT_ROW} width={n(BEAT - GAP)} height={ROW_H} rx={7} fill={ACCENT} fillOpacity={0.14} stroke={ACCENT} strokeWidth={2} strokeDasharray="5 4" />
-      <Label x={n(X0 + BEAT * 2.5)} y={DOT_ROW + 17} size={13} color={ACCENT} weight={900} anchor="middle">
+      <Label x={n(X0 + BEAT * 2.5)} y={DOT_ROW + 18} color={ACCENT} weight={900} anchor="middle">
         + 1
       </Label>
-      <Label x={n(X0 + BEAT * 3.5)} y={DOT_ROW + 17} size={16} color={ACCENT} weight={900} anchor="middle">
+      <Label x={n(X0 + BEAT * 3.5)} y={DOT_ROW + 18} size={18} color={ACCENT} weight={900} anchor="middle">
         = 3
       </Label>
     </Art>

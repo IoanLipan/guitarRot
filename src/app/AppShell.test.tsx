@@ -191,6 +191,30 @@ async function openOnFeed() {
 const tab = (name: string) => screen.getByRole('button', { name });
 const pressBack = () => act(() => world.backButton?.());
 
+/** The shell hears about awards through the progress handle; this is how a test makes the game say something. */
+function listenForAwards() {
+  world.progress = fakeProgressHandle({
+    subscribeAwards: vi.fn((listener) => {
+      world.awards = listener as (notice: unknown) => void;
+      return () => {};
+    }),
+  });
+}
+const unlock = (id: string) => ({
+  id: 1,
+  event: { type: 'song-played', songId: 'tom-dooley' },
+  award: { xp: 20, levelBefore: 1, levelAfter: 1, unlocked: [id], dayStreak: 1, firstOfDay: false },
+});
+
+/**
+ * A lesson takes the tab bar away, so the one way off it with the lesson still
+ * open is an unlock toast: its tap opens that pick on the You tab.
+ */
+function leaveByUnlockToast() {
+  act(() => world.awards?.(unlock('first-song')));
+  fireEvent.click(screen.getByTestId('unlock-toast'));
+}
+
 describe('AppShell', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -233,6 +257,54 @@ describe('AppShell', () => {
     });
   });
 
+  describe('a lesson open', () => {
+    async function openLesson() {
+      render(<AppShell />);
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('start-learn'));
+      });
+    }
+
+    it('takes the tab bar and the settings gear away: the lesson has its own close button and needs the height', async () => {
+      await openLesson();
+
+      expect(screen.getByTestId('lesson-view')).toBeInTheDocument();
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      for (const name of ['Feed', 'Songs', 'Learn', 'Quiz', 'You']) {
+        expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+      }
+      expect(screen.queryByTestId('open-settings')).not.toBeInTheDocument();
+    });
+
+    it('brings them back when the lesson is closed', async () => {
+      await openLesson();
+
+      fireEvent.click(screen.getByTestId('lesson-close'));
+
+      expect(screen.queryByTestId('lesson-view')).not.toBeInTheDocument();
+      expect(tab('Learn')).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByTestId('open-settings')).toBeInTheDocument();
+    });
+
+    it('keeps them on every other tab, and on the course list', async () => {
+      await openOnFeed();
+      expect(screen.getByTestId('open-settings')).toBeInTheDocument();
+      expect(tab('Learn')).toBeInTheDocument();
+
+      fireEvent.click(tab('Learn'));
+      expect(screen.getByTestId('course')).toBeInTheDocument();
+      expect(screen.getByTestId('open-settings')).toBeInTheDocument();
+      expect(tab('Quiz')).toBeInTheDocument();
+    });
+
+    it('draws the gear on a solid fill, not a blur', async () => {
+      await openOnFeed();
+      const gear = screen.getByTestId('open-settings');
+      expect(gear.className).toContain('bg-surface-2/90');
+      expect(gear.className).not.toContain('backdrop-blur');
+    });
+  });
+
   describe('the start screen', () => {
     it('offers learning first and the feed second, and nothing else is on screen yet', () => {
       render(<AppShell />);
@@ -252,7 +324,6 @@ describe('AppShell', () => {
       expect(world.start).toHaveBeenCalledTimes(1);
       expect(screen.getByTestId('lesson-view')).toBeInTheDocument();
       expect(screen.getByText(COURSE[0]!.title)).toBeInTheDocument();
-      expect(tab('Learn')).toHaveAttribute('aria-current', 'page');
       // The Feed never mounted on the way, so no riff started for a moment.
       expect(screen.queryByTestId('feed-screen')).not.toBeInTheDocument();
     });
@@ -312,6 +383,7 @@ describe('AppShell', () => {
 
   describe('tabs keep their place', () => {
     async function openLessonAtThirdStep() {
+      listenForAwards();
       render(<AppShell />);
       await act(async () => {
         fireEvent.click(screen.getByTestId('start-learn'));
@@ -326,7 +398,7 @@ describe('AppShell', () => {
       await openLessonAtThirdStep();
       expect(stepCounter()).toHaveAttribute('aria-valuenow', '2');
 
-      fireEvent.click(tab('Quiz'));
+      leaveByUnlockToast();
       expect(screen.queryByTestId('lesson-view')).not.toBeInTheDocument();
       fireEvent.click(tab('Feed'));
       fireEvent.click(tab('Learn'));
@@ -361,7 +433,7 @@ describe('AppShell', () => {
 
     it('a lesson being finished is not recorded again when you come back to it', async () => {
       await openLessonAtThirdStep();
-      fireEvent.click(tab('Quiz'));
+      leaveByUnlockToast();
       fireEvent.click(tab('Learn'));
 
       expect(world.progress.completeLesson).not.toHaveBeenCalled();
@@ -376,18 +448,20 @@ describe('AppShell', () => {
     it('peels off one layer at a time: settings, lesson, song, tab, then leaves the app', async () => {
       await openOnFeed();
 
-      // Build every layer: a lesson open on Learn, a song open on Songs, then
-      // standing on Learn with the Settings sheet over it.
+      // Build every layer: a song open on Songs, then the Settings sheet over
+      // the course list on Learn (a lesson takes the gear away, so Settings
+      // goes on before the lesson does).
       fireEvent.click(tab('Songs'));
       fireEvent.click(screen.getByTestId('pick-song'));
       fireEvent.click(tab('Learn'));
-      fireEvent.click(screen.getByTestId(`lesson-row-${COURSE[0]!.id}`));
       fireEvent.click(screen.getByTestId('open-settings'));
       expect(screen.getByTestId('settings-sheet')).toBeInTheDocument();
 
       // 1. The Settings sheet.
       pressBack();
       expect(screen.queryByTestId('settings-sheet')).not.toBeInTheDocument();
+      expect(screen.getByTestId('course')).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId(`lesson-row-${COURSE[0]!.id}`));
       expect(screen.getByTestId('lesson-view')).toBeInTheDocument();
 
       // 2. The lesson.
@@ -430,11 +504,13 @@ describe('AppShell', () => {
     });
 
     it('leaves a lesson that is open on another tab alone', async () => {
+      listenForAwards();
       await openOnFeed();
       fireEvent.click(tab('Learn'));
       fireEvent.click(screen.getByTestId(`lesson-row-${COURSE[0]!.id}`));
-      fireEvent.click(tab('Quiz'));
+      leaveByUnlockToast();
 
+      pressBack(); // the pick the toast opened
       pressBack();
       expect(tab('Feed')).toHaveAttribute('aria-current', 'page');
       fireEvent.click(tab('Learn'));
@@ -621,20 +697,6 @@ describe('AppShell', () => {
   });
 
   describe('the game layer', () => {
-    function listenForAwards() {
-      world.progress = fakeProgressHandle({
-        subscribeAwards: vi.fn((listener) => {
-          world.awards = listener as (notice: unknown) => void;
-          return () => {};
-        }),
-      });
-    }
-    const unlock = (id: string) => ({
-      id: 1,
-      event: { type: 'song-played', songId: 'tom-dooley' },
-      award: { xp: 20, levelBefore: 1, levelAfter: 1, unlocked: [id], dayStreak: 1, firstOfDay: false },
-    });
-
     it('is mounted once the app is running, and listening for awards', async () => {
       listenForAwards();
       await openOnFeed();

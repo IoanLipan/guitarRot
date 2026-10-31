@@ -34,17 +34,17 @@ function Point({
     <li
       data-testid="explain-point"
       className={`explain-rise relative flex gap-3.5 ${
-        last ? '' : 'after:absolute after:top-[34px] after:-bottom-[10px] after:left-[13px] after:w-0.5 after:rounded-full after:bg-accent/15'
+        last ? '' : 'after:absolute after:top-[34px] after:-bottom-[10px] after:left-[13px] after:w-0.5 after:rounded-full after:bg-line'
       }`}
       style={enters(order)}
     >
       <span
         aria-hidden="true"
-        className="mt-[2px] flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/15 text-sm font-black text-accent ring-1 ring-accent/35"
+        className="mt-[2px] flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-3 text-meta font-black text-ink"
       >
-        {alone ? <span className="h-2 w-2 rounded-full bg-accent" /> : number}
+        {alone ? <span className="h-2 w-2 rounded-full bg-ink" /> : number}
       </span>
-      <p className="min-w-0 flex-1 text-[18px] leading-[1.45] font-medium text-ink short:text-[17px] short:leading-[1.4]">
+      <p className="min-w-0 flex-1 text-lesson leading-[1.45] font-medium text-ink tight:text-body tight:leading-[1.4]">
         <RichText>{children}</RichText>
       </p>
     </li>
@@ -52,19 +52,21 @@ function Point({
 }
 
 const CALLOUTS = {
+  // A tip is a quiet aside, so it gets a step up in tone, not a colour: amber is kept for the one thing to tap.
   tip: {
     Icon: BulbIcon,
     label: 'Tip',
-    color: 'var(--color-accent)',
-    tint: 'rgba(255,176,32,0.09)',
-    edge: 'rgba(255,176,32,0.28)',
+    box: 'bg-surface-2',
+    ink: 'text-ink',
+    strong: '[--rich-strong:var(--color-ink)]',
   },
   warn: {
     Icon: WarningIcon,
     label: 'Common mistake',
-    color: 'var(--color-bad)',
-    tint: 'rgba(255,90,95,0.10)',
-    edge: 'rgba(255,90,95,0.32)',
+    box: 'bg-bad/10',
+    ink: 'text-bad',
+    // **strong** inside a callout takes the callout's colour.
+    strong: '[--rich-strong:var(--color-bad)]',
   },
 } as const;
 
@@ -75,25 +77,15 @@ function Callout({ kind, children, order }: { kind: keyof typeof CALLOUTS; child
       role="note"
       aria-label={look.label}
       data-testid={`explain-${kind}`}
-      className="explain-rise flex gap-3 rounded-2xl px-3.5 py-3 short:py-2.5"
-      style={
-        {
-          ...enters(order),
-          background: look.tint,
-          boxShadow: `inset 0 0 0 1px ${look.edge}`,
-          // **strong** inside a callout takes the callout's colour.
-          '--rich-strong': look.color,
-        } as CSSProperties
-      }
+      className={`explain-rise flex gap-3 rounded-2xl px-3.5 py-3 tight:py-2.5 ${look.box} ${look.strong}`}
+      style={enters(order)}
     >
-      <span aria-hidden="true" className="mt-px shrink-0" style={{ color: look.color }}>
+      <span aria-hidden="true" className={`mt-px shrink-0 ${look.ink}`}>
         <look.Icon size={22} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs leading-none font-extrabold tracking-widest uppercase" style={{ color: look.color }}>
-          {look.label}
-        </p>
-        <p className="mt-1.5 text-[16px] leading-[1.45] text-ink short:mt-1 short:text-[15px]">
+        <p className={`text-label leading-none font-bold ${look.ink}`}>{look.label}</p>
+        <p className="mt-1.5 text-body leading-[1.45] text-ink tight:mt-1 tight:leading-[1.4]">
           <RichText>{children}</RichText>
         </p>
       </div>
@@ -123,17 +115,17 @@ export function ExplainStep({
   ].filter((kind): kind is 'tip' | 'warn' => kind !== null);
 
   return (
-    <article className="flex flex-col gap-4 short:gap-3" data-testid="step-explain">
+    <article className="flex flex-col gap-4 tight:gap-3" data-testid="step-explain">
       <VisualCard visual={step.visual} engine={engine} />
 
       <h2
-        className="explain-rise text-[28px] leading-[1.12] font-black tracking-tight text-balance short:text-[25px]"
+        className="explain-rise text-headline font-black tracking-tight text-balance tight:text-[24px] tight:leading-[1.15]"
         style={enters(1)}
       >
         <RichText>{step.headline}</RichText>
       </h2>
 
-      <ol className="flex flex-col gap-3.5 short:gap-3" aria-label="Key points">
+      <ol className="flex flex-col gap-3.5 tight:gap-3" aria-label="Key points">
         {points.map((point, index) => (
           <Point
             key={index}

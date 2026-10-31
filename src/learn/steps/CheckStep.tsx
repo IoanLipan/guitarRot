@@ -5,7 +5,6 @@ import { CheckIcon } from '@/ui/icons';
 import { burst } from '@/ui/motion';
 import { Reveal } from './Reveal';
 import { RichText } from './RichText';
-import { StepKicker } from './StepHeading';
 
 /**
  * One hand-written multiple-choice question. A wrong tap turns that option red
@@ -43,29 +42,26 @@ export function CheckStep({
   const answered = solved || wrong.length > 0;
 
   return (
-    <div className="flex flex-col gap-5" data-testid="step-check">
-      <div className="flex flex-col gap-1.5">
-        <StepKicker>Quick check</StepKicker>
-        <h2 className="text-[26px] leading-[1.15] font-black tracking-tight text-balance">
-          <RichText>{step.question}</RichText>
-        </h2>
-      </div>
+    <div className="flex flex-col gap-5 tight:gap-3" data-testid="step-check">
+      <h2 className="text-headline font-black tracking-tight text-balance tight:text-title">
+        <RichText>{step.question}</RichText>
+      </h2>
 
-      <div className="flex flex-col gap-3" role="group" aria-label="Answers">
+      <div className="flex flex-col gap-3 tight:gap-2" role="group" aria-label="Answers">
         {step.options.map((option) => {
           const isRight = solved && option === step.answer;
           const isWrong = wrong.includes(option);
           const classes = [
-            'press press-soft min-h-14 w-full rounded-2xl border-2 px-4 py-3.5 text-left text-[18px] leading-snug font-bold [&_[data-note-chip]]:text-[1em]',
+            'press press-soft min-h-14 w-full rounded-2xl border-2 px-4 py-3.5 text-left text-lesson leading-snug font-bold tight:min-h-12 tight:py-2 tight:text-body [&_[data-note-chip]]:text-[1em]',
           ];
           if (isRight) {
-            classes.push('answer-pop answer-ring border-[var(--color-good)] bg-[var(--color-good)] pr-12 text-[var(--color-ground)]');
+            classes.push('answer-pop answer-ring border-good bg-good pr-12 text-ground');
           } else if (isWrong) {
-            classes.push('answer-shake answer-ring border-[var(--color-bad)] bg-[var(--color-bad)] text-[var(--color-ground)]');
+            classes.push('answer-shake answer-ring border-bad bg-bad text-ground');
           } else if (solved) {
-            classes.push('border-[#22222b] bg-[var(--color-surface)] text-[var(--color-ink)] opacity-40');
+            classes.push('border-line bg-surface text-ink opacity-40');
           } else {
-            classes.push('border-[#2b2b36] bg-[var(--color-surface-2)] text-[var(--color-ink)]');
+            classes.push('border-line bg-surface-2 text-ink');
           }
           return (
             <button
@@ -91,21 +87,22 @@ export function CheckStep({
         })}
       </div>
 
-      <div className="min-h-24" role="status" aria-live="polite">
+      {/* No space is held back for the answer: it arrives under the options and scrolls itself into view. */}
+      <div role="status" aria-live="polite">
         {answered && (
           <Reveal
             // Keyed so "Correct" arrives as fresh as "Not quite" did.
             key={solved ? 'right' : 'wrong'}
             data-testid="check-feedback"
-            className={`rise-in scroll-mb-8 rounded-2xl px-4 py-3.5 ${solved ? 'bg-good/12' : 'bg-bad/12'}`}
+            className={`rise-in scroll-mb-8 rounded-2xl px-4 py-3.5 tight:py-3 ${solved ? 'bg-good/12' : 'bg-bad/12'}`}
           >
-            <p className={`text-lg font-black ${solved ? 'text-good' : 'text-bad'}`}>
+            <p className={`text-lesson font-black ${solved ? 'text-good' : 'text-bad'}`}>
               {solved ? 'Correct' : 'Not quite'}
             </p>
-            <p className="mt-1 text-[16px] leading-[1.5] text-ink">
+            <p className="mt-1 text-body leading-[1.5] text-ink">
               <RichText>{step.explain}</RichText>
             </p>
-            {!solved && <p className="mt-2 text-sm text-ink-dim">Have another go.</p>}
+            {!solved && <p className="mt-2 text-meta text-ink-dim">Have another go.</p>}
           </Reveal>
         )}
       </div>

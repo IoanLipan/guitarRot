@@ -61,23 +61,17 @@ export function AlphabetLoop() {
       ))}
       <RingArrow cx={CX} cy={CY} r={R} from={300 + EDGE - 90} to={360 - EDGE - 90} color={INK} width={4.5} headSize={11} />
 
-      {/* how far apart, inside the ring for two frets and outside for the one-fret gaps */}
-      {gaps.map((gap) => {
-        if (gap.frets === 1) {
-          const [x, y] = at(gap.mid, R + 32);
+      {/* only the two odd gaps are named: the plain grey ones are the usual two frets, said once in the lesson */}
+      {gaps
+        .filter((gap) => gap.frets === 1)
+        .map((gap) => {
+          const [x, y] = at(gap.mid, R + 34);
           return (
-            <text key={gap.from} x={x} y={y} fill={ACCENT} fontSize={13} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+            <text key={gap.from} x={x} y={y} fill={ACCENT} fontSize={16} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
               1 fret
             </text>
           );
-        }
-        const [x, y] = at(gap.mid, R - 29);
-        return (
-          <text key={gap.from} x={x} y={y} fill={DIM} fontSize={11} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
-            2 frets
-          </text>
-        );
-      })}
+        })}
 
       {NOTES.map((note) => {
         const [x, y] = at(note.frets * 30, R);
@@ -85,7 +79,7 @@ export function AlphabetLoop() {
         return (
           <g key={note.name}>
             <NoteDot x={x} y={y} name={note.name} r={BUBBLE} />
-            <text x={sx} y={sy} fill={noteColor(note.name)} fontSize={12} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+            <text x={sx} y={sy} fill={noteColor(note.name)} fontSize={15} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
               {note.solfege}
             </text>
           </g>
@@ -94,11 +88,8 @@ export function AlphabetLoop() {
 
       <Leader x1={128} y1={48} x2={at(330, R)[0]} y2={at(330, R)[1] - 4} color={INK} />
       <Tag x={100} y={34} text={['starts again,', 'higher']} />
-      <text x={CX} y={CY - 8} fill={INK} fontSize={13} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+      <text x={CX} y={CY} fill={INK} fontSize={18} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
         12 frets
-      </text>
-      <text x={CX} y={CY + 9} fill={DIM} fontSize={11} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
-        ↻ repeat
       </text>
     </Art>
   );

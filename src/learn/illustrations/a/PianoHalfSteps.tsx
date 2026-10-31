@@ -47,7 +47,7 @@ export function PianoHalfSteps() {
           <text
             x={LEFT + i * KEY_W + KEY_W / 2}
             y={TOP + KEY_H - 18}
-            fill="#0b0b0f"
+            fill="var(--color-ground)"
             fontSize={15}
             fontWeight={900}
             textAnchor="middle"
@@ -59,7 +59,7 @@ export function PianoHalfSteps() {
             x={LEFT + i * KEY_W + KEY_W / 2}
             y={TOP + KEY_H + 18}
             fill={noteColor(key.name)}
-            fontSize={13}
+            fontSize={15}
             fontWeight={800}
             textAnchor="middle"
             dominantBaseline="middle"
@@ -73,10 +73,10 @@ export function PianoHalfSteps() {
       <g opacity={0.35}>
         <rect x={edge} y={TOP} width={KEY_W - 4} height={KEY_H} rx={4} fill={WHITE} stroke={GROUND} strokeWidth={2} />
         <rect x={edge + 5} y={TOP + KEY_H - 31} width={KEY_W - 14} height={25} rx={7} fill={noteColor('C')} />
-        <text x={edge + (KEY_W - 4) / 2} y={TOP + KEY_H - 18} fill="#0b0b0f" fontSize={15} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
+        <text x={edge + (KEY_W - 4) / 2} y={TOP + KEY_H - 18} fill="var(--color-ground)" fontSize={15} fontWeight={900} textAnchor="middle" dominantBaseline="middle">
           C
         </text>
-        <text x={edge + (KEY_W - 4) / 2} y={TOP + KEY_H + 18} fill={noteColor('C')} fontSize={13} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
+        <text x={edge + (KEY_W - 4) / 2} y={TOP + KEY_H + 18} fill={noteColor('C')} fontSize={15} fontWeight={800} textAnchor="middle" dominantBaseline="middle">
           Do
         </text>
       </g>
@@ -104,7 +104,7 @@ export function PianoHalfSteps() {
       ))}
       <Tag x={218} y={24} text="no black key = 1 fret (half step)" color={ACCENT} stroke={ACCENT} />
 
-      <text x={180} y={200} fill={DIM} fontSize={12} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
+      <text x={180} y={200} fill={DIM} fontSize={15} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
         a black key in between = 2 frets
       </text>
     </Art>

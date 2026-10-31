@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { Lesson } from '@/content';
 import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, CloseIcon } from '@/ui/icons';
 import { burst, fillTransform, stagger } from '@/ui/motion';
 import { RichText } from './steps/RichText';
-import { StepView, stepGate } from './steps/StepView';
+import { StepView, gateReason, stepGate } from './steps/StepView';
 
 export type LessonViewProps = {
   lesson: Lesson;
@@ -31,6 +31,55 @@ export type LessonViewProps = {
 };
 
 const NO_STEPS: readonly number[] = [];
+
+/**
+ * Whether the scroller has more under what is on screen. The fade and its
+ * "More below" cue show only then: at the end of a step there is nothing to
+ * hint at, and the last line is never half under a fade.
+ */
+function useMoreBelow(scrollRef: RefObject<HTMLDivElement | null>, step: number): boolean {
+  const [more, setMore] = useState(false);
+  // `step` is a dependency because the scroller is a new element for every step.
+  useLayoutEffect(() => {
+    const scroller = scrollRef.current;
+    if (scroller === null) {
+      setMore(false);
+      return;
+    }
+    const measure = () => setMore(scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight > 4);
+    measure();
+    scroller.addEventListener('scroll', measure, { passive: true });
+    // A step grows (a check's answer arrives) and a window resizes: look again.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(scroller);
+    if (scroller.firstElementChild !== null) observer?.observe(scroller.firstElementChild);
+    return () => {
+      scroller.removeEventListener('scroll', measure);
+      observer?.disconnect();
+    };
+  }, [scrollRef, step]);
+  return more;
+}
+
+/** A small chevron pointing down; drawn here because it is only the scroll cue's. */
+function ChevronDown() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={16}
+      height={16}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
 
 /**
  * One lesson, one step per screen. The step list sits above a Next button that
@@ -60,6 +109,7 @@ export function LessonView({
   /** Set when this visit finishes the lesson, so coming back to a finished lesson does not throw confetti again. */
   const celebrateRef = useRef(false);
   const badgeRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Through a ref so a new callback identity on every parent render does not re-report.
   const onStepChangeRef = useRef(onStepChange);
@@ -73,6 +123,7 @@ export function LessonView({
   const gate = step === undefined ? 'open' : stepGate(step);
   const isPassed = passed.includes(index);
   const isLast = index === total - 1;
+  const moreBelow = useMoreBelow(scrollRef, index);
 
   function markPassed() {
     setPassed((previous) => (previous.includes(index) ? previous : [...previous, index]));
@@ -108,12 +159,18 @@ export function LessonView({
 
   const fraction = total === 0 ? 1 : Math.min(1, index / total);
   const ready = gate === 'required' && isPassed;
+  // A shut Next says why, instead of sitting there grey and saying nothing.
+  const shut = gate === 'required' && !isPassed;
+  const reason = shut && step !== undefined ? gateReason(step) : undefined;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-ground" data-testid="lesson-view">
-      {/* pr-16 keeps the bar clear of the shell's settings gear, which floats
-          over the top right of this pane. */}
-      <header className="shrink-0 px-5 pt-3 pr-16 narrow:pl-4">
+      {/* A new step is said aloud: focus stays on Next, so a screen reader would otherwise hear nothing happen. */}
+      <p role="status" aria-live="polite" className="sr-only" data-testid="lesson-announce">
+        {finished ? `All ${total} steps done` : `Step ${index + 1} of ${total}`}
+      </p>
+      {/* The shell's tab bar and settings gear are gone while a lesson is open, so the bar has the whole width. */}
+      <header className="shrink-0 px-5 pt-3 narrow:px-4 tight:pt-2">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -139,20 +196,19 @@ export function LessonView({
               style={{ transform: fillTransform(fraction) }}
             />
           </div>
-          <span className="w-9 shrink-0 text-right text-xs font-bold text-ink-dim tabular-nums">
+          <span className="label w-10 shrink-0 text-right tabular-nums">
             {Math.min(index + 1, total)}/{total}
           </span>
         </div>
-        <p className="mt-2.5 truncate text-xs font-bold tracking-wider text-ink-dim uppercase tight:mt-1.5">
-          {lesson.title}
-        </p>
+        {/* On the smallest phones (568px tall) the title gives its row to the step, but stays for a screen reader. */}
+        <p className="label mt-2 truncate tight:mt-1 [@media(max-height:600px)]:sr-only">{lesson.title}</p>
       </header>
 
       {finished ? (
         <div
           // Centred with auto margins, not justify-center: a card taller than the pane (a 320px phone)
           // would otherwise lose its top, where the badge is, above the scroll.
-          className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-y-auto px-6 py-8 text-center tight:gap-4 tight:py-4 [&>:first-child]:mt-auto [&>:last-child]:mb-auto"
+          className="flex min-h-0 flex-1 flex-col items-center gap-6 overflow-y-auto px-6 pt-8 pb-[calc(env(safe-area-inset-bottom)+2rem)] text-center tight:gap-4 tight:pt-4 tight:pb-[calc(env(safe-area-inset-bottom)+1rem)] [&>:first-child]:mt-auto [&>:last-child]:mb-auto"
           data-testid="lesson-complete"
         >
           <div className="relative" ref={badgeRef} aria-hidden="true">
@@ -170,14 +226,12 @@ export function LessonView({
             </div>
           </div>
           <div className="rise-in flex flex-col gap-2" style={stagger(2, 80)}>
-            <h2 className="text-3xl font-black">Lesson complete</h2>
-            <p className="text-base text-ink-dim">{lesson.title}</p>
+            <h2 className="text-headline font-black">Lesson complete</h2>
+            <p className="text-body text-ink-dim">{lesson.title}</p>
           </div>
           <div className="scale-in w-full max-w-sm rounded-2xl bg-surface px-5 py-4" style={stagger(3, 90)}>
-            <p className="text-xs font-extrabold tracking-widest text-accent uppercase">
-              Goal reached
-            </p>
-            <p className="mt-1.5 text-[17px] leading-relaxed">
+            <p className="label">Goal reached</p>
+            <p className="mt-1.5 text-lesson leading-[1.5]">
               <RichText>{lesson.goal}</RichText>
             </p>
           </div>
@@ -191,21 +245,21 @@ export function LessonView({
                   onOpenNext();
                 }}
                 data-testid="lesson-next-lesson"
-                className="press flex min-h-16 flex-col items-center justify-center rounded-full bg-accent px-6 py-3 text-ground shadow-[0_6px_18px_rgba(255,176,32,0.3)]"
+                className="press flex min-h-16 flex-col items-center justify-center rounded-full bg-accent px-6 py-3 text-ground"
               >
-                <span className="text-lg font-extrabold">Next lesson</span>
-                <span className="max-w-full truncate text-xs font-semibold opacity-75">
+                <span className="text-lesson font-extrabold">Next lesson</span>
+                <span className="max-w-full truncate text-label font-semibold opacity-75">
                   {nextLesson.title}
                 </span>
               </button>
             ) : (
-              <p className="text-base font-bold text-accent">That was the last lesson in the course.</p>
+              <p className="text-body font-bold text-ink">That was the last lesson in the course.</p>
             )}
             <button
               type="button"
               onClick={handleClose}
               data-testid="lesson-back-to-course"
-              className={`press min-h-12 rounded-full px-6 py-3 text-base font-bold ${
+              className={`press min-h-12 rounded-full px-6 py-3 text-body font-bold ${
                 nextLesson === undefined ? 'bg-accent text-ground' : 'bg-surface-2 text-ink'
               }`}
             >
@@ -215,25 +269,42 @@ export function LessonView({
         </div>
       ) : (
         <>
-          <div
-            // Keyed by step so every step starts fresh at the top of its own scroll.
-            // narrow:px-4 here, in the header and in the footer: 16px a side is what lets
-            // three chord tiles or a row of note bubbles fit a 320px phone.
-            key={index}
-            data-testid="lesson-scroll"
-            data-dir={direction}
-            className="lesson-step-in min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-4 short:pt-3 short:pb-3 narrow:px-4"
-          >
-            <div className="mx-auto w-full max-w-md">
-              {step !== undefined && (
-                <StepView step={step} engine={engine} onDone={markPassed} onTunedAll={onTunedAll} />
-              )}
+          <div className="relative min-h-0 flex-1">
+            <div
+              // Keyed by step so every step starts fresh at the top of its own scroll.
+              // narrow:px-4 here, in the header and in the footer: 16px a side is what lets
+              // three chord tiles or a row of note bubbles fit a 320px phone.
+              key={index}
+              ref={scrollRef}
+              data-testid="lesson-scroll"
+              data-dir={direction}
+              className="lesson-step-in h-full overflow-y-auto px-5 pt-4 pb-4 short:pt-3 short:pb-3 narrow:px-4"
+            >
+              <div className="mx-auto w-full max-w-md">
+                {step !== undefined && (
+                  <StepView step={step} engine={engine} onDone={markPassed} onTunedAll={onTunedAll} />
+                )}
+              </div>
+            </div>
+
+            {/* The fade lets a step scroll under the footer without its last line sliced off
+                mid-letter, and the cue says there is more: both only while there is. */}
+            <div
+              aria-hidden="true"
+              data-testid="lesson-more"
+              data-visible={moreBelow ? 'true' : 'false'}
+              className={`pointer-events-none absolute inset-x-0 bottom-0 flex h-8 items-end justify-center bg-linear-to-t from-ground to-transparent transition-opacity duration-200 ${
+                moreBelow ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <span className="label flex items-center gap-1 pb-0.5 text-ink">
+                More below
+                <ChevronDown />
+              </span>
             </div>
           </div>
 
-          {/* The fade above it is what lets a step scroll under the footer without
-              its last line being sliced off mid-letter. */}
-          <footer className="relative flex shrink-0 gap-3 px-5 pt-3 pb-4 narrow:px-4 tight:pt-2 tight:pb-3 before:pointer-events-none before:absolute before:inset-x-0 before:-top-5 before:h-5 before:bg-linear-to-t before:from-ground before:to-transparent">
+          <footer className="flex shrink-0 gap-3 px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] narrow:px-4 tight:pt-2 tight:pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
             {index > 0 && (
               <button
                 type="button"
@@ -250,24 +321,31 @@ export function LessonView({
                 type="button"
                 onClick={handleNext}
                 data-testid="lesson-skip"
-                className="press press-soft flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-surface-2 text-base font-extrabold text-ink tight:h-12"
+                className="press press-soft flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-surface-2 text-body font-extrabold text-ink tight:h-12"
               >
                 Skip
                 <ArrowRightIcon size={20} />
               </button>
             ) : (
+              // The one amber fill on a lesson screen. While it is shut it names what opens it.
               <button
                 type="button"
                 onClick={handleNext}
-                disabled={gate === 'required' && !isPassed}
+                disabled={shut}
                 data-testid="lesson-next"
                 data-ready={ready ? 'true' : undefined}
-                className={`press press-soft flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-accent text-base font-extrabold text-ground shadow-[0_6px_18px_rgba(255,176,32,0.25)] disabled:bg-surface-2 disabled:text-ink-dim disabled:shadow-none tight:h-12 ${
+                className={`press press-soft flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-accent text-body font-extrabold text-ground disabled:bg-surface-2 disabled:text-ink-dim tight:h-12 ${
                   ready ? 'answer-pop' : ''
                 }`}
               >
-                {isLast ? 'Finish' : 'Next'}
-                {isLast ? <CheckIcon size={20} /> : <ArrowRightIcon size={20} />}
+                {reason !== undefined ? (
+                  reason
+                ) : (
+                  <>
+                    {isLast ? 'Finish' : 'Next'}
+                    {isLast ? <CheckIcon size={20} /> : <ArrowRightIcon size={20} />}
+                  </>
+                )}
               </button>
             )}
           </footer>

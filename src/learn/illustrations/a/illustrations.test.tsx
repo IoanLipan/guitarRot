@@ -51,11 +51,13 @@ describe('group a illustrations', () => {
 });
 
 describe('guitar-parts', () => {
-  it('names all nine parts', () => {
+  it('names the seven parts a beginner needs, each big enough to read on a phone', () => {
     const texts = textsOf('guitar-parts');
-    for (const part of ['Headstock', 'Tuning pegs', 'Nut', 'Frets', 'Neck', 'Body', 'Sound hole', 'Bridge', 'Strings']) {
+    for (const part of ['Headstock', 'Frets', 'Neck', 'Body', 'Sound hole', 'Bridge', 'Strings']) {
       expect(texts).toContain(part);
     }
+    // Tuning pegs and the nut were cut: nine tags would not fit at a readable size (the pegs have a picture of their own).
+    expect(texts).toHaveLength(7);
   });
 });
 
@@ -108,10 +110,11 @@ describe('tuning-peg', () => {
 describe('tab-map', () => {
   it('labels the strings thin e to thick E and explains the three numbers', () => {
     const texts = textsOf('tab-map');
-    expect(texts.filter((text) => /^[A-Ge] \(\w+\)$/.test(text))).toEqual(['e (Mi)', 'B (Si)', 'G (Sol)', 'D (Re)', 'A (La)', 'E (Mi)']);
-    expect(texts).toContain('0 = open string');
-    expect(texts).toContain('3 = fret 3, string 6');
-    expect(texts.join(' ')).toContain('stacked = together');
+    // The strings come first, as plain note letters (the solfège is on every other picture of them).
+    expect(texts.slice(0, 6)).toEqual(['e', 'B', 'G', 'D', 'A', 'E']);
+    expect(texts).toContain('0 = open');
+    expect(texts).toContain('3 = fret 3');
+    expect(texts).toContain('together');
     expect(texts).toContain('read');
   });
 });
@@ -152,10 +155,11 @@ describe('alphabet-loop', () => {
     for (const syllable of ['La', 'Si', 'Do', 'Re', 'Mi', 'Fa', 'Sol']) expect(texts).toContain(syllable);
   });
 
-  it('marks exactly two one-fret gaps and four two-fret gaps, and the loop back', () => {
+  it('names the two one-fret gaps, leaves the four plain ones unlabelled, and shows the loop back', () => {
     const texts = textsOf('alphabet-loop');
     expect(texts.filter((text) => text === '1 fret')).toHaveLength(2);
-    expect(texts.filter((text) => text === '2 frets')).toHaveLength(4);
+    expect(texts).not.toContain('2 frets');
+    expect(texts).toContain('12 frets');
     expect(texts.join(' ')).toContain('starts again, higher');
   });
 });
@@ -191,9 +195,8 @@ describe('octave-shape', () => {
   it('shows G twice, C twice and the rule in words', () => {
     const texts = textsOf('octave-shape');
     expect(texts.filter((text) => text === 'G (Sol)')).toHaveLength(2);
-    expect(texts.filter((text) => text === 'C (Do)')).toHaveLength(2);
+    expect(texts.filter((text) => text === 'C')).toHaveLength(2);
     expect(texts).toContain('2 strings thinner, 2 frets up');
-    expect(texts).toContain('(from strings 6 and 5)');
   });
 
   it('labels the frets 3 to 7 and the strings 1 to 6', () => {
@@ -216,7 +219,8 @@ describe('chord-notes', () => {
   it('strums all six strings together', () => {
     const texts = textsOf('chord-notes');
     expect(texts).toContain('strum = all together');
-    expect(texts.filter((text) => /^[EBG]$/.test(text)).slice(-6)).toEqual(['E', 'B', 'E', 'G', 'B', 'E']);
+    // Six strings in the colours of the three notes; they are not lettered, the colours say which note each is.
+    expect(texts.filter((text) => /^[EBG]$/.test(text))).toEqual(['E', 'G', 'B']);
   });
 });
 

@@ -38,7 +38,7 @@ export function PracticePlan() {
         return (
           <g key={s.name}>
             <path d={sliceD(CX, CY, R_OUT, R_IN, s.a0 + 0.8, s.a1 - 0.8)} fill={s.color} />
-            <Label x={mid.x} y={mid.y + 0.5} size={18} color="#0b0b0f" weight={900} anchor="middle">
+            <Label x={mid.x} y={mid.y + 0.5} size={18} color="var(--color-ground)" weight={900} anchor="middle">
               {s.minutes}
             </Label>
           </g>
@@ -72,7 +72,7 @@ export function PracticePlan() {
         return (
           <g key={i}>
             <circle cx={x} cy={166} r={14} fill={GOOD} />
-            <polyline points={`${x - 6},${166} ${x - 1.5},${171} ${x + 6.5},${161}`} fill="none" stroke="#0b0b0f" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points={`${x - 6},${166} ${x - 1.5},${171} ${x + 6.5},${161}`} fill="none" stroke="var(--color-ground)" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
             <Label x={x} y={190} size={12} color={DIM} weight={800} anchor="middle">
               {day}
             </Label>
