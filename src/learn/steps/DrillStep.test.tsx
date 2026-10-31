@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { LessonStep } from '@/content';
@@ -101,6 +103,93 @@ describe('DrillStep board', () => {
     expect(names.textContent).toBe('EADGBe');
     expect(names.className).toContain('sticky');
     expect(names).toHaveAttribute('aria-hidden', 'true');
+  });
+});
+
+describe('DrillStep on a small phone', () => {
+  /** Renders the drill where `(max-height: 700px)` does, or does not, match, and hands back what was asked. */
+  function onScreen<T>(
+    tight: boolean,
+    read: () => T,
+    drill: Extract<LessonStep, { kind: 'drill' }> = step,
+  ): { value: T; asked: string[] } {
+    const original = window.matchMedia;
+    const matchMedia = vi.fn().mockReturnValue({
+      matches: tight,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    window.matchMedia = matchMedia;
+    try {
+      const { unmount } = render(<DrillStep step={drill} engine={fakeEngine()} onDone={vi.fn()} />);
+      const value = read();
+      unmount();
+      return { value, asked: matchMedia.mock.calls.map(([query]) => String(query)) };
+    } finally {
+      window.matchMedia = original;
+    }
+  }
+
+  /**
+   * The tallest the board is drawn, in pixels: its widest width over its own aspect ratio. A board that
+   * scrolls sideways is held at its minimum width, which wins over its maximum.
+   */
+  function boardHeight(): number {
+    const wrapper = screen.getByTestId('neck').firstElementChild as HTMLElement;
+    const [width, height] = (wrapper.style.aspectRatio.split('/') as [string, string]).map(Number) as [number, number];
+    const widest = Math.max(Number.parseFloat(wrapper.style.maxWidth), Number.parseFloat(wrapper.style.minWidth) || 0);
+    return (widest * height) / width;
+  }
+
+  it('has no eyebrow: the progress row is the first thing, and the question is the heading', () => {
+    show();
+    expect(screen.queryByText('Practice')).not.toBeInTheDocument();
+    const root = screen.getByTestId('step-drill');
+    expect(root.firstElementChild).toContainElement(screen.getByTestId('drill-count'));
+    expect(root.firstElementChild?.querySelector('ol')).not.toBeNull();
+  });
+
+  it('draws the board no taller than 160px, so four answers fit under it on a 568px phone', () => {
+    const tight = onScreen(true, boardHeight);
+    const roomy = onScreen(false, boardHeight);
+    expect(tight.value).toBeLessThanOrEqual(160 + 0.5);
+    expect(roomy.value).toBeGreaterThan(tight.value);
+    // It asks the question the `tight:` variant asks (src/index.css).
+    expect(tight.asked).toContain('(max-height: 700px)');
+  });
+
+  it('does the same for the frets 0 to 12 drills, whose board scrolls sideways and used to ignore the limit', () => {
+    const wide: Extract<LessonStep, { kind: 'drill' }> = { kind: 'drill', strings: [0], fretRange: [0, 12], count: 3 };
+    const tight = onScreen(true, boardHeight, wide);
+    const roomy = onScreen(false, boardHeight, wide);
+    expect(tight.value).toBeLessThanOrEqual(160 + 0.5);
+    expect(roomy.value).toBeGreaterThan(200);
+    expect(tight.value).toBeLessThan(roomy.value);
+  });
+
+  it('asks the same question as the tight: variant', () => {
+    const css = readFileSync(join(__dirname, '..', '..', 'index.css'), 'utf8');
+    expect(css).toContain('@custom-variant tight (@media (max-height: 700px));');
+  });
+
+  it('keeps a roomy verdict block normally and one line of it when tight, so the answers are not pushed out', () => {
+    show();
+    expect(screen.getByRole('status')).toHaveClass('min-h-28', 'tight:min-h-7');
+  });
+
+  it('closes its gaps under tight: and keeps the question and the answers in the order they are read', () => {
+    show();
+    const root = screen.getByTestId('step-drill');
+    expect(root).toHaveClass('gap-4', 'tight:gap-3');
+    const order = [
+      screen.getByTestId('neck'),
+      screen.getByRole('heading', { level: 2 }),
+      screen.getByTestId('answer-grid'),
+      screen.getByRole('status'),
+    ];
+    for (let i = 1; i < order.length; i += 1) {
+      expect(order[i - 1]!.compareDocumentPosition(order[i]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
   });
 });
 

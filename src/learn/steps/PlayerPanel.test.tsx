@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getToneProfile, type AudioEngine } from '@/audio';
-import { RIFFS } from '@/content';
+import { getSong, RIFFS, songToRiff } from '@/content';
 
 const world = vi.hoisted(() => ({
   beat: 0,
@@ -130,14 +130,55 @@ describe('PlayerPanel tab staff', () => {
     expect(panel).not.toHaveTextContent('BPM');
   });
 
-  it('labels its slider "Speed" in the quiet label style, and its play button does not glow', () => {
+  it('labels its slider "Speed" in the quiet label style, and nothing in it is capitals or tracked', () => {
     render(<PlayerPanel riff={riff} title="Warm-up" engine={fakeEngine()} />);
     const row = screen.getByText('Speed').parentElement as HTMLElement;
     expect(row.className).toContain('label');
     expect(row.className).not.toMatch(/uppercase|tracking/);
+    const panel = screen.getByTestId('player-panel');
+    for (const element of [panel, ...panel.querySelectorAll('*')]) {
+      expect(element.getAttribute('class') ?? '').not.toMatch(/uppercase|tracking-(wide|wider|widest)/);
+    }
+  });
+
+  it('makes Play a secondary action, because Next is the one amber fill on a lesson screen', () => {
+    render(<PlayerPanel riff={riff} title="Warm-up" engine={fakeEngine()} />);
     const play = screen.getByTestId('player-toggle');
-    expect(play.className).toContain('bg-accent');
-    expect(play.className).not.toContain('shadow');
+    expect(play).toHaveClass('bg-surface-2', 'text-accent', 'ring-1', 'ring-accent/40');
+    expect(play.className).not.toMatch(/(^|\s)bg-accent(?![\w/-])/);
+    expect(play.className).not.toMatch(/shadow/);
+  });
+
+  it('shows the metronome as on with a ring and an amber glyph, not an amber fill', async () => {
+    render(<PlayerPanel riff={riff} title="Warm-up" engine={fakeEngine()} />);
+    const metronome = screen.getByTestId('metronome-toggle');
+    expect(metronome).toHaveAttribute('aria-pressed', 'false');
+    expect(metronome).not.toHaveClass('text-accent');
+
+    await act(async () => {
+      fireEvent.click(metronome);
+    });
+
+    expect(metronome).toHaveAttribute('aria-pressed', 'true');
+    expect(metronome).toHaveClass('text-accent', 'ring-2', 'ring-accent');
+    expect(metronome.className).not.toMatch(/(^|\s)bg-accent(?![\w/-])/);
+    expect(metronome).not.toHaveAttribute('style');
+  });
+
+  it('puts Play, the metronome and the speed above the staff, so they are on screen on a 568px phone', () => {
+    render(<PlayerPanel riff={riff} title="Warm-up" engine={fakeEngine()} />);
+    const controls = screen.getByTestId('player-controls');
+    expect(controls).toContainElement(screen.getByTestId('player-toggle'));
+    expect(controls).toContainElement(screen.getByTestId('metronome-toggle'));
+    expect(controls).toContainElement(screen.getByRole('slider', { name: 'Playback speed' }));
+    expect(controls.compareDocumentPosition(screen.getByTestId('tab-scroller')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('does the same above a chord chart, which is as tall as the song is long', () => {
+    const song = getSong('tom-dooley')!;
+    render(<PlayerPanel riff={songToRiff(song)} title={song.title} chart={song.chart} engine={fakeEngine()} />);
+    const controls = screen.getByTestId('player-controls');
+    expect(controls.compareDocumentPosition(screen.getByTestId('chord-chart')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('follows the playhead while playing', async () => {

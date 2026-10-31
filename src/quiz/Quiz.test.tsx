@@ -59,6 +59,21 @@ describe('Quiz free practice', () => {
     expect(screen.getByText('Streak 6')).toBeInTheDocument();
   });
 
+  it('says "Streak" in the house label style: sentence case, no tracked capitals', () => {
+    renderPractice();
+    const streak = screen.getByTestId('streak');
+    expect(streak).toHaveClass('label');
+    expect(streak.className).not.toMatch(/uppercase|tracking-|text-\[13px\]|text-xs/);
+  });
+
+  it('says the verdict in sentence case too', () => {
+    renderPractice();
+    fireEvent.click(screen.getByRole('button', { name: WRONG }));
+    const verdict = screen.getByText('Miss');
+    expect(verdict.className).not.toMatch(/uppercase/);
+    expect(screen.queryByText('MISS')).toBeNull();
+  });
+
   it('bumps the streak counter when it goes up, and keeps just the one counter on screen', () => {
     const at = (current: number) =>
       fakeProgress({ state: { ...emptyProgressState(), streak: { current, longest: current, lastActiveDate: null } } });
@@ -83,21 +98,21 @@ describe('Quiz free practice', () => {
     expect(within(screen.getByTestId('answer-grid')).getAllByRole('button')).toHaveLength(4);
   });
 
-  it('records a correct answer, flashes PERFECT, and advances on its own', () => {
+  it('records a correct answer, flashes Perfect, and advances on its own', () => {
     const progress = fakeProgress();
     renderPractice(progress);
 
     fireEvent.click(screen.getByRole('button', { name: CORRECT }));
 
     expect(progress.recordAnswer).toHaveBeenCalledWith(true, expect.any(String));
-    expect(screen.getByText('PERFECT')).toBeInTheDocument();
+    expect(screen.getByText('Perfect')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: CORRECT })).toBeDisabled();
 
     act(() => {
       vi.advanceTimersByTime(1100);
     });
 
-    expect(screen.queryByText('PERFECT')).toBeNull();
+    expect(screen.queryByText('Perfect')).toBeNull();
     expect(screen.getByRole('button', { name: CORRECT })).toBeEnabled();
   });
 
@@ -108,7 +123,7 @@ describe('Quiz free practice', () => {
     fireEvent.click(screen.getByRole('button', { name: WRONG }));
 
     expect(progress.recordAnswer).toHaveBeenCalledWith(false, expect.any(String));
-    expect(screen.getByText('MISS')).toBeInTheDocument();
+    expect(screen.getByText('Miss')).toBeInTheDocument();
     // The D string is MIDI 50; fret 2 is E, and D itself is open on it.
     expect(screen.getByTestId('quiz-explanation')).toHaveTextContent(
       'String 4 is D (Re) open, so 2 frets up is E (Mi). D (Re) is at fret 0 on that string — 2 frets lower.',
@@ -119,7 +134,7 @@ describe('Quiz free practice', () => {
     });
 
     // Still waiting on the user — a mistake you scroll past is a mistake you repeat.
-    expect(screen.getByText('MISS')).toBeInTheDocument();
+    expect(screen.getByText('Miss')).toBeInTheDocument();
   });
 
   it('moves on from a wrong answer when the user asks for the next question', () => {
@@ -128,7 +143,7 @@ describe('Quiz free practice', () => {
     fireEvent.click(screen.getByRole('button', { name: WRONG }));
     fireEvent.click(screen.getByRole('button', { name: /Next question/ }));
 
-    expect(screen.queryByText('MISS')).toBeNull();
+    expect(screen.queryByText('Miss')).toBeNull();
     expect(screen.getByRole('button', { name: CORRECT })).toBeEnabled();
   });
 });

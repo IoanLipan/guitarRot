@@ -1,9 +1,10 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
-import { glueSolfege, StepCaption, StepKicker } from './StepHeading';
+import * as StepHeading from './StepHeading';
+import { glueSolfege, StepCaption } from './StepHeading';
 
 describe('glueSolfege', () => {
   it('keeps a note and its solfège on one line', () => {
@@ -18,8 +19,8 @@ describe('glueSolfege', () => {
 });
 
 describe('a step has no eyebrow label', () => {
-  it('draws nothing for the old kicker, which survives only until DrillStep drops its last use', () => {
-    expect(renderToStaticMarkup(createElement(StepKicker, null, 'Quick check'))).toBe('');
+  it('no longer offers the old kicker at all', () => {
+    expect(Object.keys(StepHeading)).not.toContain('StepKicker');
   });
 
   it('draws a caption as the step\'s own heading line: body type, a size down under tight:', () => {
@@ -33,12 +34,11 @@ describe('a step has no eyebrow label', () => {
 
 /**
  * The lesson screens speak in sentence case with no emoji and no eyebrows.
- * Not scanned: DrillStep and PlayerPanel, which belong to the players, and
- * the learn tab's own screens (Course, Explore, Tuner), which are not lessons.
+ * Not scanned: the learn tab's own screens (Course, Explore, Tuner), which
+ * are not lessons.
  */
 describe('the lesson screens, as written', () => {
   const ROOT = join(__dirname, '..', '..');
-  const OTHERS = ['DrillStep.tsx', 'PlayerPanel.tsx'];
 
   function sources(dir: string): string[] {
     return readdirSync(dir).flatMap((entry) => {
@@ -51,7 +51,7 @@ describe('the lesson screens, as written', () => {
   const files = [
     join(ROOT, 'learn', 'LessonView.tsx'),
     join(ROOT, 'app', 'AppShell.tsx'),
-    ...sources(join(ROOT, 'learn', 'steps')).filter((file) => !OTHERS.some((other) => file.endsWith(sep + other))),
+    ...sources(join(ROOT, 'learn', 'steps')),
     ...sources(join(ROOT, 'learn', 'illustrations')),
   ];
 
@@ -84,7 +84,7 @@ describe('the lesson screens, as written', () => {
   it('draws nothing with a resting glow or a gradient behind it', () => {
     const found = lines
       .filter(({ text }) => /gradient\(|bg-linear-|bg-gradient-|shadow-\[|backdrop-blur/.test(text))
-      // The one fade that lets a scrolling step slide under the footer, and the end-screen badge's celebration.
+      // The one fade at the bottom of a scrolling step, and the end-screen badge's celebration.
       .filter(({ at, text }) => !(at.includes('LessonView.tsx') && /bg-linear-to-t from-ground to-transparent|rgba\(53,208,127/.test(text)))
       .map(({ at }) => at);
     expect(found).toEqual([]);

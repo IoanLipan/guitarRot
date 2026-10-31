@@ -3,15 +3,6 @@ import { RichText } from './RichText';
 export { glueSolfege } from './glue';
 
 /**
- * @deprecated The eyebrow label above a step (LOOK, YOUR TURN, QUICK CHECK) is
- * gone: the step's own heading says what the screen is. This draws nothing and
- * stays only until DrillStep, which another change owns, drops its last use.
- */
-export function StepKicker(_props: { children: React.ReactNode }): null {
-  return null;
-}
-
-/**
  * A step's own heading: the instruction that says what this screen is for.
  * Steps have no label above it (no "LOOK", no "YOUR TURN"); the sentence is
  * the label. Captions are whole sentences, often two, so they read as body

@@ -29,6 +29,12 @@ export type NeckProps = {
   focus?: FretPosition | null;
   /** Tallest the board may be drawn, in pixels. A step with more to show beside it asks for less. */
   maxHeight?: number;
+  /**
+   * Holds a board that scrolls sideways to `maxHeight` as well. Such a board is otherwise drawn at its
+   * natural size however low `maxHeight` is (shrinking twelve frets to a phone's width leaves the dots
+   * too small), so for a step that has to give it less room, it is shrunk, width and all, and still scrolls.
+   */
+  fitHeight?: boolean;
   /** What the dots say. Defaults to the note letter; "custom" uses each marker's own label. */
   labelMode?: LabelMode;
   /** Strings the picture is about: drawn bright, the rest faded. */
@@ -56,6 +62,7 @@ export function Neck({
   onFretTap,
   focus = null,
   maxHeight = DEFAULT_MAX_HEIGHT,
+  fitHeight = false,
   labelMode = 'note',
   highlightStrings,
   markerScale,
@@ -71,6 +78,8 @@ export function Neck({
     [fretRange, interactive],
   );
   const scrolls = natural.width > fitLimit;
+  // How much of its natural size a scrolling board is drawn at: all of it, unless it was asked to be lower.
+  const scrollScale = fitHeight ? Math.min(1, maxHeight / natural.height) : 1;
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   // A wide board opens on the part that matters: centre the focused dot.
@@ -100,7 +109,7 @@ export function Neck({
         className="relative mx-auto flex w-full"
         style={{
           aspectRatio: `${natural.width} / ${natural.height}`,
-          minWidth: scrolls ? natural.width : undefined,
+          minWidth: scrolls ? natural.width * scrollScale : undefined,
           maxWidth: Math.min(natural.width * MAX_ZOOM, (maxHeight * natural.width) / natural.height),
         }}
       >
