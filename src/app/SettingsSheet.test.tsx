@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { getToneProfile, TONE_PROFILES, type AudioEngine } from '@/audio';
+import { getToneProfile, toneProfilesFor, type AudioEngine } from '@/audio';
 import { fakeProgressHandle } from './testkit';
 import type { ProgressHandle } from './useProgress';
 
@@ -252,7 +252,7 @@ describe('SettingsSheet as a dialog', () => {
 });
 
 describe('SettingsSheet tone choice', () => {
-  const ids = TONE_PROFILES.map((profile) => profile.id);
+  const ids = toneProfilesFor('guitar').map((profile) => profile.id);
 
   it('is a radio group named for the tone, with one radio per tone and the current one checked', () => {
     renderSheet();

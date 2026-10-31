@@ -2,7 +2,10 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode 
 import { CheckIcon, ExternalLinkIcon } from '@/ui/icons';
 import { prefersReducedMotion } from '@/ui/motion';
 import { Capacitor } from '@capacitor/core';
-import { getToneProfile, TONE_PROFILES, type AudioEngine } from '@/audio';
+import { getToneProfile, toneProfilesFor, type AudioEngine } from '@/audio';
+
+// Guitar tones only until the tone list follows the chosen instrument.
+const TONE_PROFILES = toneProfilesFor('guitar');
 import { SONGS, getChord } from '@/content';
 import { useFocusTrap } from '@/game/useFocusTrap';
 import { chordStrings, chordVoicing, STANDARD_TUNING } from '@/music';
