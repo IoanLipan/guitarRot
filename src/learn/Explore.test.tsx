@@ -91,7 +91,7 @@ describe('Explore', () => {
     render(<Explore engine={fakeEngine()} />);
 
     const scroller = screen.getByTestId('scroll-fade');
-    expect(scroller).toContainElement(screen.getByRole('img', { name: 'Fretboard explorer' }));
+    expect(scroller).toContainElement(screen.getByRole('group', { name: 'Fretboard explorer' }));
     // The old scroller pulled itself out to the screen edges (-mx-5) and so ran past the right gutter.
     expect(scroller.className).not.toMatch(/-mx-/);
   });
