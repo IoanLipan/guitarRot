@@ -12,6 +12,7 @@ import { ALL_CHORDS, chordsFor, getChord } from './chords';
 import { ALL_LESSONS, COURSE, courseFor } from './course';
 import { UKE_UNITS } from './course/uke';
 import { UKE_UNIT_1_FACTS } from './course/uke/unit1.facts';
+import { UKE_UNIT_2_FACTS } from './course/uke/unit2.facts';
 import { findCheck, problemWith } from './course/factCheck';
 import type { LessonFacts } from './course/facts';
 import { findRiff } from './drills';
@@ -22,11 +23,24 @@ import { chartBars, chordByName, songPlayableOn } from './songs';
 import { UKULELE_COURSE } from './ukuleleCourse';
 
 /** The plan's outline, in teaching order. Lesson ids are stored in progress, so never rename a shipped one. */
-const EXPECTED_ORDER = ['uke-meet', 'uke-strings', 'uke-tuning', 'uke-first-strum'];
+const EXPECTED_ORDER = [
+  'uke-meet',
+  'uke-strings',
+  'uke-tuning',
+  'uke-first-strum',
+  'uke-c-am',
+  'uke-f-chord',
+  'uke-g-chord',
+  'uke-island-strum',
+  'uke-first-song',
+];
 
-const EXPECTED_UNITS: readonly (readonly [string, number])[] = [['Meet the ukulele', 4]];
+const EXPECTED_UNITS: readonly (readonly [string, number])[] = [
+  ['Meet the ukulele', 4],
+  ['Your first chords', 5],
+];
 
-const ALL_FACTS: readonly LessonFacts[] = [...UKE_UNIT_1_FACTS];
+const ALL_FACTS: readonly LessonFacts[] = [...UKE_UNIT_1_FACTS, ...UKE_UNIT_2_FACTS];
 
 const WORLD = { instrument: UKULELE, lessons: UKULELE_COURSE };
 
@@ -245,7 +259,11 @@ describe('the pictures of the ukulele course', () => {
 
 describe('what the ukulele course teaches about chords', () => {
   /** Chords each lesson introduces; a later lesson may use anything taught so far. */
-  const TAUGHT_AT: Readonly<Record<string, readonly string[]>> = {};
+  const TAUGHT_AT: Readonly<Record<string, readonly string[]>> = {
+    'uke-c-am': ['C', 'Am'],
+    'uke-f-chord': ['F'],
+    'uke-g-chord': ['G', 'G7'],
+  };
 
   /** The chords a riff of the course strums, from its tags: a chord drill is tagged with each chord it uses. */
   function riffChords(riffId: string): string[] {
