@@ -238,10 +238,12 @@ export function SettingsSheet({
           </div>
 
           {/* CC BY requires the attribution to travel with the work, so it
-              lives in the app and not only in the repository. */}
+              lives in the app and not only in the repository. The ukulele
+              recordings are CC0 and need no credit; they get one anyway. */}
           <p className="mt-4 text-label leading-relaxed text-ink-faint" data-testid="sample-credit">
             Guitar samples: tonejs-instruments by Nicholaus Brosowsky, CC BY 3.0 — recorded by
-            University of Iowa EMS, quartertone and Karoryfer.
+            University of Iowa EMS, quartertone and Karoryfer. Ukulele samples: FreePats Ukulele,
+            recorded by Mateusz Dąbrowski, CC0.
           </p>
 
           {/* The same duty for song editions under CC BY: each song that needs a

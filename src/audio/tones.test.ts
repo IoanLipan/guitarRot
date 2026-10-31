@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TONE_ID, getToneProfile, isToneId, liveBodyGainDb, TONE_PROFILES } from './tones';
+import {
+  DEFAULT_TONE_ID,
+  getToneProfile,
+  isToneId,
+  liveBodyGainDb,
+  TONE_PROFILES,
+  toneProfilesFor,
+} from './tones';
 
 describe('tone profiles', () => {
   it('ships the voicings with unique ids, acoustic first', () => {
@@ -10,18 +17,44 @@ describe('tone profiles', () => {
       'rock',
       'blues',
       'country',
+      'ukulele',
     ]);
+  });
+
+  // The settings list is built per instrument, so the ukulele's voicing must
+  // never turn up among a guitar's tones, nor a guitar's among the ukulele's.
+  it('says which instrument each voicing is for, and lists them apart', () => {
+    expect(toneProfilesFor('guitar').map((p) => p.id)).toEqual([
+      'acoustic',
+      'classical',
+      'clean',
+      'rock',
+      'blues',
+      'country',
+    ]);
+    expect(toneProfilesFor('ukulele').map((p) => p.id)).toEqual(['ukulele']);
+    for (const profile of TONE_PROFILES) {
+      expect(['guitar', 'ukulele'], profile.id).toContain(profile.instrument);
+    }
   });
 
   // Only an instrument with a box resonates: the electrics leave the body
   // stage at 0 dB, which makes the filter transparent.
-  it('gives the hollow-bodied guitars a body resonance and the electrics none', () => {
+  it('gives the hollow-bodied instruments a body resonance and the electrics none', () => {
     for (const id of ['acoustic', 'classical']) {
       const hollow = getToneProfile(id);
       expect(hollow.amp.bodyGainDb, id).toBeGreaterThan(0);
       expect(hollow.amp.bodyHz, id).toBeLessThan(200);
     }
-    for (const electric of TONE_PROFILES.filter((p) => !['acoustic', 'classical'].includes(p.id))) {
+    // A small box resonates higher than a guitar's: a ukulele's air sits well
+    // above a dreadnought's ~110Hz, though still below its own lowest note.
+    const ukulele = getToneProfile('ukulele');
+    expect(ukulele.amp.bodyGainDb).toBeGreaterThan(0);
+    expect(ukulele.amp.bodyHz).toBeGreaterThan(getToneProfile('classical').amp.bodyHz);
+    expect(ukulele.amp.bodyHz).toBeLessThan(262);
+    for (const electric of TONE_PROFILES.filter(
+      (p) => !['acoustic', 'classical', 'ukulele'].includes(p.id),
+    )) {
       expect(electric.amp.bodyGainDb).toBe(0);
     }
   });
@@ -41,6 +74,20 @@ describe('tone profiles', () => {
     for (const id of ['clean', 'rock', 'blues', 'country']) {
       expect(getToneProfile(id).sampleSet, id).toBe('electric');
     }
+    expect(getToneProfile('ukulele').sampleSet).toBe('ukulele');
+  });
+
+  // A bright, short-lived nylon string through a clean chain: more open than the
+  // classical, a smaller room, no drive, and a ring that lets go sooner.
+  it('keeps the ukulele clean, bright and dry next to the classical', () => {
+    const ukulele = getToneProfile('ukulele');
+    const classical = getToneProfile('classical');
+    expect(ukulele.name).toBe('Ukulele');
+    expect(ukulele.amp.drive).toBe(0);
+    expect(ukulele.amp.filterHz).toBeGreaterThan(classical.amp.filterHz);
+    expect(ukulele.amp.reverbWet).toBeLessThan(classical.amp.reverbWet);
+    expect(ukulele.string.dampening).toBeGreaterThan(classical.string.dampening);
+    expect(ukulele.string.resonance).toBeLessThan(classical.string.resonance);
   });
 
   it('keeps the classical tone clean, soft and darker than the acoustic', () => {

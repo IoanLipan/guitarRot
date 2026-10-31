@@ -99,6 +99,7 @@ describe('SettingsSheet About section', () => {
 
     const credit = screen.getByTestId('sample-credit');
     expect(credit).toHaveTextContent('tonejs-instruments');
+    expect(credit).toHaveTextContent('Ukulele samples: FreePats Ukulele, recorded by Mateusz Dąbrowski, CC0.');
     expect(within(screen.getByTestId('about-section')).getByTestId('sample-credit')).toBe(credit);
   });
 

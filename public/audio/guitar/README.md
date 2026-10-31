@@ -7,8 +7,8 @@ way, so quizzes are correct with or without samples.
 
 ## What is installed
 
-Three sets of real recorded guitar notes; the engine pitch-shifts the
-nearest one to fill any gap:
+Four sets of real recorded notes; the engine pitch-shifts the nearest one
+to fill any gap:
 
 - `acoustic/` — steel-string, **every semitone** from D2 to D5, so nothing
   in first position is ever stretched; topped up to A#5 with the four
@@ -17,6 +17,9 @@ nearest one to fill any gap:
 - `electric/` — clean electric, every three semitones, C#2 to C6. Plays
   Clean, Rock, Blues and Country, which get their character from the amp
   chain (drive, tone, reverb) rather than from a different recording.
+- `ukulele/` — a tenor ukulele, C4 to C6 (every note through fret 15 of a
+  standard-tuned ukulele), every one to three semitones.
+  Plays the Ukulele tone. Public domain (CC0), unlike the three sets above.
 
 Every file starts within a few milliseconds of the pick — the originals had
 30-50ms of silence first, which made every strum and riff land late.
