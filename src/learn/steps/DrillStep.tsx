@@ -3,7 +3,8 @@ import { ArrowRightIcon } from '@/ui/icons';
 import { errorHaptic, successHaptic, tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { LessonStep } from '@/content';
-import { fretToMidi, STANDARD_TUNING, stringNumber, withSolfege, type FretPosition } from '@/music';
+import { useInstrument } from '@/instrument';
+import { fretToMidi, stringNumber, withSolfege, type FretPosition, type InstrumentId } from '@/music';
 import { AnswerGrid, explainNoteAnswer, noteQuestionAt, type NoteQuizQuestion } from '@/quiz';
 import { Neck } from './Neck';
 import { Reveal } from './Reveal';
@@ -50,7 +51,7 @@ function shuffled<T>(items: readonly T[]): T[] {
  * until the pool runs out. The question's fret window is the step's range, not
  * the Quiz tab's fixed 0-5, so a drill on frets 0-12 shows the whole neck.
  */
-function buildQuestions(step: Extract<LessonStep, { kind: 'drill' }>): NoteQuizQuestion[] {
+function buildQuestions(step: Extract<LessonStep, { kind: 'drill' }>, instrument: InstrumentId): NoteQuizQuestion[] {
   const [low, high] = step.fretRange;
   const pool: FretPosition[] = [];
   for (const stringIndex of step.strings) {
@@ -61,7 +62,7 @@ function buildQuestions(step: Extract<LessonStep, { kind: 'drill' }>): NoteQuizQ
   const picks: FretPosition[] = [];
   while (picks.length < step.count) picks.push(...shuffled(pool).slice(0, step.count - picks.length));
   return picks.map(({ stringIndex, fret }) => ({
-    ...noteQuestionAt(stringIndex, fret),
+    ...noteQuestionAt(stringIndex, fret, { instrument }),
     fretRange: step.fretRange,
   }));
 }
@@ -86,9 +87,10 @@ export function DrillStep({
   engine: AudioEngine;
   onDone: () => void;
 }) {
+  const instrument = useInstrument();
   const [round, setRound] = useState(0);
   // `round` is not read inside: bumping it is how "Try again" deals a fresh set.
-  const questions = useMemo(() => buildQuestions(step), [step, round]);
+  const questions = useMemo(() => buildQuestions(step, instrument.id), [step, instrument.id, round]);
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
   const [results, setResults] = useState<boolean[]>([]);
@@ -142,7 +144,7 @@ export function DrillStep({
 
   function handleFretTap(position: FretPosition) {
     tapHaptic();
-    engine.playNote(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret), {
+    engine.playNote(fretToMidi(instrument.tuning, position.stringIndex, position.fret), {
       stringIndex: position.stringIndex,
     });
   }
@@ -201,7 +203,7 @@ export function DrillStep({
             onFretTap={handleFretTap}
             focus={question.position}
             popMarkers
-            ariaLabel={`Name this note. The dot is on string ${stringNumber(question.position.stringIndex)}, ${
+            ariaLabel={`Name this note. The dot is on string ${stringNumber(question.position.stringIndex, instrument)}, ${
               question.position.fret === 0 ? 'open' : `fret ${question.position.fret}`
             }. Tap any fret to hear it.`}
           />

@@ -1,6 +1,6 @@
 import { midiToPitchClass, type PitchClass } from './notes';
 import { clampFretRange, fretToMidi, type FretPosition } from './fretboard';
-import { STRING_COUNT, type Tuning } from './tuning';
+import type { Tuning } from './tuning';
 
 export type ScalePattern = {
   id: string;
@@ -34,7 +34,7 @@ export function scalePositions(
   const inScale = new Set(scalePitchClasses(root, pattern));
   const [lo, hi] = clampFretRange(fretRange);
   const found: FretPosition[] = [];
-  for (let stringIndex = 0; stringIndex < STRING_COUNT; stringIndex += 1) {
+  for (let stringIndex = 0; stringIndex < tuning.length; stringIndex += 1) {
     for (let fret = lo; fret <= hi; fret += 1) {
       if (inScale.has(midiToPitchClass(fretToMidi(tuning, stringIndex, fret)))) {
         found.push({ stringIndex, fret });

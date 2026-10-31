@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { AudioEngine } from '@/audio';
 import { getSong, songToRiff, type LessonStep } from '@/content';
+import { useInstrument } from '@/instrument';
 import { PlayerPanel } from './PlayerPanel';
 import { MissingContent, StepCaption } from './StepHeading';
 
@@ -11,10 +12,12 @@ export function SongStep({
   step: Extract<LessonStep, { kind: 'song' }>;
   engine: AudioEngine;
 }) {
+  const { id: instrument } = useInstrument();
   const song = getSong(step.songId);
   // A chart song's riff is built, not stored; keep one object so the player
-  // is created once per step rather than on every render.
-  const riff = useMemo(() => (song === undefined ? undefined : songToRiff(song)), [song]);
+  // is created once per step rather than on every render. It is built with the
+  // chord shapes of the instrument the lesson is for.
+  const riff = useMemo(() => (song === undefined ? undefined : songToRiff(song, instrument)), [song, instrument]);
   if (song === undefined || riff === undefined) return <MissingContent what={`song ${step.songId}`} />;
 
   return (

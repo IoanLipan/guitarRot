@@ -1,12 +1,16 @@
-import { STANDARD_TUNING, STRING_COUNT, type Midi, type Tuning } from '@/music';
+import type { Midi, Tuning } from '@/music';
 
 /**
  * The string an in-tune reading is tuning: the one whose open pitch it is. Any
  * other note, however steady, is null. The tuner calls a reading "in tune" when
  * it is close to the nearest note, which says nothing about whether that note
  * is one a string should sound: B2 held perfectly is not the A string tuned.
+ *
+ * Which string that is depends on the instrument's tuning, and only the open
+ * pitch decides it: on the re-entrant ukulele the string with index 0 is the
+ * high G, so the answer is never "the lowest string that fits".
  */
-export function openStringOf(midi: Midi, tuning: Tuning = STANDARD_TUNING): number | null {
+export function openStringOf(midi: Midi, tuning: Tuning): number | null {
   const index = tuning.indexOf(midi);
   return index === -1 ? null : index;
 }
@@ -16,6 +20,7 @@ export function withTuned(tuned: ReadonlySet<number>, stringIndex: number): Read
   return tuned.has(stringIndex) ? tuned : new Set([...tuned, stringIndex]);
 }
 
-export function allStringsTuned(tuned: ReadonlySet<number>): boolean {
-  return tuned.size >= STRING_COUNT;
+/** Every string of the instrument has been heard in tune. */
+export function allStringsTuned(tuned: ReadonlySet<number>, stringCount: number): boolean {
+  return tuned.size >= stringCount;
 }

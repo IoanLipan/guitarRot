@@ -1,6 +1,6 @@
 import * as Tone from 'tone';
 import { riffTotalBeats, type Riff } from '@/content';
-import { STANDARD_TUNING, type Tuning } from '@/music';
+import { instrumentOf, type Tuning } from '@/music';
 import {
   beatsToTransportTime,
   riffLoopEnd,
@@ -63,7 +63,7 @@ export function createRiffPlayer(
   engine: AudioEngine,
   opts: { tuning?: Tuning; speed?: number } = {},
 ): RiffPlayer {
-  const tuning = opts.tuning ?? STANDARD_TUNING;
+  const tuning = opts.tuning ?? instrumentOf(riff).tuning;
   let speed = opts.speed ?? 1;
 
   const notes = riffToScheduledNotes(riff, tuning);

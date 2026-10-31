@@ -8,7 +8,7 @@ import {
   chordToneNames,
   chordVoicing,
   chordStrings,
-  STANDARD_TUNING,
+  instrumentOf,
   withSolfege,
   type ChordShape,
 } from '@/music';
@@ -28,6 +28,7 @@ export function ChordCard({
   /** The card that owns the screen: its contents rise in one after another when it becomes this. */
   isActive?: boolean;
 }) {
+  const instrument = instrumentOf(chord);
   const diagram = chordShapeToFretboard(chord);
   const [strumming, setStrumming] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,14 +45,14 @@ export function ChordCard({
     // The whole card is the button: the ripple spreads from the finger across it,
     // and the strings of the diagram shiver in strum order.
     strumFx(event.currentTarget, { x: event.clientX, y: event.clientY });
-    engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
+    engine.strum(chordVoicing(chord, instrument.tuning), { strings: chordStrings(chord) });
     setStrumming(true);
     if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => setStrumming(false), STRUM_FLASH_MS);
   }
 
   const rise = isActive ? 'rise-in' : '';
-  const tones = chordToneNames(chord, STANDARD_TUNING).map(withSolfege);
+  const tones = chordToneNames(chord, instrument.tuning).map(withSolfege);
 
   return (
     <button
@@ -76,6 +77,7 @@ export function ChordCard({
         style={stagger(1)}
       >
         <Fretboard
+          instrument={instrument}
           orientation="vertical"
           fretRange={diagram.fretRange}
           markers={diagram.markers}

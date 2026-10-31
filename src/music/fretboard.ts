@@ -1,12 +1,12 @@
 import { midiToPitchClass, type Midi, type PitchClass } from './notes';
-import { MAX_FRET, STRING_COUNT, type Tuning } from './tuning';
+import { MAX_FRET, type Tuning } from './tuning';
 
 export type FretPosition = { stringIndex: number; fret: number };
 
 export const DEFAULT_FRET_RANGE: readonly [number, number] = [0, 12];
 
-function assertStringIndex(stringIndex: number): void {
-  if (!Number.isInteger(stringIndex) || stringIndex < 0 || stringIndex >= STRING_COUNT) {
+function assertStringIndex(tuning: Tuning, stringIndex: number): void {
+  if (!Number.isInteger(stringIndex) || stringIndex < 0 || stringIndex >= tuning.length) {
     throw new Error(`String index out of range: ${stringIndex}`);
   }
 }
@@ -23,7 +23,7 @@ export function clampFretRange(range: readonly [number, number]): [number, numbe
 }
 
 export function openStringMidi(tuning: Tuning, stringIndex: number): Midi {
-  assertStringIndex(stringIndex);
+  assertStringIndex(tuning, stringIndex);
   const open = tuning[stringIndex];
   if (open === undefined) throw new Error(`Tuning has no string ${stringIndex}`);
   return open;
@@ -36,7 +36,7 @@ export function fretToMidi(tuning: Tuning, stringIndex: number, fret: number): M
   return openStringMidi(tuning, stringIndex) + fret;
 }
 
-/** Every position producing exactly this pitch, ordered low string to high. */
+/** Every position producing exactly this pitch, ordered by string index (bottom tab line first). */
 export function findPositions(
   tuning: Tuning,
   midi: Midi,
@@ -47,7 +47,7 @@ export function findPositions(
   }
   const [lo, hi] = clampFretRange(fretRange);
   const found: FretPosition[] = [];
-  for (let stringIndex = 0; stringIndex < STRING_COUNT; stringIndex += 1) {
+  for (let stringIndex = 0; stringIndex < tuning.length; stringIndex += 1) {
     const fret = midi - openStringMidi(tuning, stringIndex);
     if (fret >= lo && fret <= hi) {
       found.push({ stringIndex, fret });
@@ -57,7 +57,7 @@ export function findPositions(
 }
 
 /**
- * Every position producing this pitch class in any octave, ordered low string to high.
+ * Every position producing this pitch class in any octave, ordered by string index.
  *
  * `PitchClass` is an unbranded number, so a caller can hand this an out-of-range
  * value produced by ordinary arithmetic (e.g. `root + 7` for "a fifth above root",
@@ -75,7 +75,7 @@ export function findPitchClassPositions(
 ): FretPosition[] {
   const [lo, hi] = clampFretRange(fretRange);
   const found: FretPosition[] = [];
-  for (let stringIndex = 0; stringIndex < STRING_COUNT; stringIndex += 1) {
+  for (let stringIndex = 0; stringIndex < tuning.length; stringIndex += 1) {
     for (let fret = lo; fret <= hi; fret += 1) {
       if (midiToPitchClass(fretToMidi(tuning, stringIndex, fret)) === midiToPitchClass(pc)) {
         found.push({ stringIndex, fret });

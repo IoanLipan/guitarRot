@@ -3,7 +3,8 @@ import { ArrowLeftIcon, ArrowRightIcon, MicIcon, SpeakerIcon, StopIcon } from '@
 import { tapHaptic } from '@/app/haptics';
 import { useMicPitch, type MicReading } from '@/app/useMicPitch';
 import type { AudioEngine } from '@/audio';
-import { fretToMidi, noteLabel, noteName, STANDARD_TUNING, stringNumber } from '@/music';
+import { useInstrument } from '@/instrument';
+import { fretToMidi, noteLabel, noteName, stringNumber, type Tuning } from '@/music';
 import { allStringsTuned, openStringOf, withTuned } from './tunedStrings';
 
 /** Within this many cents of the note counts as dead on. */
@@ -23,11 +24,11 @@ const METER_RANGE_CENTS = 50;
  * the rounded note, so an A string pulled 60 cents flat (G#2 + 40) still
  * resolves to the A string rather than to whichever string owns G#.
  */
-function closestStringIndex(reading: MicReading): number {
+function closestStringIndex(reading: MicReading, tuning: Tuning): number {
   const exact = reading.midi + reading.cents / 100;
   let best = 0;
   let bestDistance = Number.POSITIVE_INFINITY;
-  STANDARD_TUNING.forEach((open, index) => {
+  tuning.forEach((open, index) => {
     const distance = Math.abs(open - exact);
     if (distance < bestDistance) {
       best = index;
@@ -67,9 +68,11 @@ export function Tuner({
   onTunedAll,
 }: {
   engine: AudioEngine;
-  /** Called once, when all six open strings have been heard in tune since this tuner opened. */
+  /** Called once, when every open string of the instrument has been heard in tune since this tuner opened. */
   onTunedAll?: () => void;
 }) {
+  const instrument = useInstrument();
+  const { tuning } = instrument;
   const { status, reading, start, stop } = useMicPitch();
 
   const inZone = reading !== null && Math.abs(reading.cents) < IN_TUNE_CENTS;
@@ -90,7 +93,7 @@ export function Tuner({
 
   // A session is this screen being open: tune the strings in any order, stop and
   // start the microphone between them, and it still counts. Refs, because nothing
-  // is drawn from it; the only output is the one call when the sixth is in.
+  // is drawn from it; the only output is the one call when the last string is in.
   const tunedRef = useRef<ReadonlySet<number>>(new Set());
   const reportedRef = useRef(false);
   const onTunedAllRef = useRef(onTunedAll);
@@ -98,16 +101,16 @@ export function Tuner({
   const tunedMidi = inTune && reading !== null ? reading.midi : null;
   useEffect(() => {
     if (tunedMidi === null || reportedRef.current) return;
-    const stringIndex = openStringOf(tunedMidi);
+    const stringIndex = openStringOf(tunedMidi, tuning);
     if (stringIndex === null) return;
     tunedRef.current = withTuned(tunedRef.current, stringIndex);
-    if (allStringsTuned(tunedRef.current)) {
+    if (allStringsTuned(tunedRef.current, tuning.length)) {
       reportedRef.current = true;
       onTunedAllRef.current?.();
     }
-  }, [tunedMidi]);
+  }, [tunedMidi, tuning]);
 
-  const closest = reading === null ? null : closestStringIndex(reading);
+  const closest = reading === null ? null : closestStringIndex(reading, tuning);
   const cents = reading?.cents ?? 0;
   const needle = Math.min(METER_RANGE_CENTS, Math.max(-METER_RANGE_CENTS, cents));
   const needlePercent = ((needle + METER_RANGE_CENTS) / (2 * METER_RANGE_CENTS)) * 100;
@@ -116,7 +119,7 @@ export function Tuner({
 
   function handleHear(stringIndex: number) {
     tapHaptic();
-    engine.playNote(fretToMidi(STANDARD_TUNING, stringIndex, 0), { stringIndex });
+    engine.playNote(fretToMidi(tuning, stringIndex, 0), { stringIndex });
   }
 
   function handleStart() {
@@ -128,6 +131,8 @@ export function Tuner({
     tapHaptic();
     stop();
   }
+
+  const instrumentWord = instrument.name.toLowerCase();
 
   let prompt: string | null = null;
   if (reading === null) {
@@ -194,7 +199,7 @@ export function Tuner({
           className="rounded-2xl bg-surface-2 px-4 py-3 text-meta leading-relaxed text-ink-dim"
         >
           This device doesn’t let the app use a microphone, so the tuner can’t listen. You can
-          still tune by ear: tap a string below and match your guitar to it.
+          still tune by ear: tap a string below and match your {instrumentWord} to it.
         </p>
       )}
 
@@ -222,7 +227,7 @@ export function Tuner({
               </p>
               <span aria-hidden="true">·</span>
               <p data-testid="tuner-string">
-                Closest: <span className="font-bold text-ink">String {stringNumber(closest ?? 0)}</span>
+                Closest: <span className="font-bold text-ink">String {stringNumber(closest ?? 0, instrument)}</span>
               </p>
             </>
           )}
@@ -302,10 +307,10 @@ export function Tuner({
       <section className="flex flex-col gap-2">
         <h3 className="label">Hear each string</h3>
         <p className="text-meta text-ink-dim tight:sr-only">
-          Tune by ear: tap a string, play the same string on your guitar, and match the sound.
+          Tune by ear: tap a string, play the same string on your {instrumentWord}, and match the sound.
         </p>
-        <div className="grid grid-cols-3 gap-2">
-          {STANDARD_TUNING.map((open, stringIndex) => {
+        <div className={`grid gap-2 ${tuning.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {tuning.map((open, stringIndex) => {
             const isClosest = closest === stringIndex;
             return (
               <button
@@ -313,7 +318,7 @@ export function Tuner({
                 type="button"
                 data-testid={`hear-string-${stringIndex}`}
                 data-closest={isClosest}
-                aria-label={`Hear string ${stringNumber(stringIndex)}, ${noteLabel(open)}`}
+                aria-label={`Hear string ${stringNumber(stringIndex, instrument)}, ${noteLabel(open)}`}
                 onClick={() => handleHear(stringIndex)}
                 className={`press press-tile flex flex-col items-center rounded-2xl px-2 py-2 tight:py-1.5 ${
                   isClosest ? 'bg-surface-3 ring-2 ring-accent' : 'bg-surface ring-2 ring-transparent'
@@ -323,7 +328,7 @@ export function Tuner({
                   {noteLabel(open)}
                   <SpeakerIcon size={16} className="text-ink-dim" />
                 </span>
-                <span className="text-label text-ink-dim">String {stringNumber(stringIndex)}</span>
+                <span className="text-label text-ink-dim">String {stringNumber(stringIndex, instrument)}</span>
               </button>
             );
           })}

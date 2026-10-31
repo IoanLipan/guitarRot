@@ -1,5 +1,5 @@
 import { riffTotalBeats, type Riff, type Technique } from '@/content';
-import { STANDARD_TUNING, fretToMidi, type Midi, type Tuning } from '@/music';
+import { fretToMidi, instrumentOf, type Midi, type Tuning } from '@/music';
 
 export const MIN_SPEED = 0.25;
 export const MAX_SPEED = 1.5;
@@ -50,9 +50,10 @@ export function speedToBpm(baseBpm: number, speed: number): number {
   return baseBpm * clamped;
 }
 
+/** The riff's notes as pitches. Unless told otherwise they are played on the tuning of the instrument the riff is written for. */
 export function riffToScheduledNotes(
   riff: Riff,
-  tuning: Tuning = STANDARD_TUNING,
+  tuning: Tuning = instrumentOf(riff).tuning,
 ): ScheduledNote[] {
   return riff.events.map((event) => ({
     time: beatsToTransportTime(event.beat),

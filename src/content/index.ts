@@ -1,6 +1,7 @@
 export * from './types';
 export * from './riffs';
 export * from './chords';
+export * from './ukuleleChords';
 export * from './songs';
 export * from './songCatalog';
 export * from './melody';
@@ -8,5 +9,6 @@ export * from './legato';
 export * from './drills';
 export * from './lessons';
 export * from './course';
+export * from './ukuleleCourse';
 export * from './illustrations';
 export * from './rich';

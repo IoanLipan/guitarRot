@@ -4,12 +4,13 @@ import { successHaptic, tapHaptic } from '@/app/haptics';
 import { useMicPitch } from '@/app/useMicPitch';
 import type { AudioEngine } from '@/audio';
 import type { LessonStep } from '@/content';
+import { useInstrument } from '@/instrument';
 import {
   fretToMidi,
   noteLabel,
-  STANDARD_TUNING,
   stringNumber,
   type FretPosition,
+  type Instrument,
 } from '@/music';
 import type { FretMarker } from '@/render';
 import { Neck } from './Neck';
@@ -34,9 +35,9 @@ function sameNote(heard: number, target: number): boolean {
   return heard === target || Math.abs(heard - target) === 12;
 }
 
-function whereToPlay(position: FretPosition): string {
+function whereToPlay(position: FretPosition, instrument: Instrument): string {
   const fret = position.fret === 0 ? 'open' : `fret ${position.fret}`;
-  return `string ${stringNumber(position.stringIndex)}, ${fret}`;
+  return `string ${stringNumber(position.stringIndex, instrument)}, ${fret}`;
 }
 
 /**
@@ -53,6 +54,8 @@ export function ListenStep({
   engine: AudioEngine;
   onDone: () => void;
 }) {
+  const instrument = useInstrument();
+  const { tuning } = instrument;
   const mic = useMicPitch();
   /** Targets come in order, so "how many are ticked" is also "which is next". */
   const [ticked, setTicked] = useState(0);
@@ -66,7 +69,7 @@ export function ListenStep({
   const complete = ticked >= total;
   const target = complete ? undefined : step.targets[ticked];
   const targetMidi =
-    target === undefined ? undefined : fretToMidi(STANDARD_TUNING, target.stringIndex, target.fret);
+    target === undefined ? undefined : fretToMidi(tuning, target.stringIndex, target.fret);
 
   const heard = mic.reading?.midi;
   const hearing = heard !== undefined && targetMidi !== undefined && sameNote(heard, targetMidi);
@@ -96,12 +99,12 @@ export function ListenStep({
       later(() => setGotIt(null), GOT_IT_MS);
       const next = step.targets[ticked + 1];
       const nextMidi =
-        next === undefined ? undefined : fretToMidi(STANDARD_TUNING, next.stringIndex, next.fret);
+        next === undefined ? undefined : fretToMidi(tuning, next.stringIndex, next.fret);
       setArmed(!(nextMidi !== undefined && (nextMidi - targetMidi) % 12 === 0));
       setTicked((count) => count + 1);
     }, HOLD_MS);
     return () => clearTimeout(timer);
-  }, [matching, target, targetMidi, ticked, step.targets]);
+  }, [matching, target, targetMidi, ticked, step.targets, tuning]);
 
   // All played: tell the lesson, and let go of the microphone.
   const { stop } = mic;
@@ -176,7 +179,7 @@ export function ListenStep({
             <RichText>{`Play ${noteLabel(targetMidi)}`}</RichText>
           </p>
           <p className="text-body text-ink-dim" data-testid="listen-where">
-            {whereToPlay(target)}
+            {whereToPlay(target, instrument)}
           </p>
         </div>
       )}

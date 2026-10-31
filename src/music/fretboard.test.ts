@@ -6,28 +6,26 @@ import {
   openStringMidi,
   positionKey,
 } from './fretboard';
-import {
-  STANDARD_TUNING,
-  STRING_COUNT,
-  stringIndexFromNumber,
-  stringNumber,
-} from './tuning';
+import { GUITAR, stringIndexFromNumber, stringNumber } from './instruments';
+import { STANDARD_TUNING } from './tuning';
+
+const STRING_COUNT = STANDARD_TUNING.length;
 import { noteName } from './notes';
 
 describe('string index convention', () => {
   it('treats index 0 as the low E, which guitarists call string 6', () => {
-    expect(stringNumber(0)).toBe(6);
-    expect(stringNumber(5)).toBe(1);
+    expect(stringNumber(0, GUITAR)).toBe(6);
+    expect(stringNumber(5, GUITAR)).toBe(1);
   });
 
   it('round-trips index and number', () => {
     for (let i = 0; i < STRING_COUNT; i += 1) {
-      expect(stringIndexFromNumber(stringNumber(i))).toBe(i);
+      expect(stringIndexFromNumber(stringNumber(i, GUITAR), GUITAR)).toBe(i);
     }
   });
 
   it('puts the lowest pitch at index 0', () => {
-    expect(STANDARD_TUNING[0]).toBeLessThan(STANDARD_TUNING[5]);
+    expect(STANDARD_TUNING[0]).toBeLessThan(STANDARD_TUNING[5] ?? 0);
   });
 });
 

@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { Riff } from '@/content';
-import { STANDARD_TUNING, fretToMidi, noteName, type FretPosition } from '@/music';
+import { fretToMidi, instrumentOf, noteName, type FretPosition, type Instrument } from '@/music';
 import { createFretboardGeometry, Fretboard, noteColor, type FretMarker } from '@/render';
 import { RepeatIcon } from '@/ui/icons';
 import { pingAt } from '@/ui/motion';
@@ -21,8 +21,8 @@ export type FretboardLoopRange = { anchor: number; start: number; end: number };
 const keyOf = (position: FretPosition): string => `${position.stringIndex}:${position.fret}`;
 
 /** The note letter a position plays: what its dot says and what colours it. */
-const letterOf = (position: FretPosition): string =>
-  noteName(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret));
+const letterOf = (instrument: Instrument, position: FretPosition): string =>
+  noteName(fretToMidi(instrument.tuning, position.stringIndex, position.fret));
 
 /**
  * The song as a guitar neck that lights up as it plays: the view of your own
@@ -56,6 +56,8 @@ export function FretboardView({
   /** The same handler the chart's bars use: tap a bar to loop it, tap its anchor again to clear. */
   onLoopTap: (bar: number) => void;
 }) {
+  // The neck is the riff's own: a ukulele song is a four-string board.
+  const instrument = instrumentOf(riff);
   const plan = useMemo(() => planFretboard(riff), [riff]);
   const restingBar = loopRange?.start ?? 0;
   const resting = useMemo(() => restingCursor(plan, restingBar), [plan, restingBar]);
@@ -93,8 +95,14 @@ export function FretboardView({
     () =>
       fretRange === undefined
         ? null
-        : createFretboardGeometry({ orientation: 'horizontal', fretRange, interactive: true, stringLabels: true }),
-    [fretRange],
+        : createFretboardGeometry({
+            orientation: 'horizontal',
+            fretRange,
+            interactive: true,
+            stringLabels: true,
+            stringCount: instrument.tuning.length,
+          }),
+    [fretRange, instrument],
   );
 
   const markers = useMemo<FretMarker[]>(() => {
@@ -102,7 +110,7 @@ export function FretboardView({
     const sounding = new Set((shown.lit?.positions ?? []).map(keyOf));
     const coming = new Set((shown.next?.positions ?? []).map(keyOf));
     return barPlan.positions.map((position) => {
-      const letter = letterOf(position);
+      const letter = letterOf(instrument, position);
       const key = keyOf(position);
       return {
         ...position,
@@ -113,7 +121,7 @@ export function FretboardView({
         emphasis: !playing ? undefined : sounding.has(key) ? 'lit' : coming.has(key) ? 'next' : 'dim',
       };
     });
-  }, [barPlan, shown.lit, shown.next, playing]);
+  }, [barPlan, shown.lit, shown.next, playing, instrument]);
 
   // A ring swells off each dot as its note is struck. A fresh note, not a fresh render, is the trigger.
   useEffect(() => {
@@ -122,15 +130,15 @@ export function FretboardView({
     const radius = Math.min(geometry.stringSpacing, geometry.fretSpacing) * 0.34;
     for (const position of lit.positions) {
       const point = geometry.markerPoint(position);
-      pingAt(svg, point.x, point.y, radius, noteColor(letterOf(position)));
+      pingAt(svg, point.x, point.y, radius, noteColor(letterOf(instrument, position)));
     }
-  }, [lit, playing, geometry]);
+  }, [lit, playing, geometry, instrument]);
 
   if (barPlan === undefined) return null;
 
   function handleTap(position: FretPosition) {
     tapHaptic();
-    engine.playNote(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret), {
+    engine.playNote(fretToMidi(instrument.tuning, position.stringIndex, position.fret), {
       stringIndex: position.stringIndex,
     });
   }
@@ -165,7 +173,7 @@ export function FretboardView({
               data-testid="fretboard-note"
               className="max-w-full truncate rounded-full bg-surface-2 px-3.5 py-1.5 text-body font-bold tight:py-1"
             >
-              {describeNotes(lit.positions)}
+              {describeNotes(lit.positions, instrument)}
             </p>
           ) : (
             !playing && (
@@ -180,6 +188,7 @@ export function FretboardView({
       {/* The board fills whatever height is left. It sits absolutely so its own size never decides the layout. */}
       <div ref={boardRef} className="relative min-h-0 flex-1">
         <Fretboard
+          instrument={instrument}
           orientation="horizontal"
           fretRange={barPlan.fretRange}
           markers={markers}
@@ -187,7 +196,7 @@ export function FretboardView({
           onFretTap={handleTap}
           fit
           className="absolute inset-0 h-full w-full"
-          ariaLabel={`Guitar neck for bar ${shown.bar + 1}`}
+          ariaLabel={`${instrument.name} neck for bar ${shown.bar + 1}`}
         />
       </div>
     </div>

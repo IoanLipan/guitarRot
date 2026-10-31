@@ -4,37 +4,71 @@ import type { AudioEngine } from '@/audio';
 import { tapHaptic } from '@/app/haptics';
 import { strumFx } from '@/ui/motion';
 import { ScrollFade } from '@/ui/ScrollFade';
-import { CHORDS } from '@/content';
+import { chordsFor } from '@/content';
+import { useInstrument } from '@/instrument';
 import {
   chordSolfegeName,
   chordToneNames,
   chordVoicing,
   chordStrings,
   fretToMidi,
+  getInstrument,
+  instrumentOf,
   noteLabel,
   SCALES,
   scalePositions,
-  STANDARD_TUNING,
   stringNumber,
   withSolfege,
   type ChordShape,
   type FretPosition,
+  type InstrumentId,
+  type PitchClass,
+  type ScalePattern,
 } from '@/music';
 import { chordShapeToFretboard, Fretboard } from '@/render';
 
-const EXPLORER_FRET_RANGE: [number, number] = [0, 12];
-const SCALE_FRET_RANGE: [number, number] = [0, 3];
-/** E, for "E minor pentatonic, box one" (@see design_handoff_guitarrot_app/README.md). */
-const E_PITCH_CLASS = 4;
 /** How long a tap stays highlighted after the sound fires. */
 const TAP_FLASH_MS = 700;
 
-const SCALE_DOTS = scalePositions(
-  STANDARD_TUNING,
-  E_PITCH_CLASS,
-  SCALES.minorPentatonic,
-  SCALE_FRET_RANGE,
-).map((position) => ({ ...position, tone: 'root' as const }));
+/**
+ * The scale shape each instrument's explorer draws. The guitar's is E minor
+ * pentatonic, box one (@see design_handoff_guitarrot_app/README.md). Four
+ * strings do not make a "box", so the ukulele's is the C major pentatonic in
+ * its first five frets: every note of it sits inside the shapes a beginner
+ * already holds for C and Am.
+ */
+const SCALE_BOX: Record<
+  InstrumentId,
+  { root: PitchClass; pattern: ScalePattern; frets: [number, number]; heading: string; label: string }
+> = {
+  guitar: {
+    root: 4,
+    pattern: SCALES.minorPentatonic,
+    frets: [0, 3],
+    heading: 'E (Mi) minor pentatonic, box 1',
+    label: 'E minor pentatonic, box one',
+  },
+  ukulele: {
+    root: 0,
+    pattern: SCALES.majorPentatonic,
+    frets: [0, 4],
+    heading: 'C (Do) major pentatonic, first position',
+    label: 'C major pentatonic, first position',
+  },
+};
+
+const SCALE_DOTS: Record<InstrumentId, { stringIndex: number; fret: number; tone: 'root' }[]> = {
+  guitar: scaleDots('guitar'),
+  ukulele: scaleDots('ukulele'),
+};
+
+function scaleDots(id: InstrumentId) {
+  const box = SCALE_BOX[id];
+  return scalePositions(getInstrument(id).tuning, box.root, box.pattern, box.frets).map((position) => ({
+    ...position,
+    tone: 'root' as const,
+  }));
+}
 
 /**
  * The free-play half of Learn: poke at the neck, strum any chord, see a scale
@@ -42,6 +76,10 @@ const SCALE_DOTS = scalePositions(
  * the scrolling live in `Learn`.)
  */
 export function Explore({ engine }: { engine: AudioEngine }) {
+  const instrument = useInstrument();
+  const chords = chordsFor(instrument.id);
+  const scaleBox = SCALE_BOX[instrument.id];
+  const explorerFrets: [number, number] = [0, instrument.boardFrets];
   const [tapped, setTapped] = useState<FretPosition | null>(null);
   const [playedChord, setPlayedChord] = useState<ChordShape | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -61,7 +99,7 @@ export function Explore({ engine }: { engine: AudioEngine }) {
 
   function handleExplorerTap(position: FretPosition) {
     tapHaptic();
-    const midi = fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret);
+    const midi = fretToMidi(instrument.tuning, position.stringIndex, position.fret);
     engine.playNote(midi, { stringIndex: position.stringIndex });
     setTapped(position);
   }
@@ -69,12 +107,12 @@ export function Explore({ engine }: { engine: AudioEngine }) {
   function handleChordTap(chord: ChordShape, event: React.MouseEvent<HTMLElement>) {
     tapHaptic();
     strumFx(event.currentTarget, { x: event.clientX, y: event.clientY });
-    engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
+    engine.strum(chordVoicing(chord, instrumentOf(chord).tuning), { strings: chordStrings(chord) });
     flashChord(chord);
   }
 
   const tappedNote =
-    tapped === null ? null : noteLabel(fretToMidi(STANDARD_TUNING, tapped.stringIndex, tapped.fret));
+    tapped === null ? null : noteLabel(fretToMidi(instrument.tuning, tapped.stringIndex, tapped.fret));
 
   return (
     <div className="rise-in flex flex-col gap-9 px-5 pt-2 pb-8">
@@ -85,7 +123,7 @@ export function Explore({ engine }: { engine: AudioEngine }) {
         <ScrollFade className="rounded-2xl">
           <Fretboard
             orientation="horizontal"
-            fretRange={EXPLORER_FRET_RANGE}
+            fretRange={explorerFrets}
             markers={tapped === null ? [] : [{ ...tapped, tone: 'root' }]}
             onFretTap={handleExplorerTap}
             popMarkers
@@ -97,7 +135,7 @@ export function Explore({ engine }: { engine: AudioEngine }) {
             'Tap any fret to hear it.'
           ) : (
             <>
-              You tapped fret {tapped.fret}, string {stringNumber(tapped.stringIndex)}{' '}
+              You tapped fret {tapped.fret}, string {stringNumber(tapped.stringIndex, instrument)}{' '}
               <ArrowRightIcon size={14} className="inline-block align-[-2px]" />{' '}
               <strong data-testid="tapped-note" className="text-accent">
                 {tappedNote}
@@ -110,7 +148,7 @@ export function Explore({ engine }: { engine: AudioEngine }) {
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
           <h2 className="label">Chord library</h2>
-          <span className="text-label text-ink-faint">{CHORDS.length} shapes</span>
+          <span className="text-label text-ink-faint">{chords.length} shapes</span>
         </div>
 
         {/* Above the grid, and stuck to the top of the scroll while the grid goes by: the grid is
@@ -127,14 +165,14 @@ export function Explore({ engine }: { engine: AudioEngine }) {
               <span>
                 <strong className="text-accent">{playedChord.name}</strong> —{' '}
                 {chordSolfegeName(playedChord)} —{' '}
-                {chordToneNames(playedChord, STANDARD_TUNING).map(withSolfege).join(' · ')}
+                {chordToneNames(playedChord, instrumentOf(playedChord).tuning).map(withSolfege).join(' · ')}
               </span>
             )}
           </p>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          {CHORDS.map((chord) => {
+          {chords.map((chord) => {
             const diagram = chordShapeToFretboard(chord);
             const isPlaying = playedChord?.id === chord.id;
             return (
@@ -150,6 +188,7 @@ export function Explore({ engine }: { engine: AudioEngine }) {
               >
                 <div className="h-24 w-full">
                   <Fretboard
+                    instrument={instrumentOf(chord)}
                     orientation="vertical"
                     fretRange={diagram.fretRange}
                     markers={diagram.markers}
@@ -177,15 +216,15 @@ export function Explore({ engine }: { engine: AudioEngine }) {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="label">Scale positions — E (Mi) minor pentatonic, box 1</h2>
+        <h2 className="label">Scale positions — {scaleBox.heading}</h2>
         <div className="h-40 w-full">
           <Fretboard
             orientation="horizontal"
-            fretRange={SCALE_FRET_RANGE}
-            markers={SCALE_DOTS}
+            fretRange={scaleBox.frets}
+            markers={SCALE_DOTS[instrument.id]}
             fit
             className="h-full w-full"
-            ariaLabel="E minor pentatonic, box one"
+            ariaLabel={scaleBox.label}
           />
         </div>
       </section>

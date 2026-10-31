@@ -1,12 +1,13 @@
 import { useId, useMemo, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useInstrument } from '@/instrument';
 import {
-  STANDARD_TUNING,
   fretToMidi,
   intervalBetween,
   noteLabel,
   noteName,
   stringNumber,
   type FretPosition,
+  type Instrument,
   type Midi,
   type Tuning,
 } from '@/music';
@@ -16,7 +17,6 @@ import {
   type Orientation,
   type FretboardGeometry,
 } from './fretboardGeometry';
-import { STRING_NAMES } from './stringNames';
 import { useRenderedScale } from './useRenderedScale';
 
 /**
@@ -69,6 +69,12 @@ export type FretboardProps = {
   orientation: Orientation;
   fretRange: [number, number];
   markers: FretMarker[];
+  /**
+   * The instrument drawn: its string count, names and string widths. Defaults
+   * to the one the app is set to (see `useInstrument`).
+   */
+  instrument?: Instrument;
+  /** Overrides the instrument's open-string pitches, for a board in another tuning. */
   tuning?: Tuning;
   labelMode?: LabelMode;
   /** Required by labelMode "interval"; ignored otherwise. */
@@ -115,9 +121,6 @@ export type FretboardProps = {
   className?: string;
   ariaLabel?: string;
 };
-
-/** Low E is thickest. Index matches stringIndex. */
-const STRING_WIDTHS = [3.2, 2.8, 2.4, 1.9, 1.5, 1.2];
 
 /**
  * A dot is either a note, which wears that note's colour (`color`, from
@@ -169,7 +172,8 @@ export function Fretboard({
   orientation,
   fretRange,
   markers,
-  tuning = STANDARD_TUNING,
+  instrument: instrumentProp,
+  tuning: tuningProp,
   labelMode = 'none',
   intervalRootMidi,
   mutedStrings = [],
@@ -187,13 +191,17 @@ export function Fretboard({
   className,
   ariaLabel,
 }: FretboardProps) {
+  const appInstrument = useInstrument();
+  const instrument = instrumentProp ?? appInstrument;
+  const tuning = tuningProp ?? instrument.tuning;
+  const stringCount = tuning.length;
   const interactive = onFretTap !== undefined;
   const nameGutter = stringNames !== false && orientation === 'horizontal';
   const drawNames = stringNames === true && nameGutter;
 
   const geometry: FretboardGeometry = useMemo(
-    () => createFretboardGeometry({ orientation, fretRange, interactive, stringLabels: nameGutter }),
-    [orientation, fretRange, interactive, nameGutter],
+    () => createFretboardGeometry({ orientation, fretRange, interactive, stringLabels: nameGutter, stringCount }),
+    [orientation, fretRange, interactive, nameGutter, stringCount],
   );
 
   const markerRadius = Math.min(geometry.stringSpacing, geometry.fretSpacing) * 0.34 * markerScale;
@@ -235,7 +243,7 @@ export function Fretboard({
       key === 'Home' ? [0, -tappableFrets.length] : key === 'End' ? [0, tappableFrets.length] : (ARROW_STEPS[orientation][key] ?? [0, 0]);
     if (stringStep === 0 && fretStep === 0) return null;
 
-    const nextString = Math.min(STRING_NAMES.length - 1, Math.max(0, position.stringIndex + stringStep));
+    const nextString = Math.min(stringCount - 1, Math.max(0, position.stringIndex + stringStep));
     const nextFret = tappableFrets[Math.min(tappableFrets.length - 1, Math.max(0, index + fretStep))];
     if (nextFret === undefined) return null;
     const next = { stringIndex: nextString, fret: nextFret };
@@ -268,7 +276,7 @@ export function Fretboard({
       // A picture is an image; a board you can tap is a group of buttons,
       // and an image's children are hidden from a screen reader.
       role={interactive ? 'group' : 'img'}
-      aria-label={ariaLabel ?? 'Guitar fretboard'}
+      aria-label={ariaLabel ?? `${instrument.name} fretboard`}
       data-testid="fretboard"
       data-orientation={orientation}
     >
@@ -326,7 +334,8 @@ export function Fretboard({
         );
       })}
 
-      {STRING_WIDTHS.map((strokeWidth, stringIndex) => {
+      {Array.from({ length: stringCount }, (_, stringIndex) => {
+        const strokeWidth = instrument.stringWidths[stringIndex] ?? 2;
         const line = geometry.stringLine(stringIndex);
         const focused = highlightStrings.includes(stringIndex);
         const dimmed = highlightStrings.length > 0 && !focused;
@@ -391,7 +400,7 @@ export function Fretboard({
         })}
 
       {drawNames &&
-        STRING_NAMES.map((name, stringIndex) => {
+        instrument.stringNames.slice(0, stringCount).map((name, stringIndex) => {
           const point = geometry.stringLabelPoint(stringIndex);
           return (
             <text
@@ -503,11 +512,11 @@ export function Fretboard({
 
       {interactive &&
         tappableFrets.flatMap((fret) =>
-          Array.from({ length: STRING_NAMES.length }, (_, stringIndex) => {
+          Array.from({ length: stringCount }, (_, stringIndex) => {
             const position = { stringIndex, fret };
             const rect = geometry.cellRect(position);
             const midi = fretToMidi(tuning, stringIndex, fret);
-            const where = `string ${stringNumber(stringIndex)}, ${fret === 0 ? 'open' : `fret ${fret}`}`;
+            const where = `string ${stringNumber(stringIndex, instrument)}, ${fret === 0 ? 'open' : `fret ${fret}`}`;
             return (
               <rect
                 key={`cell-s${stringIndex}f${fret}`}

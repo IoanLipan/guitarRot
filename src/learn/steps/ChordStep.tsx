@@ -3,21 +3,24 @@ import { NoteIcon } from '@/ui/icons';
 import { tapHaptic } from '@/app/haptics';
 import { ripple, vibrateStrings } from '@/ui/motion';
 import type { AudioEngine } from '@/audio';
-import { CHORDS, type LessonStep } from '@/content';
+import { getChord, type LessonStep } from '@/content';
 import {
   chordSolfegeName,
   chordStrings,
   chordToneNames,
   chordVoicing,
   fretToMidi,
+  instrumentOf,
   noteName,
-  STANDARD_TUNING,
+  stringCountOf,
   stringNumber,
   withSolfege,
 } from '@/music';
 import { chordShapeToFretboard, Fretboard, noteColor } from '@/render';
 import { RichText } from './RichText';
 import { MissingContent, StepCaption } from './StepHeading';
+
+const NUMBER_WORDS: Record<number, string> = { 4: 'four', 6: 'six' };
 
 /** How long the "just strummed" highlight holds after a tap. */
 const STRUM_FLASH_MS = 700;
@@ -29,7 +32,7 @@ export function ChordStep({
   step: Extract<LessonStep, { kind: 'chord' }>;
   engine: AudioEngine;
 }) {
-  const chord = CHORDS.find((candidate) => candidate.id === step.chordId);
+  const chord = getChord(step.chordId);
   const [strumming, setStrumming] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const diagramRef = useRef<HTMLDivElement>(null);
@@ -43,15 +46,21 @@ export function ChordStep({
 
   if (chord === undefined) return <MissingContent what={`chord ${step.chordId}`} />;
 
+  const instrument = instrumentOf(chord);
   const diagram = chordShapeToFretboard(chord);
-  const tones = chordToneNames(chord, STANDARD_TUNING).map(withSolfege);
+  const tones = chordToneNames(chord, instrument.tuning).map(withSolfege);
   const sounding = chordStrings(chord);
   const lowest = sounding[0];
-  // Derived from the shape, so it can never disagree with the diagram.
+  const stringCount = stringCountOf(instrument);
+  // Derived from the shape, so it can never disagree with the diagram. "The first
+  // sounding string" is by string index, which is where the hand starts the stroke;
+  // on the ukulele that is not the lowest in pitch, so it never says "thicker".
   const strumAdvice =
     lowest === undefined || lowest === 0
-      ? 'Strum all six strings.'
-      : `Start the strum on string ${stringNumber(lowest)} and leave the thicker strings alone.`;
+      ? `Strum all ${NUMBER_WORDS[stringCount] ?? stringCount} strings.`
+      : instrument.id === 'guitar'
+        ? `Start the strum on string ${stringNumber(lowest, instrument)} and leave the thicker strings alone.`
+        : `Start the strum on string ${stringNumber(lowest, instrument)} and leave the strings before it alone.`;
 
   function handleStrum(event: React.MouseEvent<HTMLButtonElement>) {
     if (chord === undefined) return;
@@ -59,7 +68,7 @@ export function ChordStep({
     // The button ripples under the finger and the diagram's strings shiver.
     ripple(event.currentTarget, { x: event.clientX, y: event.clientY }, 'rgba(255, 176, 32, 0.22)');
     vibrateStrings(diagramRef.current);
-    engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
+    engine.strum(chordVoicing(chord, instrument.tuning), { strings: chordStrings(chord) });
     setStrumming(true);
     if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => setStrumming(false), STRUM_FLASH_MS);
@@ -79,11 +88,12 @@ export function ChordStep({
         }`}
       >
         <Fretboard
+          instrument={instrument}
           orientation="vertical"
           fretRange={diagram.fretRange}
           markers={diagram.markers.map((marker) => ({
             ...marker,
-            color: noteColor(noteName(fretToMidi(STANDARD_TUNING, marker.stringIndex, marker.fret))),
+            color: noteColor(noteName(fretToMidi(instrument.tuning, marker.stringIndex, marker.fret))),
           }))}
           mutedStrings={diagram.mutedStrings}
           openStrings={diagram.openStrings}

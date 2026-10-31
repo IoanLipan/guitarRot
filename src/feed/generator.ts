@@ -1,6 +1,12 @@
-import { CHORDS, RIFFS, type Riff } from '@/content';
-import type { ChordShape } from '@/music';
-import { generateChordQuestion, generateNoteQuestion, questionForId, type QuizQuestion } from '@/quiz';
+import { chordsFor, riffsFor, type Riff } from '@/content';
+import { DEFAULT_INSTRUMENT_ID, type ChordShape, type InstrumentId } from '@/music';
+import {
+  generateChordQuestion,
+  generateNoteQuestion,
+  instrumentOfQuestionId,
+  questionForId,
+  type QuizQuestion,
+} from '@/quiz';
 
 export type FeedItem =
   | { kind: 'riff'; id: string; riff: Riff }
@@ -69,16 +75,20 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
-function pickKind(cursor: FeedCursor, random: () => number): FeedKind {
+/** Which kinds of card have anything to show: an instrument with no riffs yet has a feed of chords and quizzes. */
+type Available = { riff: boolean; chord: boolean };
+
+function pickKind(cursor: FeedCursor, random: () => number, available: Available): FeedKind {
   // Open on something playable. Being tested before you've heard a note is
   // the fastest way to make someone close the app.
-  if (cursor.sequence === 0) return 'riff';
+  if (cursor.sequence === 0) return available.riff ? 'riff' : available.chord ? 'chord' : 'quiz';
 
   // A quiz is due: the feed promised one every few cards.
   if (cursor.sinceQuiz >= QUIZ_MAX_GAP) return 'quiz';
 
   const quizAllowed = cursor.sinceQuiz >= QUIZ_MIN_GAP;
-  const candidates: FeedKind[] = quizAllowed ? ['riff', 'chord', 'quiz'] : ['riff', 'chord'];
+  const playable: FeedKind[] = (['riff', 'chord'] as const).filter((kind) => available[kind]);
+  const candidates: FeedKind[] = quizAllowed || playable.length === 0 ? [...playable, 'quiz'] : playable;
 
   // Never a third card of the same kind in a row — that is what makes a feed
   // feel like a list instead of a shuffle.
@@ -140,23 +150,29 @@ export function generateFeedPage(
   random: () => number = Math.random,
   /** Most-overdue-first ids from `dueSrsIds`; drained as quiz slots need them. */
   dueIds: readonly string[] = [],
+  /** Whose riffs, chords and quizzes the page is made of. Defaults to the guitar. */
+  instrument: InstrumentId = DEFAULT_INSTRUMENT_ID,
 ): { items: FeedItem[]; cursor: FeedCursor } {
   const items: FeedItem[] = [];
   let next = { ...cursor };
-  const due = [...dueIds];
+  const riffs = riffsFor(instrument);
+  const chords = chordsFor(instrument);
+  const available: Available = { riff: riffs.length > 0, chord: chords.length > 0 };
+  // Reviews due on the other instrument's neck are not this feed's to ask.
+  const due = dueIds.filter((id) => instrumentOfQuestionId(id) === instrument);
 
   for (let i = 0; i < count; i += 1) {
-    const kind = pickKind(next, random);
+    const kind = pickKind(next, random, available);
     const sequence = next.sequence + 1;
     const runLength = kind === next.lastKind ? next.runLength + 1 : 1;
 
     if (kind === 'riff') {
-      const pool = poolAt(next.sequence, RIFFS, (candidate) => candidate.level <= EASY_MAX_RIFF_LEVEL);
+      const pool = poolAt(next.sequence, riffs, (candidate) => candidate.level <= EASY_MAX_RIFF_LEVEL);
       const riff = pickContent(pool, next.recentRiffIds, random);
       items.push({ kind, id: `feed-${sequence}-${riff.id}`, riff });
       next = {
         ...next,
-        recentRiffIds: remember(next.recentRiffIds, riff.id, RIFFS.length),
+        recentRiffIds: remember(next.recentRiffIds, riff.id, riffs.length),
         sinceQuiz: next.sinceQuiz + 1,
         sequence,
         lastKind: kind,
@@ -168,14 +184,14 @@ export function generateFeedPage(
     if (kind === 'chord') {
       const pool = poolAt(
         next.sequence,
-        CHORDS,
+        chords,
         (candidate) => candidate.difficulty <= EASY_MAX_CHORD_DIFFICULTY,
       );
       const chord = pickContent(pool, next.recentChordIds, random);
       items.push({ kind, id: `feed-${sequence}-${chord.id}`, chord });
       next = {
         ...next,
-        recentChordIds: remember(next.recentChordIds, chord.id, CHORDS.length),
+        recentChordIds: remember(next.recentChordIds, chord.id, chords.length),
         sinceQuiz: next.sinceQuiz + 1,
         sequence,
         lastKind: kind,
@@ -189,7 +205,9 @@ export function generateFeedPage(
     const dueQuestion = due.length > 0 ? questionForId(due.shift()!) : null;
     const question =
       dueQuestion ??
-      (next.nextQuizIsNote ? generateNoteQuestion({ random }) : generateChordQuestion({ random }));
+      (next.nextQuizIsNote
+        ? generateNoteQuestion({ random, instrument })
+        : generateChordQuestion({ random, instrument }));
     items.push({ kind, id: `feed-${sequence}-${question.id}`, question });
     next = {
       ...next,

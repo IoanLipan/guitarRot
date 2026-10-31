@@ -1,7 +1,8 @@
-import type { ChordShape } from '@/music';
+import { instrumentIdOf, type ChordShape, type InstrumentId } from '@/music';
+import { UKULELE_CHORDS } from './ukuleleChords';
 
-/** Standard open/barre voicings for the beginner chord library. */
-export const CHORDS: readonly ChordShape[] = [
+/** Standard open/barre voicings for the beginner guitar chord library. */
+export const GUITAR_CHORDS: readonly ChordShape[] = [
   {
     id: 'E-open',
     name: 'E',
@@ -314,6 +315,22 @@ export const CHORDS: readonly ChordShape[] = [
   },
 ];
 
+/**
+ * The guitar library, under its old name. Anything that lists chords for a
+ * player wants `chordsFor(instrument)` instead; this stays for code and tests
+ * that mean the guitar specifically.
+ */
+export const CHORDS: readonly ChordShape[] = GUITAR_CHORDS;
+
+/** Every shape in every instrument's library. Ids are unique across all of it. */
+export const ALL_CHORDS: readonly ChordShape[] = [...GUITAR_CHORDS, ...UKULELE_CHORDS];
+
+/** The chord library of one instrument. */
+export function chordsFor(instrument: InstrumentId): readonly ChordShape[] {
+  return instrument === 'guitar' ? GUITAR_CHORDS : ALL_CHORDS.filter((chord) => instrumentIdOf(chord) === instrument);
+}
+
+/** A chord by id, from any instrument's library: an id names its instrument. */
 export function getChord(id: string): ChordShape | undefined {
-  return CHORDS.find((chord) => chord.id === id);
+  return ALL_CHORDS.find((chord) => chord.id === id);
 }

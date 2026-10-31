@@ -3,20 +3,22 @@ import { NoteIcon } from '@/ui/icons';
 import { tapHaptic } from '@/app/haptics';
 import { strumFx } from '@/ui/motion';
 import type { AudioEngine } from '@/audio';
-import { CHORDS, type NeckDot, type Visual } from '@/content';
+import { getChord, type NeckDot, type Visual } from '@/content';
+import { useInstrument } from '@/instrument';
 import {
   chordSolfegeName,
   chordStrings,
   chordToneNames,
   chordVoicing,
   fretToMidi,
+  instrumentOf,
   noteLabel,
   noteName,
   spellingSolfege,
-  STANDARD_TUNING,
   stringNumber,
   withSolfege,
   type FretPosition,
+  type Instrument,
 } from '@/music';
 import { chordShapeToFretboard, createFretboardGeometry, Fretboard, type FretMarker } from '@/render';
 import { noteColor } from '@/render/noteColors';
@@ -94,11 +96,11 @@ function IllustrationView({ name }: { name: Extract<Visual, { kind: 'illustratio
   );
 }
 
-function describeDots(dots: readonly NeckDot[]): string {
+function describeDots(dots: readonly NeckDot[], instrument: Instrument): string {
   const shown = dots.slice(0, 8).map((dot) => {
-    const note = noteLabel(fretToMidi(STANDARD_TUNING, dot.stringIndex, dot.fret));
+    const note = noteLabel(fretToMidi(instrument.tuning, dot.stringIndex, dot.fret));
     const fret = dot.fret === 0 ? 'open' : `fret ${dot.fret}`;
-    return `${note} on string ${stringNumber(dot.stringIndex)}, ${fret}`;
+    return `${note} on string ${stringNumber(dot.stringIndex, instrument)}, ${fret}`;
   });
   return shown.join('; ');
 }
@@ -110,6 +112,7 @@ function NeckView({
   visual: Extract<Visual, { kind: 'neck' }>;
   engine: AudioEngine;
 }) {
+  const instrument = useInstrument();
   const [heard, setHeard] = useState<FretPosition | null>(null);
   const interactive = visual.tapToHear === true;
   const short = useShortScreen();
@@ -119,16 +122,16 @@ function NeckView({
       visual.dots.map((dot) => ({
         stringIndex: dot.stringIndex,
         fret: dot.fret,
-        label: neckDotText(dot),
+        label: neckDotText(dot, instrument),
         tone: 'root' as const,
-        color: noteColor(noteName(fretToMidi(STANDARD_TUNING, dot.stringIndex, dot.fret))),
+        color: noteColor(noteName(fretToMidi(instrument.tuning, dot.stringIndex, dot.fret))),
       })),
-    [visual.dots],
+    [visual.dots, instrument],
   );
 
   function handleTap(position: FretPosition) {
     tapHaptic();
-    engine.playNote(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret), {
+    engine.playNote(fretToMidi(instrument.tuning, position.stringIndex, position.fret), {
       stringIndex: position.stringIndex,
     });
     setHeard(position);
@@ -148,7 +151,7 @@ function NeckView({
         // The card holds up to about eight frets scaled down; a longer board scrolls.
         fitLimit={500}
         bleed={false}
-        ariaLabel={`Guitar neck, frets ${visual.fretRange[0]} to ${visual.fretRange[1]}. ${describeDots(visual.dots)}`}
+        ariaLabel={`${instrument.name} neck, frets ${visual.fretRange[0]} to ${visual.fretRange[1]}. ${describeDots(visual.dots, instrument)}`}
       />
       {interactive && (
         <p
@@ -164,10 +167,10 @@ function NeckView({
           ) : (
             <>
               <span className="text-body">
-                <RichText>{noteLabel(fretToMidi(STANDARD_TUNING, heard.stringIndex, heard.fret))}</RichText>
+                <RichText>{noteLabel(fretToMidi(instrument.tuning, heard.stringIndex, heard.fret))}</RichText>
               </span>
               <span>
-                string {stringNumber(heard.stringIndex)}, {heard.fret === 0 ? 'open' : `fret ${heard.fret}`}
+                string {stringNumber(heard.stringIndex, instrument)}, {heard.fret === 0 ? 'open' : `fret ${heard.fret}`}
               </span>
             </>
           )}
@@ -186,7 +189,7 @@ function ChordsView({
 }) {
   const [strummed, flash] = useFlash<string>();
   const chords = chordIds.flatMap((id) => {
-    const chord = CHORDS.find((candidate) => candidate.id === id);
+    const chord = getChord(id);
     return chord === undefined ? [] : [chord];
   });
 
@@ -194,14 +197,19 @@ function ChordsView({
     <div className="flex flex-col gap-2" data-testid="visual-chords">
       <div className="flex justify-center gap-2.5 overflow-x-auto narrow:gap-1.5">
         {chords.map((chord) => {
+          const chordInstrument = instrumentOf(chord);
           const diagram = chordShapeToFretboard(chord);
-          const geometry = createFretboardGeometry({ orientation: 'vertical', fretRange: diagram.fretRange });
+          const geometry = createFretboardGeometry({
+            orientation: 'vertical',
+            fretRange: diagram.fretRange,
+            stringCount: chordInstrument.tuning.length,
+          });
           const coloured = diagram.markers.map<FretMarker>((marker) => ({
             ...marker,
-            color: noteColor(noteName(fretToMidi(STANDARD_TUNING, marker.stringIndex, marker.fret))),
+            color: noteColor(noteName(fretToMidi(chordInstrument.tuning, marker.stringIndex, marker.fret))),
           }));
           const playing = strummed === chord.id;
-          const tones = chordToneNames(chord, STANDARD_TUNING);
+          const tones = chordToneNames(chord, chordInstrument.tuning);
           return (
             <button
               key={chord.id}
@@ -211,7 +219,7 @@ function ChordsView({
               aria-label={`${chord.name}, ${chordSolfegeName(chord)}. Notes: ${tones.map(withSolfege).join(', ')}. Tap to strum it.`}
               onClick={(event) => {
                 tapHaptic();
-                engine.strum(chordVoicing(chord, STANDARD_TUNING), { strings: chordStrings(chord) });
+                engine.strum(chordVoicing(chord, chordInstrument.tuning), { strings: chordStrings(chord) });
                 strumFx(event.currentTarget, { x: event.clientX, y: event.clientY });
                 flash(chord.id);
               }}
@@ -236,6 +244,7 @@ function ChordsView({
                 style={{ aspectRatio: `${geometry.width} / ${geometry.height}` }}
               >
                 <Fretboard
+                  instrument={chordInstrument}
                   orientation="vertical"
                   fretRange={diagram.fretRange}
                   markers={coloured}
@@ -279,8 +288,9 @@ function TapHint({ children }: { children: React.ReactNode }) {
 }
 
 function NotesView({ notes, engine }: { notes: readonly string[]; engine: AudioEngine }) {
+  const instrument = useInstrument();
   const [playing, flash] = useFlash<number>();
-  const midis = useMemo(() => notesToMidi(notes), [notes]);
+  const midis = useMemo(() => notesToMidi(notes, instrument), [notes, instrument]);
   // Seven fit in one row of a phone; longer lists (a chromatic run) become even rows.
   const columns = notes.length <= 7 ? notes.length : Math.ceil(notes.length / Math.ceil(notes.length / 7));
 

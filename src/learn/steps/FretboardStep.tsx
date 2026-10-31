@@ -2,22 +2,23 @@ import { useState } from 'react';
 import { tapHaptic } from '@/app/haptics';
 import type { AudioEngine } from '@/audio';
 import type { LessonStep } from '@/content';
+import { useInstrument } from '@/instrument';
 import {
   fretToMidi,
   noteLabel,
   noteName,
-  STANDARD_TUNING,
   stringNumber,
   type FretPosition,
+  type Instrument,
 } from '@/music';
 import { noteColor } from '@/render';
 import { Neck } from './Neck';
 import { RichText } from './RichText';
 import { StepCaption } from './StepHeading';
 
-function where(position: FretPosition, withString: boolean): string {
+function where(position: FretPosition, withString: boolean, instrument: Instrument): string {
   const fret = position.fret === 0 ? 'open' : `fret ${position.fret}`;
-  return withString ? `string ${stringNumber(position.stringIndex)}, ${fret}` : fret;
+  return withString ? `string ${stringNumber(position.stringIndex, instrument)}, ${fret}` : fret;
 }
 
 export function FretboardStep({
@@ -27,6 +28,8 @@ export function FretboardStep({
   step: Extract<LessonStep, { kind: 'fretboard' }>;
   engine: AudioEngine;
 }) {
+  const instrument = useInstrument();
+  const { tuning } = instrument;
   const [tapped, setTapped] = useState<FretPosition | null>(null);
   const interactive = step.tapToHear === true;
   // The same string for every dot? Then "fret 3" is enough; otherwise say which.
@@ -34,7 +37,7 @@ export function FretboardStep({
 
   function handleTap(position: FretPosition) {
     tapHaptic();
-    engine.playNote(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret), {
+    engine.playNote(fretToMidi(tuning, position.stringIndex, position.fret), {
       stringIndex: position.stringIndex,
     });
     setTapped(position);
@@ -49,7 +52,7 @@ export function FretboardStep({
         markers={step.positions.map((position) => ({
           ...position,
           tone: 'root' as const,
-          color: noteColor(noteName(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret))),
+          color: noteColor(noteName(fretToMidi(tuning, position.stringIndex, position.fret))),
         }))}
         onFretTap={interactive ? handleTap : undefined}
         ariaLabel={step.caption}
@@ -62,9 +65,9 @@ export function FretboardStep({
           ) : (
             <>
               <strong className="text-body">
-                <RichText>{noteLabel(fretToMidi(STANDARD_TUNING, tapped.stringIndex, tapped.fret))}</RichText>
+                <RichText>{noteLabel(fretToMidi(tuning, tapped.stringIndex, tapped.fret))}</RichText>
               </strong>{' '}
-              — {where(tapped, true)}
+              — {where(tapped, true, instrument)}
             </>
           )}
         </p>
@@ -77,9 +80,9 @@ export function FretboardStep({
             className="flex flex-col items-start rounded-2xl bg-surface px-3 py-2.5 tight:py-2"
           >
             <span className="text-body">
-              <RichText>{noteLabel(fretToMidi(STANDARD_TUNING, position.stringIndex, position.fret))}</RichText>
+              <RichText>{noteLabel(fretToMidi(tuning, position.stringIndex, position.fret))}</RichText>
             </span>
-            <span className="label mt-1">{where(position, manyStrings)}</span>
+            <span className="label mt-1">{where(position, manyStrings, instrument)}</span>
           </li>
         ))}
       </ul>

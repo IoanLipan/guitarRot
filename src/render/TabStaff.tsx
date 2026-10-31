@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import type { Riff, TabEvent, Technique } from '@/content';
-import { STRING_NAMES } from './stringNames';
+import { GUITAR } from '@/music';
 import type { TabGeometry } from './tabGeometry';
 
 export type TabStaffProps = {
@@ -49,7 +49,7 @@ export const TabStaff = forwardRef<SVGSVGElement, TabStaffProps>(function TabSta
       aria-label={`Tab for ${riff.title}`}
       data-testid="tab-staff"
     >
-      {STRING_NAMES.map((_, stringIndex) => {
+      {Array.from({ length: geometry.stringCount }, (_, stringIndex) => {
         const line = geometry.staffLine(stringIndex);
         return (
           <line
@@ -126,11 +126,20 @@ export const TabStaff = forwardRef<SVGSVGElement, TabStaffProps>(function TabSta
 });
 
 /**
- * E A D G B e, one name per staff line, in a column that stays where it is
- * while the staff scrolls. Its lines are the staff's own (same height, same
- * spacing), so each name sits level with its line.
+ * The string names (E A D G B e, or G C E A), one per staff line, in a column
+ * that stays where it is while the staff scrolls. Its lines are the staff's
+ * own (same height, same spacing), so each name sits level with its line.
  */
-export function TabStringNames({ geometry, className }: { geometry: TabGeometry; className?: string }) {
+export function TabStringNames({
+  geometry,
+  names = GUITAR.stringNames,
+  className,
+}: {
+  geometry: TabGeometry;
+  /** In string-index order, the bottom line first. Defaults to the guitar's. */
+  names?: readonly string[];
+  className?: string;
+}) {
   return (
     <svg
       className={className}
@@ -140,7 +149,7 @@ export function TabStringNames({ geometry, className }: { geometry: TabGeometry;
       aria-hidden="true"
       data-testid="tab-string-names"
     >
-      {STRING_NAMES.map((name, stringIndex) => (
+      {names.slice(0, geometry.stringCount).map((name, stringIndex) => (
         <text
           key={name + stringIndex}
           data-testid={`string-label-${stringIndex}`}

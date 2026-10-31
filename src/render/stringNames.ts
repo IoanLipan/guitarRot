@@ -1,6 +1,10 @@
+import { GUITAR } from '@/music';
+
 /**
- * The six strings as the tab writes them, low to high: E A D G B e. Index
- * matches `stringIndex`. The tab staff, the fretboard and a lesson's neck all
- * name their strings with these, so "string 3 is G" can be found on any of them.
+ * The guitar's six strings as the tab writes them, low to high: E A D G B e.
+ * Index matches `stringIndex`. Other instruments name theirs on the
+ * instrument itself (`Instrument.stringNames`, ukulele: G C E A), and the
+ * boards that draw names take them from there; this stays for the guitar-only
+ * callers and tests.
  */
-export const STRING_NAMES = ['E', 'A', 'D', 'G', 'B', 'e'] as const;
+export const STRING_NAMES = GUITAR.stringNames;

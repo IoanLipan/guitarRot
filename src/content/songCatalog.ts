@@ -1,5 +1,6 @@
 import type { Riff, TabEvent } from './types';
-import { MOVIES_TAG, type Song, type SongSection } from './songs';
+import type { InstrumentId } from '@/music';
+import { MOVIES_TAG, songPlayableOn, type Song, type SongSection } from './songs';
 import { melodyRiff } from './melody';
 import { HARD_SONGS } from './hardSongs';
 import { MOVIE_SONGS } from './movieSongs';
@@ -745,4 +746,9 @@ export const SONGS: readonly Song[] = [
 
 export function getSong(id: string): Song | undefined {
   return SONGS.find((song) => song.id === id);
+}
+
+/** The songs one instrument can play, in catalogue order (see `songPlayableOn`). */
+export function songsFor(instrument: InstrumentId): readonly Song[] {
+  return SONGS.filter((song) => songPlayableOn(song, instrument));
 }

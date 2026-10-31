@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { AudioEngine } from '@/audio';
+import { useInstrument } from '@/instrument';
 import { dueSrsIds } from '@/quiz/srs';
 import type { ProgressHandle } from '@/app/useProgress';
 import { ShareButton, shareTargetOf, shareTitleOf } from '@/share';
@@ -32,9 +33,18 @@ export function Feed({
   progress: ProgressHandle;
   initialItem?: FeedItem | undefined;
 }) {
+  // The feed is made of one instrument's cards. Changing the instrument remounts the feed
+  // (the shell keys it), so this is read once for each feed there is.
+  const { id: instrument } = useInstrument();
   const cursorRef = useRef<FeedCursor>(emptyCursor());
   const [items, setItems] = useState<FeedItem[]>(() => {
-    const page = generateFeedPage(PAGE_SIZE, cursorRef.current, undefined, dueSrsIds(progress.state.srs, Date.now()));
+    const page = generateFeedPage(
+      PAGE_SIZE,
+      cursorRef.current,
+      undefined,
+      dueSrsIds(progress.state.srs, Date.now()),
+      instrument,
+    );
     cursorRef.current = page.cursor;
     return initialItem === undefined ? page.items : [initialItem, ...page.items];
   });
@@ -51,10 +61,11 @@ export function Feed({
       cursorRef.current,
       undefined,
       dueSrsIds(progress.state.srs, Date.now()),
+      instrument,
     );
     cursorRef.current = page.cursor;
     setItems((current) => [...current, ...page.items]);
-  }, [progress.state.srs]);
+  }, [progress.state.srs, instrument]);
 
   // The feed never ends: as the active card approaches the tail, generate more.
   useEffect(() => {

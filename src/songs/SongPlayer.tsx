@@ -9,7 +9,8 @@ import {
   type RiffPlayer,
 } from '@/audio';
 import { beatsPerBar, chartBars, chordByName, songToRiff, type Song } from '@/content';
-import { STANDARD_TUNING } from '@/music';
+import { useInstrument } from '@/instrument';
+import { instrumentOf } from '@/music';
 import { chordShapeToFretboard, createTabGeometry, Fretboard, noteColor, TabView, useFollowPlayhead } from '@/render';
 import { ShareButton } from '@/share';
 import { ArrowLeftIcon, CloseIcon, MetronomeIcon } from '@/ui/icons';
@@ -57,7 +58,9 @@ export function SongPlayer({
   /** Called once per visit, when the song has really been heard for 20 seconds. */
   onPlayed?: (songId: string) => void;
 }) {
-  const riff = useMemo(() => songToRiff(song), [song]);
+  // A chart song is played with the shapes of the instrument the app is set to.
+  const { id: instrument } = useInstrument();
+  const riff = useMemo(() => songToRiff(song, instrument), [song, instrument]);
   const barLength = beatsPerBar(riff.timeSignature);
   const geometry = useMemo(
     () => createTabGeometry({ bars: riff.bars, timeSignature: riff.timeSignature }),
@@ -228,7 +231,7 @@ export function SongPlayer({
   const currentChord =
     song.chart === undefined || activeBar === null
       ? undefined
-      : chordByName(chartBars(song.chart)[activeBar]?.chordName ?? '');
+      : chordByName(chartBars(song.chart)[activeBar]?.chordName ?? '', instrument);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 bg-ground px-5 pt-3 pb-5 tight:gap-2 tight:pb-3">
@@ -416,10 +419,10 @@ export function SongPlayer({
             </span>
             <div className="h-16 w-full">
               <Fretboard
+                instrument={instrumentOf(currentChord)}
                 orientation="vertical"
                 fretRange={chordShapeToFretboard(currentChord).fretRange}
                 markers={chordShapeToFretboard(currentChord).markers}
-                tuning={STANDARD_TUNING}
                 showFretNumbers={false}
                 fit
                 className="h-full w-full"
