@@ -73,23 +73,38 @@ describe('the song list', () => {
     expect(rowIds()).toEqual(SONGS.map((song) => song.id).sort());
   });
 
-  it('lists only the songs the ukulele can play: strummed charts whose every chord it has', () => {
+  it('lists only the songs the ukulele can play: strummed charts whose every chord it has, and its own editions of the tunes', () => {
     render(<Harness instrument="ukulele" />);
 
     const expected = songsFor('ukulele').map((song) => song.id);
     expect(expected.length).toBeGreaterThan(0);
     expect(rowIds()).toEqual([...expected].sort());
     expect(rowIds().length).toBeLessThan(SONGS.length);
-    for (const id of rowIds()) expect(getSong(id ?? '')?.riff, id).toBeUndefined();
+    // Every strummed chart song is here, and so is every riff song the ukulele has an edition of: none of the guitar's tabs.
+    const charts = SONGS.filter((song) => song.chart !== undefined).map((song) => song.id);
+    for (const id of charts) expect(rowIds(), id).toContain(id);
+    for (const id of rowIds()) {
+      const song = getSong(id ?? '');
+      if (song?.riff !== undefined) expect(song.instrument, id).toBe('ukulele');
+    }
   });
 
   it('searches within what the ukulele can play, not the whole catalogue', async () => {
     const { default: userEvent } = await import('@testing-library/user-event');
     render(<Harness instrument="ukulele" />);
 
-    // A guitar tab song: findable on the guitar, not here.
+    // The guitar\'s tab of the tune is not here; the ukulele\'s own edition is.
     await userEvent.type(screen.getByTestId('song-search'), 'ode to joy');
     expect(screen.queryByTestId('song-row-ode-to-joy')).toBeNull();
+    expect(screen.getByTestId('song-row-uke-ode-to-joy')).toBeInTheDocument();
+  });
+
+  it('finds nothing for a guitar-only tune, such as a thrash-metal gallop', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    render(<Harness instrument="ukulele" />);
+
+    await userEvent.type(screen.getByTestId('song-search'), 'gallop');
+    expect(screen.queryByTestId('song-row-gallop-in-e')).toBeNull();
     expect(screen.getByText(/nothing matches/i)).toBeInTheDocument();
   });
 

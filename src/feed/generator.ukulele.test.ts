@@ -1,24 +1,72 @@
 import { describe, expect, it } from 'vitest';
 import { chordsFor, riffsFor } from '@/content';
 import { reviewSrsItem } from '@/quiz/srs';
-import { emptyCursor, generateFeedPage, mulberry32, NO_REPEAT_WINDOW, QUIZ_MAX_GAP } from './generator';
+import {
+  EASY_MAX_RIFF_LEVEL,
+  EASY_OPENING_CARDS,
+  emptyCursor,
+  generateFeedPage,
+  mulberry32,
+  NO_REPEAT_WINDOW,
+  QUIZ_MAX_GAP,
+} from './generator';
 
 function page(count: number, seed: number, dueIds: string[] = [], instrument: 'guitar' | 'ukulele' = 'ukulele') {
   return generateFeedPage(count, emptyCursor(), mulberry32(seed), dueIds, instrument);
 }
 
 describe('a ukulele feed', () => {
-  it('is chords and quizzes: there are no ukulele riffs yet, and it does not ask for one', () => {
-    expect(riffsFor('ukulele')).toEqual([]);
-    const { items } = page(60, 4);
+  it('deals riffs, chords and quizzes, like the guitar\'s: the ukulele has riffs of its own to show', () => {
+    expect(riffsFor('ukulele').length).toBeGreaterThanOrEqual(20);
+    const { items } = page(80, 4);
 
-    expect(items.some((item) => item.kind === 'riff')).toBe(false);
+    expect(items.some((item) => item.kind === 'riff')).toBe(true);
     expect(items.some((item) => item.kind === 'chord')).toBe(true);
     expect(items.some((item) => item.kind === 'quiz')).toBe(true);
   });
 
-  it('opens on a chord, since a ukulele has nothing playable to open on but one', () => {
-    for (const seed of [1, 2, 3, 4, 5]) expect(page(3, seed).items[0]?.kind).toBe('chord');
+  it('mixes the kinds in about the guitar\'s proportions: more riffs than chords, a quiz every few cards', () => {
+    const { items } = page(400, 21);
+    const share = (kind: string) => items.filter((item) => item.kind === kind).length / items.length;
+    expect(share('riff')).toBeGreaterThan(0.4);
+    expect(share('riff')).toBeLessThan(0.65);
+    expect(share('chord')).toBeGreaterThan(0.18);
+    expect(share('chord')).toBeLessThan(0.4);
+    expect(share('quiz')).toBeGreaterThan(0.1);
+    expect(share('quiz')).toBeLessThan(0.3);
+  });
+
+  it('shows only ukulele riffs, and opens on an easy one: a first card a beginner can play', () => {
+    const library = new Set(riffsFor('ukulele').map((riff) => riff.id));
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const { items } = page(40, seed);
+      const first = items[0];
+      expect(first?.kind).toBe('riff');
+      if (first?.kind === 'riff') expect(first.riff.level).toBeLessThanOrEqual(EASY_MAX_RIFF_LEVEL);
+      for (const item of items) {
+        if (item.kind === 'riff') {
+          expect(library.has(item.riff.id)).toBe(true);
+          expect(item.riff.instrument).toBe('ukulele');
+        }
+      }
+    }
+  });
+
+  it('keeps the opening cards easy, then draws on every level', () => {
+    const early = page(EASY_OPENING_CARDS, 9).items.flatMap((item) => (item.kind === 'riff' ? [item.riff.level] : []));
+    expect(Math.max(...early)).toBeLessThanOrEqual(EASY_MAX_RIFF_LEVEL);
+    const levels = new Set(page(300, 3).items.flatMap((item) => (item.kind === 'riff' ? [item.riff.level] : [])));
+    expect([...levels].sort()).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('never repeats a riff inside the window the pool allows', () => {
+    const riffs = riffsFor('ukulele');
+    const window = Math.min(NO_REPEAT_WINDOW, riffs.length - 1);
+    const ids = page(200, 17).items.flatMap((item) => (item.kind === 'riff' ? [item.riff.id] : []));
+    for (let i = 0; i < ids.length; i += 1) {
+      const recent = ids.slice(Math.max(0, i - Math.floor(window / 2)), i);
+      expect(recent).not.toContain(ids[i]);
+    }
   });
 
   it('shows only ukulele chords, and every quiz on its neck', () => {

@@ -1,5 +1,6 @@
 import { instrumentIdOf, type InstrumentId } from '@/music';
 import type { Riff, TabEvent, Technique } from './types';
+import { UKULELE_RIFFS } from './ukuleleRiffs';
 
 /** Ascending run of four consecutive frets on one string, in eighth notes. */
 function chromaticRun(stringIndex: number, startBeat: number): TabEvent[] {
@@ -768,11 +769,14 @@ export const RIFFS: readonly Riff[] = [
   funkLineE,
 ];
 
+/** Every feed riff of every instrument. `RIFFS` stays the guitar's own, exactly as it was. */
+export const ALL_RIFFS: readonly Riff[] = [...RIFFS, ...UKULELE_RIFFS];
+
 export function getRiff(id: string): Riff | undefined {
-  return RIFFS.find((riff) => riff.id === id);
+  return ALL_RIFFS.find((riff) => riff.id === id);
 }
 
-/** The feed's riffs for one instrument. Today they are all guitar tabs, so the ukulele's list is empty. */
+/** The feed's riffs for one instrument: the guitar's tabs, or the ukulele's own (see ukuleleRiffs.ts). */
 export function riffsFor(instrument: InstrumentId): readonly Riff[] {
-  return RIFFS.filter((riff) => instrumentIdOf(riff) === instrument);
+  return ALL_RIFFS.filter((riff) => instrumentIdOf(riff) === instrument);
 }

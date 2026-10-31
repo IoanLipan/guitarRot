@@ -234,14 +234,14 @@ describe('the start screen for an instrument with no course', () => {
     expect(screen.getByTestId('start-learn')).toHaveTextContent('Start lesson 1');
   });
 
-  it('calls the feed what it is: with no ukulele riffs yet it is chords, and the guitar\'s is still riffs', () => {
+  it('calls the feed what it is: riffs, on the guitar and on the ukulele, which has riffs of its own', () => {
     const { unmount } = render(<AppShell />);
     expect(screen.getByTestId('start-feed')).toHaveTextContent('Just scroll riffs');
     unmount();
 
     world.initial = { ...returningState(), settings: withInstrument(returningState().settings, 'ukulele') };
     render(<AppShell />);
-    expect(screen.getByTestId('start-feed')).toHaveTextContent('Just scroll chords');
+    expect(screen.getByTestId('start-feed')).toHaveTextContent('Just scroll riffs');
   });
 });
 

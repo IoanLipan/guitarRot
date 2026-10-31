@@ -1,5 +1,5 @@
 import { melodyRiff } from './melody';
-import { RIFFS } from './riffs';
+import { ALL_RIFFS } from './riffs';
 import { songToRiff, type Song, type StrumPattern } from './songs';
 import type { Riff, TabEvent, Technique } from './types';
 
@@ -350,7 +350,7 @@ export const DRILLS: readonly Riff[] = [
   folkPatternGC,
 ];
 
-const PRACTICE_RIFFS: readonly Riff[] = [...RIFFS, ...DRILLS];
+const PRACTICE_RIFFS: readonly Riff[] = [...ALL_RIFFS, ...DRILLS];
 
 /** Looks a riff up across the Feed's library and the course's drills. */
 export function findRiff(id: string): Riff | undefined {
