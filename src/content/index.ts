@@ -4,6 +4,7 @@ export * from './chords';
 export * from './ukuleleChords';
 export * from './songs';
 export * from './songCatalog';
+export * from './ukuleleSongs';
 export * from './melody';
 export * from './legato';
 export * from './drills';

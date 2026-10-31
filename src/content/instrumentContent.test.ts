@@ -43,18 +43,22 @@ describe('songs per instrument', () => {
     expect(missing.sort()).toEqual(['A5', 'Asus2', 'D5', 'Dsus2', 'E5', 'G5']);
   });
 
-  it('has some chart songs to play on the ukulele today, and never a song with a chord it cannot finger', () => {
+  it('plays on the ukulele its chart songs and its own editions, and never a song with a chord it cannot finger', () => {
     const playable = songsFor('ukulele');
     expect(playable.length).toBeGreaterThan(0);
     for (const song of playable) {
-      expect(song.chart, song.id).toBeDefined();
-      for (const bar of chartBars(song.chart!)) {
+      if (song.chart === undefined) {
+        // A tab song on the ukulele is one written for it.
+        expect(song.instrument, song.id).toBe('ukulele');
+        continue;
+      }
+      for (const bar of chartBars(song.chart)) {
         expect(chordByName(bar.chordName, 'ukulele'), `${song.id}: ${bar.chordName}`).toBeDefined();
       }
     }
   });
 
-  it('keeps riff and tab songs on the guitar until a ukulele arrangement exists', () => {
+  it('keeps the guitar\'s riff and tab songs on the guitar: the ukulele has its own editions of them', () => {
     for (const song of riffSongs) {
       expect(songPlayableOn(song, 'guitar'), song.id).toBe(true);
       expect(songPlayableOn(song, 'ukulele'), song.id).toBe(false);

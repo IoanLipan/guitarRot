@@ -3,7 +3,7 @@ import { CheckIcon, ExternalLinkIcon } from '@/ui/icons';
 import { prefersReducedMotion } from '@/ui/motion';
 import { Capacitor } from '@capacitor/core';
 import { getToneProfile, toneProfilesFor, type AudioEngine } from '@/audio';
-import { SONGS, getChord } from '@/content';
+import { ALL_SONGS, getChord } from '@/content';
 import { useFocusTrap } from '@/game/useFocusTrap';
 import { withInstrument } from '@/progress';
 import {
@@ -32,7 +32,7 @@ function describeStrings(instrument: Instrument): string {
 }
 
 /** Credits that song editions' licences ask the app to show (Creative Commons Attribution). */
-const EDITION_CREDITS = SONGS.flatMap((song) => (song.credit === undefined ? [] : [song.credit]));
+const EDITION_CREDITS = [...new Set(ALL_SONGS.flatMap((song) => (song.credit === undefined ? [] : [song.credit])))];
 
 /** How long the sheet takes to slide away; it stays mounted that long after `open` goes false (see index.css). */
 export const SHEET_EXIT_MS = 230;

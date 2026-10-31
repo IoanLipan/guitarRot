@@ -11,7 +11,7 @@ import { ALL_CHORDS } from './chords';
 import { findRiff } from './drills';
 import { isIllustrationName, type IllustrationName } from './illustrations';
 import { plainText, richProblems } from './rich';
-import { SONGS } from './songCatalog';
+import { ALL_SONGS } from './songCatalog';
 
 /** A dot on an explain card's neck picture. Labelled with its note by default. */
 export type NeckDot = FretPosition & {
@@ -194,7 +194,7 @@ export function validateLesson(lesson: Lesson): string[] {
         if (findRiff(step.riffId) === undefined) problems.push(`${where} names an unknown riff "${step.riffId}"`);
         break;
       case 'song':
-        if (!SONGS.some((song) => song.id === step.songId)) {
+        if (!ALL_SONGS.some((song) => song.id === step.songId)) {
           problems.push(`${where} names an unknown song "${step.songId}"`);
         }
         break;
