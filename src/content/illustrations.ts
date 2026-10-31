@@ -6,7 +6,9 @@
  * here, and src/learn/illustrations draws one component per name. The spec
  * is written for whoever draws it: what must be on it, what it teaches.
  *
- * `group` only splits the drawing work in two; it means nothing at runtime.
+ * `group` only splits the drawing work (a and b: the guitar course's thirty;
+ * c: the ukulele course's, drawn only where a guitar picture would be wrong
+ * for four strings); it means nothing at runtime.
  */
 export const ILLUSTRATIONS = [
   // --- Start here -----------------------------------------------------------
@@ -160,6 +162,82 @@ export const ILLUSTRATIONS = [
     name: 'tuner-needle',
     group: 'b',
     spec: 'A tuner dial: needle slightly left of centre over a −50 … 0 … +50 cents arc, note E (Mi) big in the middle. Left zone labelled "too low: tighten", right zone "too high: loosen", centre zone in green "in tune".',
+  },
+  // --- The ukulele (group c): only where a guitar picture would be wrong for four strings -----
+  {
+    name: 'uke-parts',
+    group: 'c',
+    spec: 'A whole ukulele lying horizontally, headstock left, seen from the front. Label with leader lines: Headstock, Tuning pegs, Frets, Neck, Strings (accent), Sound hole, Bridge, Body. Four strings, two tuning pegs on each side of the headstock, fret dot inlays at 5 7 10 and a double at 12 where the neck meets the body.',
+  },
+  {
+    name: 'uke-holding',
+    group: 'c',
+    spec: 'A simple geometric seated figure (no face detail) with a ukulele held against the chest: the strumming forearm lying across the lower body to hug it in, the neck angled up and out to the side, the fretting hand lightly under the neck with the thumb behind it. Callouts: "hug it in with your arm", "neck angled up", "thumb behind the neck".',
+  },
+  {
+    name: 'uke-strum-hand',
+    group: 'c',
+    spec: 'The strumming hand over the ukulele seen from above, neck to the left: four horizontal strings over the sound hole, an index finger with a down arrow sweeping across all four, a dashed ring marking the spot where the neck meets the body. Callouts: "index finger, nail down", "strum here", "loose wrist".',
+  },
+  {
+    name: 'uke-string-order',
+    group: 'c',
+    spec: 'Four horizontal strings as you see them looking down at the ukulele you are holding: string 4 at the TOP (nearest your chin), string 1 at the bottom (nearest the floor). Left of each: its number (4 at top, 1 at bottom) and a note chip G (Sol), C (Do), E (Mi), A (La). Right of each: the mnemonic word Goats / Chew / Every / Apple with the first letter in the note colour. Tags: "nearest your chin" above, "nearest the floor" below.',
+  },
+  {
+    name: 'uke-reentrant',
+    group: 'c',
+    spec: 'Four vertical bars for the open strings in string order 4 3 2 1 (G C E A), each as tall as its pitch: the C bar is the shortest, so the line over the tops dips at the C. Under each bar: its string number and a note chip. A bracket or tag says "G is higher than C: the tuning turns back" and the lowest bar is highlighted as the lowest sound.',
+  },
+  {
+    name: 'uke-tuning-peg',
+    group: 'c',
+    spec: 'Close-up of a ukulele headstock (two pegs on each side, four strings) with one tuning peg highlighted. A curved arrow "tighten" with "pitch up" and an opposite arrow "loosen" with "pitch down". Below: a small pitch graph, a line rising from below to a dashed "target" line and settling on it, labelled "come up to the note".',
+  },
+  {
+    name: 'uke-chord-box',
+    group: 'c',
+    spec: 'A ukulele chord box for C: four vertical lines G C E A left to right under a thick nut, three frets, a numbered dot 3 on the A string at fret 3, open circles above the G, C and E strings. A key: "O = ring it open", a numbered dot "= press here, the number is your finger", and "strum all four strings".',
+  },
+  {
+    name: 'uke-shape-move',
+    group: 'c',
+    spec: 'Two chord boxes side by side, C then Am. In C the ring finger (3) sits on the A string at fret 3; in Am the middle finger (2) sits on the G string at fret 2. A curved arrow from the first dot to the second labelled "one finger hops", the lifted spot faded in the second box.',
+  },
+  {
+    name: 'uke-island-strum',
+    group: 'c',
+    spec: 'The island strum as seven slots in a row: down on 1, down on 2, up on the "and" after 2, a dashed ghost slot for the swing on 3 labelled "miss", up on the "and" after 3, down on 4, up on the "and" after 4. Arrows in two colours (downs in accent). Under them, brackets with the chant: "Down", "Down-Up", "Up", "Down-Up". A line: "the hand never stops".',
+  },
+  {
+    name: 'uke-chunk',
+    group: 'c',
+    spec: 'One bar of 4/4 in four columns: beats 1 and 3 are "strum" (an accent down arrow with a long ringing wave under it), beats 2 and 4 are "chop" (a down arrow and a flat hand pressing the strings, a tiny blip under it). A line: "strum, chop, strum, chop".',
+  },
+  {
+    name: 'uke-waltz',
+    group: 'c',
+    spec: 'One bar of 3/4: three beat circles numbered 1 2 3, beat 1 the largest and in accent, a down-strum arrow under each, the time signature 3 over 4 at the start. A line: "ONE two three, ONE two three" and the words "a waltz leans on the first beat".',
+  },
+  {
+    name: 'uke-tab-map',
+    group: 'c',
+    spec: 'Left: four horizontal strings with note dots A, E, C, G from the top (string 1) to the bottom (string 4). Right: the same four lines as a tab staff with a "TAB" clef and numbers: 0 on the top line (callout "0 = open"), a 3 on the bottom line (callout "3 = fret 3, string 4"), and a stacked column (callout "together"). Dotted connectors join each string to its tab line, and a "read" arrow under the staff.',
+  },
+  {
+    name: 'uke-fingerpicking',
+    group: 'c',
+    spec: 'Four horizontal lanes for the strings G C E A (top to bottom), each with its note dot at the left. Six numbered dots in time order on the lanes G C E A E C, joined by a dashed zig-zag and coloured by the finger that plays them: thumb on the G and C lanes, index on E, middle on A. Under each dot the finger letter T, I or M, and a key at the bottom: T thumb, I index, M middle.',
+  },
+  {
+    name: 'uke-bells',
+    group: 'c',
+    spec: 'Four horizontal strings G C E A (top to bottom). Six note dots in playing order C D E F G A, each on the string it is played on (C open and D fret 2 on the C string, E open and F fret 1 on the E string, G open, A open) joined by an arrow that zig-zags across the strings. Under each dot "open" or "fret 1" or "fret 2". A tag: "each note rings over the next, like bells".',
+  },
+  {
+    name: 'uke-barre',
+    group: 'c',
+    spec: 'A front view of the first three frets of a ukulele neck, four strings G C E A. The index finger lies flat across the E and A strings at fret 1 (a long rounded bar labelled 1), the middle finger on the C string at fret 2 (2) and the ring finger on the G string at fret 3 (3): the Bb shape. Callouts: "index lies flat across two strings", "roll onto the bony edge".',
   },
 ] as const;
 

@@ -52,8 +52,10 @@ describe('the drawing kit: type big enough for a phone', () => {
 describe('every drawing, as it renders', () => {
   const NAMES = ILLUSTRATIONS.map((illustration) => illustration.name);
 
-  it('is all thirty', () => {
-    expect(NAMES).toHaveLength(30);
+  it('is all forty-five: the guitar course\'s thirty and the ukulele course\'s fifteen', () => {
+    expect(NAMES).toHaveLength(45);
+    expect(ILLUSTRATIONS.filter((illustration) => illustration.group !== 'c')).toHaveLength(30);
+    expect(ILLUSTRATIONS.filter((illustration) => illustration.group === 'c').map((i) => i.name.startsWith('uke-'))).not.toContain(false);
   });
 
   it.each(NAMES)('%s has no type under the floor', (name) => {
