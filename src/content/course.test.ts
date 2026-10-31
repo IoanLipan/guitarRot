@@ -3,19 +3,13 @@ import {
   SCALES,
   STANDARD_TUNING,
   chordSolfegeName,
-  chordStrings,
-  chordToneNames,
-  findPitchClassPositions,
   fretToMidi,
-  intervalBetween,
   midiToPitchClass,
   noteName,
-  openStringMidi,
   parseNoteName,
   scalePositions,
   spellingSolfege,
   GUITAR,
-  stringNumber,
   withSolfege,
   QUALITY_LABELS,
   type ChordShape,
@@ -28,12 +22,13 @@ import { UNIT_3_FACTS } from './course/unit3.facts';
 import { UNIT_4_FACTS } from './course/unit4.facts';
 import { UNIT_5_FACTS } from './course/unit5.facts';
 import { UNIT_6_FACTS } from './course/unit6.facts';
-import type { Fact, LessonFacts } from './course/facts';
+import type { LessonFacts } from './course/facts';
+import { beatsOf, findCheck, problemWith } from './course/factCheck';
 import { findRiff } from './drills';
 import { validateLesson, type Lesson, type LessonStep } from './lessons';
 import { parseRich, plainText, richProblems } from './rich';
 import { SONGS, getSong } from './songCatalog';
-import { chartBars, isUpstroke, patternBeats, songToRiff } from './songs';
+import { chartBars, isUpstroke, patternBeats } from './songs';
 
 const T = STANDARD_TUNING;
 
@@ -124,20 +119,6 @@ function riffById(id: string) {
 
 const pitchClassOf = (name: string): number => midiToPitchClass(parseNoteName(name));
 
-/** The name a fact should spell: flats only when the fact itself says flat. */
-function spell(midi: number, wanted: string): string {
-  return noteName(midi, { preferFlat: wanted.length === 2 && wanted.endsWith('b') });
-}
-
-const NOTE_VALUES: Readonly<Record<string, number>> = { whole: 4, half: 2, quarter: 1, eighth: 0.5 };
-
-function beatsOf(length: string): number {
-  const dotted = length.startsWith('dotted ');
-  const base = NOTE_VALUES[dotted ? length.slice('dotted '.length) : length];
-  if (base === undefined) throw new Error(`unknown note value ${length}`);
-  return dotted ? base * 1.5 : base;
-}
-
 /** Fixed-do syllables of a riff's notes, in playing order. */
 function syllables(events: readonly { stringIndex: number; fret: number; beat: number }[]): string[] {
   return [...events]
@@ -146,155 +127,10 @@ function syllables(events: readonly { stringIndex: number; fret: number; beat: n
 }
 
 function checkFor(lessonId: string, ask: string): Extract<LessonStep, { kind: 'check' }> {
-  const matches = lessonById(lessonId).steps.filter(
-    (s): s is Extract<LessonStep, { kind: 'check' }> => s.kind === 'check' && s.question.includes(ask),
-  );
-  if (matches.length !== 1) throw new Error(`${lessonId}: expected one check containing "${ask}", found ${matches.length}`);
-  return matches[0]!;
+  return findCheck(COURSE, lessonId, ask);
 }
 
-/** Returns a problem description, or null when the fact holds. */
-function problemWith(lessonId: string, f: Fact): string | null {
-  switch (f.kind) {
-    case 'note': {
-      const midi = fretToMidi(T, f.stringIndex, f.fret);
-      const got = spell(midi, f.is);
-      return got === f.is ? null : `sounds ${got}`;
-    }
-    case 'same-pitch': {
-      const gap = fretToMidi(T, f.b.stringIndex, f.b.fret) - fretToMidi(T, f.a.stringIndex, f.a.fret);
-      return gap === 12 * f.octavesUp ? null : `are ${gap} semitones apart`;
-    }
-    case 'semitones': {
-      const apart = (((pitchClassOf(f.to) - pitchClassOf(f.from)) % 12) + 12) % 12;
-      return apart === f.apart ? null : `is ${apart} semitones`;
-    }
-    case 'solfege':
-      return spellingSolfege(f.letter) === f.is ? null : `is ${spellingSolfege(f.letter)}`;
-    case 'string-number': {
-      if (stringNumber(f.stringIndex, GUITAR) !== f.number) return `index ${f.stringIndex} is string ${stringNumber(f.stringIndex, GUITAR)}`;
-      const open = noteName(openStringMidi(T, f.stringIndex));
-      return open === f.open ? null : `open string is ${open}`;
-    }
-    case 'chord-tones': {
-      const got = chordToneNames(chordById(f.chordId), T, { preferFlat: f.tones.some((t) => t.endsWith('b')) });
-      return got.join(' ') === f.tones.join(' ') ? null : `has tones ${got.join(' ')}`;
-    }
-    case 'chord-grip': {
-      const chord = chordById(f.chordId);
-      const fret = chord.frets[f.stringIndex];
-      const finger = chord.fingers[f.stringIndex];
-      return fret === f.fret && finger === f.finger ? null : `has fret ${fret} finger ${finger} there`;
-    }
-    case 'chord-strings': {
-      const got = chordStrings(chordById(f.chordId));
-      return got.join(',') === f.strings.join(',') ? null : `sounds strings ${got.join(',')}`;
-    }
-    case 'key': {
-      const root = pitchClassOf(f.root);
-      const degree = (n: number): number => (root + SCALES.major.intervals[n]!) % 12;
-      const named = (pc: number): string => noteName(pc);
-      const got = [named(root), named(degree(3)), named(degree(4)), named(degree(5))];
-      const want = [f.one, f.four, f.five, f.six];
-      return got.join(' ') === want.join(' ') ? null : `I IV V vi are ${got.join(' ')}`;
-    }
-    case 'scale': {
-      const root = parseNoteName(f.root);
-      const preferFlat = f.notes.some((n) => n.length === 2 && n.endsWith('b'));
-      const got = SCALES[f.scale].intervals.map((step) => noteName(root + step, { preferFlat }));
-      return got.join(' ') === f.notes.join(' ') ? null : `is ${got.join(' ')}`;
-    }
-    case 'scale-steps': {
-      const steps = [...SCALES[f.scale].intervals, 12].slice(1).map((v, i) => v - SCALES[f.scale].intervals[i]!);
-      const got = steps.map((s) => (s === 2 ? 'W' : s === 1 ? 'H' : '?')).join('');
-      return got === f.steps ? null : `steps are ${got}`;
-    }
-    case 'melody': {
-      const riff = songById(f.songId).riff ?? songToRiff(songById(f.songId));
-      const want = f.solfege.split(' ');
-      const got = syllables(riff.events).slice(0, want.length);
-      return got.join(' ') === f.solfege ? null : `opens ${got.join(' ')}`;
-    }
-    case 'song-bars': {
-      const chart = songById(f.songId).chart;
-      if (chart === undefined) return 'is not a chord chart';
-      const got = chartBars(chart).map((b) => b.chordName);
-      return got.join(' ') === f.chords.join(' ') ? null : `has bars ${got.join(' ')}`;
-    }
-    case 'song-chords': {
-      const chart = songById(f.songId).chart;
-      if (chart === undefined) return 'is not a chord chart';
-      const got = [...new Set(chartBars(chart).map((b) => b.chordName))].sort();
-      return got.join(' ') === [...f.chords].sort().join(' ') ? null : `uses ${got.join(' ')}`;
-    }
-    case 'song-event': {
-      const song = songById(f.songId);
-      const event = (song.riff ?? songToRiff(song)).events.find(
-        (e) => Math.abs(e.beat - f.beat) < 1e-6 && e.stringIndex === f.stringIndex,
-      );
-      if (event === undefined) return 'has no note there';
-      return event.fret === f.fret && Math.abs(event.duration - f.duration) < 1e-6
-        ? null
-        : `has fret ${event.fret} for ${event.duration} beats there`;
-    }
-    case 'riff-event': {
-      const event = riffById(f.riffId).events.find(
-        (e) => Math.abs(e.beat - f.beat) < 1e-6 && e.stringIndex === f.stringIndex,
-      );
-      if (event === undefined) return 'has no note there';
-      if (event.fret !== f.fret) return `has fret ${event.fret} there`;
-      if (f.duration !== undefined && Math.abs(event.duration - f.duration) > 1e-6) return `is ${event.duration} beats long`;
-      return null;
-    }
-    case 'strum': {
-      const hits = patternBeats('folk', 4);
-      const ups = hits.filter(isUpstroke).length;
-      return hits.length - ups === f.downs && ups === f.ups ? null : `is ${hits.length - ups} down, ${ups} up`;
-    }
-    case 'beats':
-      return beatsOf(f.length) === f.beats ? null : `is ${beatsOf(f.length)} beats`;
-    case 'fits':
-      return 4 / beatsOf(f.length) === f.inBar ? null : `${4 / beatsOf(f.length)} fit`;
-    case 'beat-seconds':
-      return 60 / f.bpm === f.seconds ? null : `is ${60 / f.bpm}s`;
-    case 'interval': {
-      const got = intervalBetween(parseNoteName(f.from), parseNoteName(f.to)).shortName;
-      return got === f.is ? null : `is ${got}`;
-    }
-    case 'check-note': {
-      const check = checkFor(lessonId, f.ask);
-      const want = withSolfege(noteName(fretToMidi(T, f.stringIndex, f.fret), { preferFlat: f.flat }));
-      return check.answer === want ? null : `answer is "${check.answer}", the neck says "${want}"`;
-    }
-    case 'check-string-number': {
-      const check = checkFor(lessonId, f.ask);
-      const want = `String ${stringNumber(f.stringIndex, GUITAR)}`;
-      return check.answer === want ? null : `answer is "${check.answer}", it is "${want}"`;
-    }
-    case 'check-same-note': {
-      const check = checkFor(lessonId, f.ask);
-      const target = fretToMidi(T, f.from.stringIndex, f.from.fret) + 12 * f.octavesUp;
-      const fret = target - openStringMidi(T, f.onString);
-      const open = withSolfege(noteName(openStringMidi(T, f.onString)));
-      const want = f.format === 'ordinal' ? `${fret}th fret` : `Fret ${fret} of the ${open} string`;
-      return check.answer === want ? null : `answer is "${check.answer}", the neck says "${want}"`;
-    }
-    case 'check-chord-tones': {
-      const check = checkFor(lessonId, f.ask);
-      const want = chordToneNames(chordById(f.chordId), T).map(withSolfege).join(', ');
-      return check.answer === want ? null : `answer is "${check.answer}", the chord is "${want}"`;
-    }
-    case 'check-fret': {
-      const check = checkFor(lessonId, f.ask);
-      const frets = findPitchClassPositions(T, pitchClassOf(f.note), [0, 12])
-        .filter((p) => p.stringIndex === f.stringIndex)
-        .map((p) => p.fret);
-      const said = Number(/\d+/.exec(check.answer)?.[0]);
-      // Notes such as the open and 12th-fret E both qualify; the answer must be one of them.
-      return frets.includes(said) ? null : `answer says fret ${said}, ${f.note} is at ${frets.join(' or ')}`;
-    }
-  }
-}
+const GUITAR_WORLD = { instrument: GUITAR, lessons: COURSE };
 
 describe('the course', () => {
   it('has the 28 lessons of the plan, in order', () => {
@@ -593,7 +429,7 @@ describe('the facts the lessons state', () => {
     it(`${lesson}: every stated fact is true`, () => {
       expect(facts.length, `${lesson} states no facts`).toBeGreaterThan(0);
       const problems = facts.flatMap((fact) => {
-        const problem = problemWith(lesson, fact);
+        const problem = problemWith(GUITAR_WORLD, lesson, fact);
         return problem === null ? [] : [`${fact.says}: ${problem}`];
       });
       expect(problems).toEqual([]);

@@ -1,4 +1,5 @@
 import type { FretPosition, ScaleId } from '@/music';
+import type { StrumPattern } from '../songs';
 
 /**
  * Musical claims a lesson makes in its prose or in a check, written down so
@@ -15,17 +16,23 @@ export type Fact = { says: string } & (
   | { kind: 'note'; stringIndex: number; fret: number; is: string }
   /** `b` sounds exactly `octavesUp` octaves above `a` (0 = the very same pitch). */
   | { kind: 'same-pitch'; a: FretPosition; b: FretPosition; octavesUp: number }
+  /** These positions sound in strictly rising pitch, in the order listed. */
+  | { kind: 'pitch-order'; positions: readonly FretPosition[] }
   /** Going up from `from` to `to` takes `apart` semitones (within one octave). */
   | { kind: 'semitones'; from: string; to: string; apart: number }
   | { kind: 'solfege'; letter: string; is: string }
   /** The open string at this index is `open`, and guitarists call it string `number`. */
   | { kind: 'string-number'; stringIndex: number; number: number; open: string }
+  /** The first letters of these words are the open strings' letters, in string-index order ("My Dog" style mnemonics). */
+  | { kind: 'initials'; words: readonly string[] }
   /** The notes of a library chord, root first. */
   | { kind: 'chord-tones'; chordId: string; tones: readonly string[] }
   /** Which finger holds which fret on one string of a library chord. */
   | { kind: 'chord-grip'; chordId: string; stringIndex: number; fret: number; finger: number }
   /** Which strings a library chord sounds (the rest are muted). */
   | { kind: 'chord-strings'; chordId: string; strings: readonly number[] }
+  /** How many strings a library chord presses (fretted, not open or muted): "one finger", "two fingers". */
+  | { kind: 'chord-fingers'; chordId: string; count: number }
   /** The chords built on the 1st, 4th, 5th and 6th notes of a major scale. */
   | { kind: 'key'; root: string; one: string; four: string; five: string; six: string }
   | { kind: 'scale'; root: string; scale: ScaleId; notes: readonly string[] }
@@ -37,12 +44,20 @@ export type Fact = { says: string } & (
   | { kind: 'song-bars'; songId: string; chords: readonly string[] }
   /** The distinct chords a chord-chart song uses. */
   | { kind: 'song-chords'; songId: string; chords: readonly string[] }
+  /** A chord-chart song's time signature, e.g. "3/4". */
+  | { kind: 'song-meter'; songId: string; meter: string }
+  /** A drill riff's time signature, e.g. "3/4". */
+  | { kind: 'riff-meter'; riffId: string; meter: string }
+  /** The opening notes of a single-note riff (a drill), in fixed-do syllables. */
+  | { kind: 'riff-melody'; riffId: string; solfege: string }
   /** A note in a single-note song's tab: string, fret and length. */
   | { kind: 'song-event'; songId: string; beat: number; stringIndex: number; fret: number; duration: number }
   /** A note in a riff's tab: string, fret and (optionally) length. */
   | { kind: 'riff-event'; riffId: string; beat: number; stringIndex: number; fret: number; duration?: number }
   /** The folk strum pattern in 4/4 has this many down and up strokes. */
   | { kind: 'strum'; downs: number; ups: number }
+  /** The beats of the bar (0 = beat 1) on which a strum pattern hits. */
+  | { kind: 'strum-beats'; pattern: StrumPattern; beatsInBar: number; beats: readonly number[] }
   /** A note value lasts this many beats ("half", "dotted half", "eighth" ...). */
   | { kind: 'beats'; length: string; beats: number }
   /** This many of a note value fill one bar of 4/4. */
@@ -50,6 +65,8 @@ export type Fact = { says: string } & (
   | { kind: 'beat-seconds'; bpm: number; seconds: number }
   /** Short interval name between two spelled pitches, e.g. C4 to G4 is "P5". */
   | { kind: 'interval'; from: string; to: string; is: string }
+  /** The check whose question contains `ask` answers with a word that starts with this string's letter. */
+  | { kind: 'check-initial'; ask: string; stringIndex: number }
   /** The check whose question contains `ask` has the note at this fret as its answer. */
   | { kind: 'check-note'; ask: string; stringIndex: number; fret: number; flat: boolean }
   /** The check's answer is the string number that holds this open note, e.g. "String 4". */
@@ -96,6 +113,18 @@ export const fact = {
     octavesUp,
   }),
 
+  pitchOrder: (...positions: FretPosition[]): Fact => ({
+    kind: 'pitch-order',
+    says: `${positions.map((p) => `s${p.stringIndex}f${p.fret}`).join(' < ')} rise in pitch`,
+    positions,
+  }),
+
+  initials: (...words: string[]): Fact => ({
+    kind: 'initials',
+    says: `"${words.join(' ')}" spells the open strings`,
+    words,
+  }),
+
   semitones: (from: string, to: string, apart: number): Fact => ({
     kind: 'semitones',
     says: `${from} up to ${to} is ${apart} semitone(s)`,
@@ -135,6 +164,13 @@ export const fact = {
     says: `${chordId} sounds string indices ${strings.join(',')}`,
     chordId,
     strings,
+  }),
+
+  fingers: (chordId: string, count: number): Fact => ({
+    kind: 'chord-fingers',
+    says: `${chordId} presses ${count} string(s)`,
+    chordId,
+    count,
   }),
 
   key: (root: string, one: string, four: string, five: string, six: string): Fact => ({
@@ -183,6 +219,27 @@ export const fact = {
     chords,
   }),
 
+  songMeter: (songId: string, meter: string): Fact => ({
+    kind: 'song-meter',
+    says: `${songId} is in ${meter}`,
+    songId,
+    meter,
+  }),
+
+  riffMeter: (riffId: string, meter: string): Fact => ({
+    kind: 'riff-meter',
+    says: `${riffId} is in ${meter}`,
+    riffId,
+    meter,
+  }),
+
+  riffMelody: (riffId: string, solfege: string): Fact => ({
+    kind: 'riff-melody',
+    says: `${riffId} opens ${solfege}`,
+    riffId,
+    solfege,
+  }),
+
   songEvent: (songId: string, beat: number, stringIndex: number, fret: number, duration: number): Fact => ({
     kind: 'song-event',
     says: `${songId} beat ${beat}: string index ${stringIndex}, fret ${fret}, ${duration} beat(s)`,
@@ -208,6 +265,14 @@ export const fact = {
     says: `folk pattern is ${downs} down and ${ups} up strokes`,
     downs,
     ups,
+  }),
+
+  strumBeats: (pattern: StrumPattern, beatsInBar: number, beats: readonly number[]): Fact => ({
+    kind: 'strum-beats',
+    says: `${pattern} in ${beatsInBar} beats hits at ${beats.join(' ')}`,
+    pattern,
+    beatsInBar,
+    beats,
   }),
 
   beats: (length: string, beats: number): Fact => ({
@@ -237,6 +302,13 @@ export const fact = {
     from,
     to,
     is,
+  }),
+
+  checkInitial: (ask: string, stringIndex: number): Fact => ({
+    kind: 'check-initial',
+    says: `check "${ask}" answers a word starting with string index ${stringIndex}'s letter`,
+    ask,
+    stringIndex,
   }),
 
   checkNote: (ask: string, stringIndex: number, fret: number, flat = false): Fact => ({
