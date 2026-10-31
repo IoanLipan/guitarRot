@@ -41,9 +41,11 @@ licence, and are not part of tonejs-instruments:
 
 The thirteen pitched notes were taken as published, then guitarRot retuned each
 one by a few cents (a resampling of at most 0.5%, from the mean of FreePats'
-own `tune` offsets and a median f0 measurement), trimmed the silence before
-the pick, faded in the first millisecond, levelled each note's first half
-second to the average level of the nylon set over the same range, and
-re-encoded them (mono, 44.1 kHz, 112 kbps). The natural decay and the 150 ms
+own `tune` offsets and a median f0 measurement), lifted everything above
+about 2 kHz by 3 dB (a gentle high shelf; the recording is warmer than a
+ukulele usually sounds and the app's filter can only cut), trimmed the
+silence before the pick, faded in the first millisecond, levelled each
+note's first half second to the average level of the nylon set over the same
+range, and re-encoded them (mono, 44.1 kHz, 112 kbps). The natural decay and the 150 ms
 tail fade the author applied are untouched. The two percussive samples in the
 FreePats set (`body-tap`, `chuck`) are not used.

@@ -151,12 +151,15 @@ export const TONE_PROFILES: readonly ToneProfile[] = [
     // less warmth) and lets go sooner. Resonance stays inside the 0.93+ band
     // the string voicing needs to read as a note at all.
     string: { attackNoise: 0.4, dampening: 5200, resonance: 0.95 },
-    // The recording is already a bright, short-lived tenor, so the amp only
-    // opens the top a little past the classical's, adds the smallest room
-    // (a ukulele sounds close and dry), and trims level to match the nylon
-    // set. The air resonance of a small body sits near 250Hz, which is only
-    // the synth's business: recordings skip the boost.
-    amp: { drive: 0, filterHz: 8200, reverbWet: 0.1, gain: 0.6, bodyHz: 250, bodyQ: 1, bodyGainDb: 4 },
+    // The recording is a short-lived tenor with a gentle presence lift added
+    // when the files were prepared (the filter below can only cut, and the
+    // body stage is flat on recordings), so the amp just opens the top past
+    // the classical's, adds the smallest room (a ukulele sounds close and
+    // dry) and levels the result: measured rendered, a C-F-G-Am strum and a
+    // C-E-G-A line land within about 1 LU of the classical. The air
+    // resonance of a small body sits near 250Hz, which is only the synth's
+    // business: recordings skip the boost.
+    amp: { drive: 0, filterHz: 8200, reverbWet: 0.1, gain: 0.85, bodyHz: 250, bodyQ: 1, bodyGainDb: 4 },
   },
 ];
 
