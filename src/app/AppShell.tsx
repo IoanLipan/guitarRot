@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Style, StatusBar } from '@capacitor/status-bar';
 import { getToneProfile } from '@/audio';
-import { courseFor, getSong, songPlayableOn } from '@/content';
+import { courseFor, getSong, riffsFor, songPlayableOn } from '@/content';
 import { InstrumentProvider } from '@/instrument';
 import type { InstrumentId } from '@/music';
 import { Feed } from '@/feed/Feed';
@@ -220,6 +220,8 @@ export function AppShell() {
           onChoose={begin}
           needsInstrument={progress.loaded && !progress.state.settings.instrumentChosen}
           onPickInstrument={progress.setInstrument}
+          // An instrument with no riffs yet has a feed of chords and quizzes: say so on the button.
+          feedLabel={riffsFor(instrumentId).length === 0 ? 'Just scroll chords' : undefined}
         />
       </>
     );
@@ -246,7 +248,6 @@ export function AppShell() {
                 openSongId={openSongId}
                 onOpenSongChange={setOpenSongId}
                 onSongPlayed={(songId) => progress.record({ type: 'song-played', songId })}
-                instrumentSwitch={instrumentSwitch}
               />
             )}
             {tab === 'learn' && (
@@ -266,13 +267,16 @@ export function AppShell() {
             {tab === 'you' && <YouTab progress={progress} openPickId={openPickId} onOpenPickChange={setOpenPickId} />}
           </div>
 
-          {/* On the Feed the switch rides the same row as the share icon and the gear, one slot further in
-              (the gear is 16px from the edge, share 68px, this 120px). The other tabs set it in their own header. */}
-          {tab === 'feed' && (
+          {/* The switch rides the gear's row. The gear is 16px from the edge. On the Feed the share icon
+              takes the next slot (68px) and the switch the one after (120px); on the Songs list it is the
+              next slot. Learn sets it beside its section tabs, and an open song has a Share pill there instead. */}
+          {(tab === 'feed' || (tab === 'songs' && openSongId === null)) && (
             <InstrumentSwitch
               instrument={instrumentId}
               onSwitch={switchInstrument}
-              className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-[7.5rem] z-20"
+              className={`absolute top-[calc(env(safe-area-inset-top)+0.75rem)] z-20 ${
+                tab === 'feed' ? 'right-[7.5rem]' : 'right-[4.25rem]'
+              }`}
             />
           )}
 

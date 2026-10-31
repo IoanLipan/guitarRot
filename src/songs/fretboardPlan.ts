@@ -241,7 +241,7 @@ function labelOf(position: FretPosition, instrument: Instrument): string {
 
 /**
  * What the sounding notes are called, and for a single note where it lives:
- * "D (Re) · 4th string, open". A chord just lists its notes, low to high; the
+ * "D (Re) · 4th string, open". A chord just lists its notes in string order; the
  * board shows where they are.
  */
 export function describeNotes(positions: readonly FretPosition[], instrument: Instrument): string {

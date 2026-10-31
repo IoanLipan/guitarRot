@@ -16,7 +16,8 @@ export type PlayNoteOptions = {
   /** Absolute AudioContext time. Omit to play now. */
   time?: number;
   /**
-   * The physical string, 0 = low E. A string sounds one note at a time, so a
+   * The physical string by index: 0 is the bottom line of a tab (the guitar's low E, the
+   * ukulele's high G). A string sounds one note at a time, so a
    * new note here stops the last one on it and leaves the other strings
    * ringing. Without it the note is not tied to any string and never chokes.
    */

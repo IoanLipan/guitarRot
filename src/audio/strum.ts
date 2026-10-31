@@ -1,6 +1,7 @@
 /**
  * Per-string delays, in seconds, that turn simultaneous notes into a strum.
- * Index 0 is the lowest string in the voicing; a downstroke hits it first.
+ * Index 0 is the first string of the voicing, by string index (not necessarily the lowest in
+ * pitch: a ukulele's first string is its high G); a downstroke hits it first.
  */
 export function strumOffsets(
   count: number,

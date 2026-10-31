@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import type { AudioEngine } from '@/audio';
 import { getSong, songPlayableOn, songsFor } from '@/content';
 import { useInstrument } from '@/instrument';
@@ -17,15 +17,12 @@ export function Songs({
   openSongId,
   onOpenSongChange,
   onSongPlayed,
-  instrumentSwitch,
 }: {
   engine: AudioEngine;
   openSongId: string | null;
   onOpenSongChange: (songId: string | null) => void;
   /** Told when a song has been heard long enough to count as played; see `SongPlayer`. */
   onSongPlayed?: (songId: string) => void;
-  /** The quick instrument switch, handed to the browser's header. */
-  instrumentSwitch?: ReactNode;
 }) {
   const { id: instrument } = useInstrument();
   const [filter, setFilter] = useState<SongFilter>(EMPTY_FILTER);
@@ -53,7 +50,6 @@ export function Songs({
       filter={filter}
       onFilterChange={setFilter}
       onOpen={(song) => onOpenSongChange(song.id)}
-      instrumentSwitch={instrumentSwitch}
     />
   );
 }

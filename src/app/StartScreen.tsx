@@ -23,6 +23,7 @@ export function StartScreen({
   onChoose,
   needsInstrument = false,
   onPickInstrument,
+  feedLabel: feedIdle,
 }: {
   plan: StartPlan;
   loading: boolean;
@@ -35,13 +36,15 @@ export function StartScreen({
   /** A first run: nobody has said what they play yet, so that is asked before anything else. */
   needsInstrument?: boolean;
   onPickInstrument?: (instrument: InstrumentId) => void;
+  /** What the second button says when idle, for an instrument whose feed is not riffs. Defaults to "Just scroll riffs". */
+  feedLabel?: string;
 }) {
   if (needsInstrument && onPickInstrument !== undefined) {
     return <InstrumentChoice onPick={onPickInstrument} />;
   }
 
   const learnLabel = labelFor('learn', chosen, loading, failed, startLabel(plan));
-  const feedLabel = labelFor('feed', chosen, loading, failed, sharedLink ? 'Open the shared link' : 'Just scroll riffs');
+  const feedLabel = labelFor('feed', chosen, loading, failed, sharedLink ? 'Open the shared link' : (feedIdle ?? 'Just scroll riffs'));
   // The tapped button is the one that is working: it keeps full brightness and shows the wheel.
   const learnBusy = loading && chosen === 'learn';
   const feedBusy = loading && chosen === 'feed';
@@ -137,7 +140,7 @@ function InstrumentChoice({ onPick }: { onPick: (instrument: InstrumentId) => vo
                 style={stagger(4 + index, 70)}
                 className="rise-in press press-soft flex flex-col items-center gap-2 rounded-3xl bg-surface-2 px-3 pt-4 pb-3.5 tight:gap-1.5 tight:pt-3 tight:pb-3"
               >
-                <InstrumentArt id={instrument.id} className="h-40 w-auto tight:h-28" />
+                <InstrumentArt id={instrument.id} className="h-44 w-auto tight:h-36" />
                 <span className="text-lesson font-extrabold">{instrument.name}</span>
                 <span className="label -mt-1.5">{STRING_WORDS[strings] ?? strings} strings</span>
               </button>

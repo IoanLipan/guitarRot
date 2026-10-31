@@ -60,10 +60,14 @@ export function SettingsSheet({
    */
   onInstrumentChange?: (instrument: InstrumentId) => void;
 }) {
-  const activeToneId = progress.state.settings.toneId;
   const activeInstrument = getInstrument(progress.state.settings.instrument);
   // Only the tones of the instrument being played are offered: a ukulele voicing is not a guitar tone.
   const tones = toneProfilesFor(activeInstrument.id);
+  // The tone in use is the one its id names, or the one standing in for it (the ukulele's own, until it has one).
+  const storedToneId = progress.state.settings.toneId;
+  const activeToneId = tones.some((profile) => profile.id === storedToneId)
+    ? storedToneId
+    : getToneProfile(storedToneId).id;
   const titleId = useId();
   const instrumentHeadId = useId();
   const toneHeadId = useId();
