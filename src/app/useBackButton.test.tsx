@@ -60,6 +60,13 @@ describe('backAction', () => {
     expect(backAction({ ...nothingOpen, settingsOpen: true, tab: 'you', pickOpen: true })).toBe('close-settings');
   });
 
+  it('closes the account sheet on the You tab first, and ignores one on a tab you are not looking at', () => {
+    expect(backAction({ ...nothingOpen, tab: 'you', accountSheetOpen: true })).toBe('close-account');
+    expect(backAction({ ...nothingOpen, tab: 'you', accountSheetOpen: true, pickOpen: true })).toBe('close-account');
+    expect(backAction({ ...nothingOpen, settingsOpen: true, tab: 'you', accountSheetOpen: true })).toBe('close-settings');
+    expect(backAction({ ...nothingOpen, tab: 'learn', accountSheetOpen: true })).toBe('go-to-feed');
+  });
+
   it('minimizes from the Feed', () => {
     expect(backAction(nothingOpen)).toBe('minimize');
   });

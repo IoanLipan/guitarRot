@@ -1,8 +1,10 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { CheckIcon, ExternalLinkIcon } from '@/ui/icons';
+import { CheckIcon, ChevronRightIcon, ExternalLinkIcon } from '@/ui/icons';
 import { prefersReducedMotion } from '@/ui/motion';
 import { Capacitor } from '@capacitor/core';
 import { getToneProfile, toneProfilesFor, type AudioEngine } from '@/audio';
+import { accountName } from '@/cloud/accountName';
+import { useAccount } from '@/cloud/AccountProvider';
 import { ALL_SONGS, getChord } from '@/content';
 import { useFocusTrap } from '@/game/useFocusTrap';
 import { withInstrument } from '@/progress';
@@ -49,6 +51,7 @@ export function SettingsSheet({
   engine,
   progress,
   onInstrumentChange,
+  onOpenAccount,
 }: {
   open: boolean;
   onClose: () => void;
@@ -59,7 +62,13 @@ export function SettingsSheet({
    * new instrument has no counterpart of; without it the sheet only changes the setting.
    */
   onInstrumentChange?: (instrument: InstrumentId) => void;
+  /**
+   * Takes the person to the Account card in the You tab (closing this sheet). The row that
+   * calls it is shown only when the build has accounts.
+   */
+  onOpenAccount?: () => void;
 }) {
+  const account = useAccount();
   const activeInstrument = getInstrument(progress.state.settings.instrument);
   // Only the tones of the instrument being played are offered: a ukulele voicing is not a guitar tone.
   const tones = toneProfilesFor(activeInstrument.id);
@@ -204,6 +213,36 @@ export function SettingsSheet({
             </button>
           </div>
         </div>
+
+        {account.status !== 'disabled' && onOpenAccount !== undefined && (
+          <section className="px-6 pt-2 pb-6" data-testid="settings-account">
+            <h3 className="label">Account</h3>
+            <button
+              type="button"
+              onClick={onOpenAccount}
+              data-testid="settings-account-row"
+              className="press press-soft mt-3 flex min-h-14 w-full items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 text-left"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-body font-extrabold">
+                  {account.status === 'signed-in'
+                    ? accountName(account.user)
+                    : account.status === 'loading'
+                      ? 'Account'
+                      : 'Sign in'}
+                </span>
+                <span className="block truncate text-meta leading-snug text-ink-dim">
+                  {account.status === 'signed-in'
+                    ? (account.user.email ?? 'Signed in')
+                    : account.status === 'loading'
+                      ? 'Checking…'
+                      : 'Save your progress so it follows you to a new phone'}
+                </span>
+              </span>
+              <ChevronRightIcon size={20} className="shrink-0 text-ink-dim" />
+            </button>
+          </section>
+        )}
 
         <section className="px-6 pt-2">
           <h3 id={instrumentHeadId} className="label">

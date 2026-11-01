@@ -5,7 +5,9 @@ guitar-theory learning: a vertical Feed of riff loops, chord cards, and
 quizzes; a Songs tab (searchable catalogue with playable chord charts and
 tab); a Learn tab (fretboard explorer, chord library, scale positions); and
 a focused Quiz tab. React 19 + TypeScript (strict) + Vite + Tailwind v4
-+ Tone.js. Runs fully offline — no account, no backend.
++ Tone.js. Runs fully offline — no account, no backend (accounts are an
+optional layer that exists only in a build given a Firebase config; see
+[Accounts](#accounts-optional)).
 
 Notes are real recorded guitar, bundled with the app (`public/audio/guitar/`):
 an acoustic set and a clean electric set, one sample every three semitones,
@@ -82,6 +84,28 @@ until a user gesture — so the app shows a "Tap to start" screen on first
 load for exactly that reason.
 
 Deploys to production automatically on every push to `master` (Vercel).
+
+## Accounts (optional)
+
+Sign-in with Google or email/password (Firebase Auth) lives in `src/cloud/`.
+It is off unless the build has the `VITE_FIREBASE_*` variables from
+[`.env.example`](.env.example); without them the app is the offline app, shows
+no account UI, makes no network call and never downloads the Firebase SDK
+(it is loaded with `import()`, after the first paint, only when enabled).
+
+Develop against the local Firebase Emulator Suite, with no Firebase project and
+no Google account (needs the `firebase` CLI and a JDK; `scripts/with-java.sh`
+finds Homebrew's `openjdk@21`):
+
+```bash
+npm run emulators         # Auth on 9099, Firestore on 8080, project demo-guitarrot
+npm run dev:emulators     # the app, pointed at them
+npm run test:cloud        # starts the emulators, runs src/**/*.emu.test.ts, stops them
+```
+
+`npm test` never needs the emulators. Android Google sign-in needs
+`android/app/google-services.json` from the Firebase console; without it the
+debug build still assembles (see the note in `android/app/build.gradle`).
 
 ## Android
 
