@@ -43,6 +43,8 @@ export function AppShell() {
   const [openSongId, setOpenSongId] = useState<string | null>(null);
   // The pick open in the You tab. Owned here because an unlock toast can send you to it.
   const [openPickId, setOpenPickId] = useState<string | null>(null);
+  // The account's email sheet, over the You tab. Owned here so the Back button can close it.
+  const [accountSheetOpen, setAccountSheetOpen] = useState(false);
   // Where the Quiz tab is (its mode select, a run, a run's results), and its handle for Back and for leaving mid-run.
   const [quizLayer, setQuizLayer] = useState<QuizLayer>('select');
   const quizApiRef = useRef<QuizApi | null>(null);
@@ -54,6 +56,7 @@ export function AppShell() {
   const transition = useViewTransition();
   function changeTab(next: TabId) {
     if (next === tab) return;
+    if (next !== 'you') setAccountSheetOpen(false);
     const go = () => transition(() => setTab(next), { element: paneRef.current, direction: tabDirection(tab, next) });
     // A quiz run in progress is not thrown away by a stray tap on a tab: the Quiz tab asks first.
     if (tab === 'quiz' && quizApiRef.current?.guardLeave(go) === true) return;
@@ -156,11 +159,15 @@ export function AppShell() {
         lessonOpen: learnPlace.lessonId !== null,
         songOpen: openSongId !== null,
         pickOpen: openPickId !== null,
+        accountSheetOpen,
         quizLayer,
       })
     ) {
       case 'close-settings':
         setSettingsOpen(false);
+        break;
+      case 'close-account':
+        setAccountSheetOpen(false);
         break;
       case 'close-lesson':
         setLearnPlace(placeWithoutLesson);
@@ -272,7 +279,15 @@ export function AppShell() {
             {tab === 'quiz' && (
               <Quiz engine={engine} progress={progress} onLayerChange={setQuizLayer} apiRef={quizApiRef} />
             )}
-            {tab === 'you' && <YouTab progress={progress} openPickId={openPickId} onOpenPickChange={setOpenPickId} />}
+            {tab === 'you' && (
+              <YouTab
+                progress={progress}
+                openPickId={openPickId}
+                onOpenPickChange={setOpenPickId}
+                accountSheetOpen={accountSheetOpen}
+                onAccountSheetOpenChange={setAccountSheetOpen}
+              />
+            )}
           </div>
 
           {/* The switch rides the gear's row. The gear is 16px from the edge. On the Feed the share icon
@@ -311,6 +326,10 @@ export function AppShell() {
           engine={engine}
           progress={progress}
           onInstrumentChange={switchInstrument}
+          onOpenAccount={() => {
+            setSettingsOpen(false);
+            changeTab('you');
+          }}
         />
       </div>
     </InstrumentProvider>

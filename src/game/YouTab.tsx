@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { activeDayStreak, levelProgress, localDateIso, QUIZ_DIFFICULTIES, rankTitle } from '@/progress';
 import type { ProgressHandle } from '@/app/useProgress';
 import { DIFFICULTY_NAME } from '@/quiz/difficultyCopy';
+import { AccountCard } from '@/cloud/AccountCard';
 import { LevelEmblem } from './LevelEmblem';
 import { MiniPicks } from './MiniPicks';
 import { PickCase } from './PickCase';
@@ -21,11 +22,16 @@ export function YouTab({
   progress,
   openPickId,
   onOpenPickChange,
+  accountSheetOpen,
+  onAccountSheetOpenChange,
   today = localDateIso(new Date()),
 }: {
   progress: Pick<ProgressHandle, 'state'>;
   openPickId: string | null;
   onOpenPickChange: (id: string | null) => void;
+  /** The account's email sheet, when the caller owns it (Android Back closes it first). It keeps its own state otherwise. */
+  accountSheetOpen?: boolean;
+  onAccountSheetOpenChange?: (open: boolean) => void;
   /** Local ISO date; tests pin it. */
   today?: string;
 }) {
@@ -54,6 +60,9 @@ export function YouTab({
             </p>
           </div>
         </section>
+
+        {/* Renders nothing in a build without accounts. Under the level, not above it: the gear sits in this corner. */}
+        <AccountCard emailOpen={accountSheetOpen} onEmailOpenChange={onAccountSheetOpenChange} delay="30ms" />
 
         <section
           aria-label="Day streak"
