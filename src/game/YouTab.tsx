@@ -3,6 +3,7 @@ import { activeDayStreak, levelProgress, localDateIso, QUIZ_DIFFICULTIES, rankTi
 import type { ProgressHandle } from '@/app/useProgress';
 import { DIFFICULTY_NAME } from '@/quiz/difficultyCopy';
 import { AccountCard } from '@/cloud/AccountCard';
+import { LeaderboardSection } from '@/leaderboard/LeaderboardSection';
 import { LevelEmblem } from './LevelEmblem';
 import { MiniPicks } from './MiniPicks';
 import { PickCase } from './PickCase';
@@ -63,6 +64,9 @@ export function YouTab({
 
         {/* Renders nothing in a build without accounts. Under the level, not above it: the gear sits in this corner. */}
         <AccountCard emailOpen={accountSheetOpen} onEmailOpenChange={onAccountSheetOpenChange} delay="30ms" />
+
+        {/* Also nothing without accounts. Right under the Account card, because signing in is how you get here. */}
+        <LeaderboardSection progress={progress} delay="45ms" />
 
         <section
           aria-label="Day streak"

@@ -5,6 +5,7 @@ import { Style, StatusBar } from '@capacitor/status-bar';
 import { getToneProfile } from '@/audio';
 import { courseFor, getSong, riffsFor, songPlayableOn } from '@/content';
 import { InstrumentProvider } from '@/instrument';
+import { LeaderboardSync } from '@/leaderboard/LeaderboardSync';
 import type { InstrumentId } from '@/music';
 import { Feed } from '@/feed/Feed';
 import { AwardLayer } from '@/game/AwardLayer';
@@ -319,6 +320,9 @@ export function AppShell() {
         {!inLesson && <TabBar active={tab} onChange={changeTab} />}
 
         <AwardLayer progress={progress} phase={awardPhase} onOpenPick={showPick} />
+
+        {/* Keeps a leaderboard entry up to date with the XP earned; nothing at all without an account on the board. */}
+        <LeaderboardSync progress={progress} />
 
         <SettingsSheet
           open={settingsOpen}

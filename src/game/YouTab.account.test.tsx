@@ -32,6 +32,21 @@ describe('the You tab and accounts', () => {
     expect(screen.getByTestId('you-level')).toBeInTheDocument();
   });
 
+  it('has no leaderboard without accounts', () => {
+    renderTab();
+    expect(screen.queryByTestId('leaderboard')).toBeNull();
+  });
+
+  it('puts the Leaderboard right under the Account card, before the streak', () => {
+    renderTab({ status: 'signed-out', user: null });
+    const card = screen.getByTestId('account-card');
+    const board = screen.getByTestId('leaderboard');
+    const streak = screen.getByTestId('you-streak');
+    expect(card.compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(board.compareDocumentPosition(streak) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(board).toHaveAttribute('data-state', 'signed-out');
+  });
+
   it('puts the Account card right under the level, before the streak', () => {
     renderTab({ status: 'signed-out', user: null });
     const level = screen.getByTestId('you-level');
