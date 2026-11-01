@@ -1,3 +1,5 @@
+/// <reference types="@capacitor-firebase/authentication" />
+
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
@@ -30,6 +32,14 @@ const config: CapacitorConfig = {
       // follows the phone's light/dark setting, which on a light-mode phone
       // would paint dark icons onto the dark strip.
       style: 'DARK',
+    },
+    FirebaseAuthentication: {
+      // Google refuses OAuth inside a WebView, so on Android the sign-in is the
+      // native Google dialog. The plugin only fetches the Google ID token; the
+      // JS SDK signs in with it (src/cloud/auth.ts), so there is one auth state
+      // for the whole app and the plugin never keeps a second, native user.
+      skipNativeAuth: true,
+      providers: ['google.com'],
     },
   },
 };

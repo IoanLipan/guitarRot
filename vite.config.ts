@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
+import { configDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { readFileSync } from 'node:fs';
@@ -24,6 +25,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Tests that talk to the Firebase emulators run on their own (`npm run test:cloud`, vitest.cloud.config.ts).
+    exclude: [...configDefaults.exclude, 'src/**/*.emu.test.ts'],
     // Whole quiz runs and every-hard-song renders sit near the default 5 s
     // and time out at random on a loaded machine; a real hang still fails.
     testTimeout: 15_000,
