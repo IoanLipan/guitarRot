@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Style, StatusBar } from '@capacitor/status-bar';
 import { getToneProfile } from '@/audio';
+import { SyncContext, useCloudSync } from '@/cloud/useCloudSync';
 import { courseFor, getSong, riffsFor, songPlayableOn } from '@/content';
 import { InstrumentProvider } from '@/instrument';
 import type { InstrumentId } from '@/music';
@@ -32,6 +33,8 @@ import { AndroidAppBanner } from './AndroidAppBanner';
 export function AppShell() {
   const { ready, engine, loading, failed, start } = useAudioEngine();
   const progress = useProgress();
+  // Signed in, the progress is kept in step with the account (nothing happens otherwise); the You tab shows how it stands.
+  const sync = useCloudSync(progress);
   const [tab, setTab] = useState<TabId>('feed');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shared, setShared] = useState<SharedContent | null>(null);
@@ -243,6 +246,7 @@ export function AppShell() {
   }
 
   return (
+    <SyncContext.Provider value={sync}>
     <InstrumentProvider id={instrumentId}>
       <div className="flex h-dvh flex-col bg-ground">
         <AndroidAppBanner />
@@ -333,6 +337,7 @@ export function AppShell() {
         />
       </div>
     </InstrumentProvider>
+    </SyncContext.Provider>
   );
 }
 

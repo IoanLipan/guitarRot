@@ -4,6 +4,7 @@ import {
   createDebouncedSaver,
   createProgressRepo,
   emptyProgressState,
+  mergeProgress,
   type Award,
   type GameEvent,
   type ProgressState,
@@ -52,6 +53,14 @@ export type ProgressHandle = {
    * when the app is about to leave the screen, where a delayed write may never run.
    */
   flush: () => void;
+  /** The progress as of this instant, which `state` can lag behind by a render. For the cloud sync. */
+  getState: () => ProgressState;
+  /**
+   * Folds progress from the cloud into this device's (see `mergeProgress`) and
+   * returns the result. Saved like any change, but it earns nothing: no award,
+   * no toast. Merging progress the device already has changes nothing.
+   */
+  mergeRemote: (remote: ProgressState) => ProgressState;
 };
 
 /** Loads progress once on mount and persists every change, debounced. */
@@ -158,6 +167,19 @@ export function useProgress(): ProgressHandle {
     void saverRef.current.flush();
   }, []);
 
+  const getState = useCallback(() => stateRef.current, []);
+
+  const mergeRemote = useCallback(
+    (remote: ProgressState): ProgressState => {
+      const current = stateRef.current;
+      const merged = mergeProgress(current, remote);
+      if (JSON.stringify(merged) === JSON.stringify(current)) return current;
+      commit(merged);
+      return merged;
+    },
+    [commit],
+  );
+
   return {
     state,
     loaded,
@@ -169,5 +191,7 @@ export function useProgress(): ProgressHandle {
     setInstrument,
     completeLesson,
     flush,
+    getState,
+    mergeRemote,
   };
 }
