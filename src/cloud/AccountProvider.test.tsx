@@ -162,3 +162,12 @@ describe('with cloud features on', () => {
     await waitFor(() => expect(signInWithEmail).toHaveBeenCalledTimes(1));
   });
 });
+
+describe('the test’s own instrument', () => {
+  it('does see the SDK when something really loads it, so the zeros above mean something', async () => {
+    vi.resetModules();
+    const { loadAuthSdk } = await import('./firebase');
+    await loadAuthSdk();
+    expect(loaded.firebaseAuth).toBeGreaterThan(0);
+  });
+});
