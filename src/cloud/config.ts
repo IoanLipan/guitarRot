@@ -93,9 +93,10 @@ export function readCloudConfig(env: CloudEnv): CloudConfig {
   };
 }
 
-// Each variable is read by name, not through `import.meta.env` as a whole, so
-// the bundler can see at build time that a build without them is disabled and
-// drop the Firebase code behind it.
+// Each variable is read by name, the form Vite replaces with the value at build
+// time. (The Firebase SDK stays out of the initial bundle by being loaded with
+// `import()`, not by this: a build without a config still contains the chunks,
+// but nothing ever asks for them.)
 export const cloud: CloudConfig = readCloudConfig({
   VITE_FIREBASE_API_KEY: import.meta.env.VITE_FIREBASE_API_KEY,
   VITE_FIREBASE_AUTH_DOMAIN: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,

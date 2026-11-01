@@ -66,11 +66,18 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
+// Firebase (accounts, Google sign-in): the google-services plugin turns
+// android/app/google-services.json into the app's Firebase resources, among them the
+// `default_web_client_id` that native Google sign-in asks Google for a token with. The
+// plugin fails the build when the file is missing, so it is applied only when the file
+// is there: a checkout without it (CI, a contributor, the offline app) still assembles,
+// and only Google sign-in on Android is unavailable. Download the file from the Firebase
+// console (Project settings > Your apps > Android, package com.guitarrot.app).
 try {
     def servicesJSON = file('google-services.json')
     if (servicesJSON.text) {
         apply plugin: 'com.google.gms.google-services'
     }
 } catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+    logger.info("google-services.json not found, google-services plugin not applied. Google sign-in on Android won't work")
 }
