@@ -14,6 +14,7 @@
     "dev:emulators": "VITE_FIREBASE_EMULATORS=1 vite"
   },
   "dependencies": {
+    "@capacitor-firebase/analytics": "^8.6.0",
     "@capacitor-firebase/authentication": "^8.6.0",
     "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.5.1",
