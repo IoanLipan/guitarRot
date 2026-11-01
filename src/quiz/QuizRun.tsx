@@ -10,6 +10,7 @@ import {
   type RunState,
 } from '@/progress';
 import { errorHaptic, successHaptic } from '@/app/haptics';
+import { track } from '@/cloud/analytics';
 import type { AudioEngine } from '@/audio';
 import type { ProgressHandle } from '@/app/useProgress';
 import { useInstrument } from '@/instrument';
@@ -93,6 +94,14 @@ export function QuizRun({
     [],
   );
 
+  // A run is a fresh mount (the caller keys it by round), so mounting is starting.
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    track('quiz_run_start', { difficulty });
+  }, [difficulty]);
+
   useEffect(() => {
     onPhaseChange?.(summary === null ? 'run' : 'results');
   }, [summary, onPhaseChange]);
@@ -104,6 +113,7 @@ export function QuizRun({
 
   function finish(finalRun: RunState) {
     const result = finishRun(finalRun);
+    track('quiz_run_finish', { difficulty, score: result.score, stars: result.stars });
     const award = progress.record(runEvent(difficulty, result));
     collect(award);
     setSummary({

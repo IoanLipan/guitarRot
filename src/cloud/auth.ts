@@ -10,8 +10,9 @@
  * fetches Google's ID token, and the JS SDK signs in with it, exactly as if
  * the popup had done it.
  */
-import type { Auth, User } from 'firebase/auth';
+import type { Auth, User, UserCredential } from 'firebase/auth';
 import { Capacitor } from '@capacitor/core';
+import { track } from './analytics';
 import { runBeforeDeleteHooks } from './deleteHooks';
 import { toAccountError } from './errors';
 import { getFirebaseAuth, loadAuthSdk } from './firebase';
@@ -49,6 +50,19 @@ export function toAccountUser(user: User): AccountUser {
 
 const SIGNED_OUT: AccountState = { status: 'signed-out', user: null };
 
+/**
+ * Tells analytics (when the person has agreed to it) how somebody got in: GA4's recommended `sign_up`
+ * for a first Google sign-in, `login` for a return. Never the account itself, and never a reason to
+ * fail a sign-in.
+ */
+function trackGoogleSignIn(sdk: AuthSdk, credential: UserCredential): void {
+  try {
+    track(sdk.getAdditionalUserInfo(credential)?.isNewUser === true ? 'sign_up' : 'login', { method: 'google' });
+  } catch {
+    // Analytics is optional.
+  }
+}
+
 /** Pushes the current user to the watcher again: Firebase stays quiet when only the profile changed. */
 let publishCurrent: (() => void) | null = null;
 
@@ -72,7 +86,14 @@ export function watchAccount(onState: (state: AccountState) => void): () => void
       publishCurrent = republish;
       unsubscribe = sdk.onAuthStateChanged(auth, report);
       // Back from a Google redirect: finishing it signs the user in (and the listener above hears it).
-      if (!Capacitor.isNativePlatform()) void sdk.getRedirectResult(auth).catch(() => undefined);
+      if (!Capacitor.isNativePlatform()) {
+        void sdk
+          .getRedirectResult(auth)
+          .then((result) => {
+            if (result !== null) trackGoogleSignIn(sdk, result);
+          })
+          .catch(() => undefined);
+      }
     })
     .catch(() => {
       // The SDK could not be fetched (offline on a first visit). Show the sign-in card; an action retries the load.
@@ -91,6 +112,7 @@ export async function signUpWithEmail({ email, password, displayName }: SignUpIn
     const { auth, sdk } = await load();
     const { user } = await sdk.createUserWithEmailAndPassword(auth, email.trim(), password);
     const name = displayName.trim();
+    track('sign_up', { method: 'password' });
     // The account exists now: a name that fails to save is not worth failing the sign-up for.
     if (name !== '') await sdk.updateProfile(user, { displayName: name }).catch(() => undefined);
     publishCurrent?.();
@@ -105,6 +127,7 @@ export async function signInWithEmail({ email, password }: SignInInput): Promise
   try {
     const { auth, sdk } = await load();
     await sdk.signInWithEmailAndPassword(auth, email.trim(), password);
+    track('login', { method: 'password' });
   } catch (error) {
     throw toAccountError(error);
   }
@@ -148,13 +171,13 @@ export async function signInWithGoogle(): Promise<void> {
     const { auth, sdk } = await load();
     if (Capacitor.isNativePlatform()) {
       const credential = sdk.GoogleAuthProvider.credential(await nativeGoogleIdToken());
-      await sdk.signInWithCredential(auth, credential);
+      trackGoogleSignIn(sdk, await sdk.signInWithCredential(auth, credential));
       return;
     }
     const provider = new sdk.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      await sdk.signInWithPopup(auth, provider);
+      trackGoogleSignIn(sdk, await sdk.signInWithPopup(auth, provider));
     } catch (error) {
       const code = (error as { code?: unknown }).code;
       // Some browsers (and in-app browsers) cannot open the popup; a full-page redirect can.
