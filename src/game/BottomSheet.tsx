@@ -9,13 +9,15 @@ export const SHEET_EXIT_MS = 230;
  * A panel that slides up from the bottom over a dimmed screen, the way the
  * Settings sheet does. Closing keeps it mounted until the slide is done, and
  * with reduced motion (no slide) it goes at once. Focus moves into the panel
- * when it opens, Escape and the backdrop close it.
+ * when it opens, Escape and the backdrop close it, unless the sheet is a question
+ * that must be answered (`dismissible={false}`): then only what is inside it closes it.
  */
 export function BottomSheet({
   open,
   onClose,
   label,
   testId,
+  dismissible = true,
   children,
 }: {
   open: boolean;
@@ -23,6 +25,8 @@ export function BottomSheet({
   /** The dialog's accessible name. */
   label: string;
   testId?: string;
+  /** False when Escape and a tap outside must not close it. Default true. */
+  dismissible?: boolean;
   children: ReactNode;
 }) {
   const [mounted, setMounted] = useState(open);
@@ -42,11 +46,11 @@ export function BottomSheet({
     if (!open) return;
     panelRef.current?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape' && dismissible) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, onClose, dismissible]);
 
   if (!open && (!mounted || prefersReducedMotion())) return null;
 
@@ -60,13 +64,17 @@ export function BottomSheet({
       aria-modal="true"
       aria-label={label}
     >
-      <button
-        type="button"
-        aria-label="Close"
-        tabIndex={-1}
-        onClick={onClose}
-        className="sheet-backdrop absolute inset-0 bg-black/60"
-      />
+      {dismissible ? (
+        <button
+          type="button"
+          aria-label="Close"
+          tabIndex={-1}
+          onClick={onClose}
+          className="sheet-backdrop absolute inset-0 bg-black/60"
+        />
+      ) : (
+        <div aria-hidden="true" className="sheet-backdrop absolute inset-0 bg-black/60" />
+      )}
       <div
         ref={panelRef}
         tabIndex={-1}
