@@ -121,6 +121,38 @@ describe('where there are no accounts', () => {
   });
 });
 
+describe('telling analytics the section was seen', () => {
+  const seen = (api?: AccountApi) => {
+    const onView = vi.fn();
+    const ui = (children: ReactNode) => (api === undefined ? children : <AccountContext.Provider value={api}>{children}</AccountContext.Provider>);
+    const view = render(ui(<LeaderboardSection progress={progressWith()} onView={onView} />));
+    return { onView, view, rerender: (next: AccountApi) => view.rerender(<AccountContext.Provider value={next}><LeaderboardSection progress={progressWith()} onView={onView} /></AccountContext.Provider>) };
+  };
+
+  it('says so once when it is shown to somebody signed out', () => {
+    const { onView } = seen(account({ status: 'signed-out', user: null }));
+    expect(onView).toHaveBeenCalledTimes(1);
+  });
+
+  it('says nothing where there are no accounts', () => {
+    const { onView } = seen(account({ status: 'disabled', user: null }));
+    const bare = seen();
+    expect(onView).not.toHaveBeenCalled();
+    expect(bare.onView).not.toHaveBeenCalled();
+  });
+
+  it('waits for the account to be known, then says so once, however the section changes after that', () => {
+    const { onView, rerender } = seen(account({ status: 'loading', user: null }));
+    expect(onView).not.toHaveBeenCalled();
+    rerender(account({ status: 'signed-out', user: null }));
+    expect(onView).toHaveBeenCalledTimes(1);
+    rerender(account({}));
+    act(() => world.push?.({ entry: ME, pending: false }));
+    rerender(account({ status: 'signed-out', user: null }));
+    expect(onView).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('signed out', () => {
   it('says what it is in one line and points at the Account card', () => {
     renderSection(account({ status: 'signed-out', user: null }));

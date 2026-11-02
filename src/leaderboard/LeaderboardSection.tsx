@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import { useAccount } from '@/cloud/AccountProvider';
 import { Field } from '@/cloud/Field';
 import type { AccountUser } from '@/cloud/types';
@@ -225,15 +225,32 @@ function Manage({ uid, name }: { uid: string; name: string }) {
 export function LeaderboardSection({
   progress,
   delay = '0ms',
+  onView,
 }: {
   progress: Pick<ProgressHandle, 'state'>;
   delay?: string;
+  /**
+   * Called once, the first time the section is on screen for somebody (signed out, or signed in), and
+   * never where there are no accounts. It is how usage analytics hears about the section; the section
+   * itself knows nothing of analytics.
+   */
+  onView?: () => void;
 }) {
   const account = useAccount();
   const online = useOnline();
   const [attempt, setAttempt] = useState(0);
   const uid = account.status === 'signed-in' ? account.user.uid : null;
   const own = useOwnEntry(uid, attempt);
+
+  const shown = account.status === 'signed-out' || account.status === 'signed-in';
+  const reported = useRef(false);
+  const latestOnView = useRef(onView);
+  latestOnView.current = onView;
+  useEffect(() => {
+    if (!shown || reported.current) return;
+    reported.current = true;
+    latestOnView.current?.();
+  }, [shown]);
 
   if (account.status === 'disabled') return null;
 
