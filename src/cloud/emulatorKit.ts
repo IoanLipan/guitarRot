@@ -13,6 +13,12 @@ export function uniqueEmail(label: string): string {
   return `${label}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}@example.test`;
 }
 
+/** A username nobody has claimed (3 to 20 characters of a-z, 0-9 and _), also across runs against a long-lived emulator. */
+export function uniqueUsername(label = 'user'): string {
+  const word = label.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'user';
+  return `${word}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export type OobCode = { email: string; requestType: string; oobCode: string; oobLink: string };
 
 /** The emails the Auth emulator "sent": it keeps their one-time codes instead of delivering them. */

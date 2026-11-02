@@ -104,7 +104,7 @@ export function EmailSheet({ open, onClose }: { open: boolean; onClose: () => vo
     setPending(true);
     try {
       if (mode === 'sign-up') {
-        await account.signUpWithEmail({ email, password, displayName: name });
+        await account.signUpWithEmail({ email, password, username: name });
         onClose();
       } else if (mode === 'sign-in') {
         await account.signInWithEmail({ email, password });

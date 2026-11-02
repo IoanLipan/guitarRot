@@ -36,6 +36,8 @@ const ACTIONS: AccountActions = {
   signInWithEmail: viaService((auth) => auth.signInWithEmail),
   sendPasswordReset: viaService((auth) => auth.sendPasswordReset),
   signInWithGoogle: viaService((auth) => auth.signInWithGoogle),
+  signInWithApple: viaService((auth) => auth.signInWithApple),
+  setUsername: viaService((auth) => auth.setUsername),
   signOut: viaService((auth) => auth.signOut),
   deleteAccount: viaService((auth) => auth.deleteAccount),
 };

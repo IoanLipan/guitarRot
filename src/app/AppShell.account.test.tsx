@@ -67,6 +67,8 @@ const actions = {
   signInWithEmail: vi.fn(),
   sendPasswordReset: vi.fn(),
   signInWithGoogle: vi.fn(),
+  signInWithApple: vi.fn(),
+  setUsername: vi.fn(),
   signOut: vi.fn(),
   deleteAccount: vi.fn(),
 };

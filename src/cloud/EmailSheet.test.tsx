@@ -10,6 +10,8 @@ const api = {
   signInWithEmail: vi.fn(),
   sendPasswordReset: vi.fn(),
   signInWithGoogle: vi.fn(),
+  signInWithApple: vi.fn(),
+  setUsername: vi.fn(),
   signOut: vi.fn(),
   deleteAccount: vi.fn(),
 };
@@ -221,7 +223,7 @@ describe('the email sheet: create account', () => {
     expect(api.signUpWithEmail).toHaveBeenCalledWith({
       email: 'ada@example.com',
       password: 'secret12',
-      displayName: 'Ada Lovelace',
+      username: 'Ada Lovelace',
     });
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });

@@ -40,6 +40,93 @@ service cloud.firestore {
       allow delete: if signedInAs(uid);
     }
 
+    // ---- USERNAMES AND PROFILES ---------------------------------------------------
+    // Two documents that only ever change together (src/cloud/usernames.ts):
+    //
+    //   usernames/{handle} = { uid, createdAt }                  the claim; the id IS the username
+    //   profiles/{uid}     = { username, createdAt, updatedAt }  the person's side of it
+    //
+    // A handle is unique because it is a document id: a second create of the same id is an
+    // update, and updates are refused. The rules below tie the two documents together with
+    // getAfter/existsAfter, which look at the state a batch or transaction WOULD leave:
+    //   - a handle can be created only by a profile that names it in the same commit;
+    //   - a profile can name only a handle its owner holds, as of the end of the commit;
+    //   - changing the name must free the old handle in the same commit;
+    //   - a handle can be deleted only by its owner, and only if their profile no longer names it.
+    // Nobody can list either collection; a handle can be looked up by its id alone, even
+    // before sign-in, because the sign-up form asks "is it free?" while the person types.
+
+    // 3 to 20 characters: a-z, 0-9, . and _; a letter or digit at each end; not a reserved word.
+    // (The same shape as src/cloud/username.ts, kept in step by a test.)
+    function validHandle(handle) {
+      return handle is string
+        && handle.matches('^[a-z0-9][a-z0-9._]{1,18}[a-z0-9]$')
+        && !(handle in ['admin', 'administrator', 'guitarrot', 'moderator', 'official', 'root', 'staff', 'support', 'system']);
+    }
+
+    function handleDoc(handle) {
+      return /databases/$(database)/documents/usernames/$(handle);
+    }
+
+    function profileDoc(uid) {
+      return /databases/$(database)/documents/profiles/$(uid);
+    }
+
+    match /usernames/{handle} {
+      allow get: if true;
+      allow list: if false;
+
+      allow create: if request.auth != null
+        && validHandle(handle)
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.keys().hasAll(['uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && existsAfter(profileDoc(request.auth.uid))
+        && getAfter(profileDoc(request.auth.uid)).data.username == handle;
+
+      allow update: if false;
+
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && (!existsAfter(profileDoc(request.auth.uid))
+          || getAfter(profileDoc(request.auth.uid)).data.username != handle);
+    }
+
+    match /profiles/{uid} {
+      function wellFormed() {
+        let doc = request.resource.data;
+        return doc.keys().hasOnly(['username', 'createdAt', 'updatedAt'])
+          && doc.keys().hasAll(['username', 'createdAt', 'updatedAt'])
+          && validHandle(doc.username)
+          && doc.createdAt is timestamp
+          && doc.updatedAt == request.time;
+      }
+
+      // The profile's username is held by this person once the commit is done.
+      function holdsHandle() {
+        let handle = request.resource.data.username;
+        return existsAfter(handleDoc(handle)) && getAfter(handleDoc(handle)).data.uid == uid;
+      }
+
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list: if false;
+
+      allow create: if request.auth != null && request.auth.uid == uid
+        && wellFormed()
+        && request.resource.data.createdAt == request.time
+        && holdsHandle();
+
+      allow update: if request.auth != null && request.auth.uid == uid
+        && wellFormed()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && holdsHandle()
+        && (request.resource.data.username == resource.data.username
+          || !existsAfter(handleDoc(resource.data.username)));
+
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
     // ---- LEADERBOARD ----------------------------------------------------------
     // The leaderboard phase adds its own `match /leaderboard/...` block right here,
     // with its own rules. Nothing below needs to change for it.

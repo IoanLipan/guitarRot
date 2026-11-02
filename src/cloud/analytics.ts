@@ -49,8 +49,10 @@ export type AnalyticsEvents = {
   /** A feed card was on screen for a moment. `level` is the riff's or chord's own difficulty; quiz cards have none. */
   feed_card_view: { kind: string; level?: number };
   /** GA4 recommended events. */
-  sign_up: { method: 'google' | 'password' };
-  login: { method: 'google' | 'password' };
+  sign_up: { method: 'google' | 'apple' | 'password' };
+  login: { method: 'google' | 'apple' | 'password' };
+  /** A username was claimed or changed. Never the name itself. */
+  username_set: Record<string, never>;
   leaderboard_view: Record<string, never>;
 };
 

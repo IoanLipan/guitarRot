@@ -27,7 +27,7 @@ import { emptyProgressState, type ProgressState } from '@/progress';
 import { deleteAccount, signOut, signUpWithEmail } from './auth';
 import { AUTH_EMULATOR, cloud, EMULATOR_PROJECT_ID, FIRESTORE_EMULATOR } from './config';
 import { onBeforeAccountDelete } from './deleteHooks';
-import { uniqueEmail } from './emulatorKit';
+import { uniqueEmail, uniqueUsername } from './emulatorKit';
 import { getFirebaseAuth, getFirestoreDb, loadFirestoreSdk } from './firebase';
 import { remoteDocData } from './remoteProgress';
 import { connectSync, deleteCloudProgress, startSync, type SyncSession, type SyncStatus } from './sync';
@@ -82,7 +82,7 @@ type Device = {
 /** Makes a person, signed in on this process's default app (device A). */
 async function newPerson(): Promise<{ uid: string; email: string }> {
   const email = uniqueEmail('sync');
-  await signUpWithEmail({ email, password: PASSWORD, displayName: 'Ada' });
+  await signUpWithEmail({ email, password: PASSWORD, username: uniqueUsername('sync') });
   const uid = (await getFirebaseAuth()).currentUser?.uid;
   if (uid === undefined) throw new Error('Not signed in after sign-up.');
   return { uid, email };
