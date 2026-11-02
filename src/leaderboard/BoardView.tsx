@@ -21,18 +21,19 @@ type RowData = { name: string; level: number; score: number; rank: number | null
 
 /**
  * One player: place, name, level, XP. The place and the XP are in the display
- * face like the You tab's other numbers. The name gets whatever width is left
- * and is cut with an ellipsis, so a 20-character name still fits a 320px phone.
+ * face like the You tab's other numbers. The XP stacks its label under the
+ * number, and "You" sits on the level line, so the name gets the rest of the
+ * width (about 115px on a 320px phone, enough for most names) and is cut with an ellipsis.
  */
 function Row({ row, you, testId }: { row: RowData; you: boolean; testId: string }) {
   return (
     <li
       data-testid={testId}
       data-you={you ? 'true' : undefined}
-      className={`flex min-h-14 items-center gap-3 rounded-2xl px-3 py-2 ${you ? 'bg-surface-3' : ''}`}
+      className={`flex min-h-14 items-center gap-2.5 rounded-2xl px-2.5 py-2 ${you ? 'bg-surface-3' : ''}`}
     >
       <span
-        className={`font-display w-9 shrink-0 text-center text-[32px] leading-none font-black tabular-nums ${
+        className={`font-display w-8 shrink-0 text-center text-[30px] leading-none font-black tabular-nums ${
           row.rank !== null && row.rank <= 3 ? 'text-ink' : 'text-ink-dim'
         }`}
         data-testid={`${testId}-rank`}
@@ -41,22 +42,20 @@ function Row({ row, you, testId }: { row: RowData; you: boolean; testId: string 
         <span className="sr-only">{row.rank === null ? ' No place yet' : ''}</span>
       </span>
       <div className="flex min-w-0 flex-1 flex-col">
-        <p className="flex items-center gap-2 text-body leading-tight font-extrabold">
-          <span className="truncate" data-testid={`${testId}-name`}>
-            {row.name}
-          </span>
-          {you && <span className="shrink-0 rounded-full bg-surface-2 px-2 text-label leading-5 font-bold text-ink">You</span>}
+        <p className="truncate text-body leading-tight font-extrabold" data-testid={`${testId}-name`}>
+          {row.name}
         </p>
-        <p className="flex items-center gap-1.5 text-meta leading-tight text-ink-dim">
-          <Pick tier={tierForLevel(row.level)} category="streak" size={13} />
+        <p className="flex items-center gap-1.5 text-meta leading-tight whitespace-nowrap text-ink-dim">
+          <Pick tier={tierForLevel(row.level)} category="streak" size={13} className="shrink-0" />
           Level {row.level}
+          {you && <span className="shrink-0 rounded-full bg-surface-2 px-1.5 text-label leading-5 font-bold text-ink">You</span>}
         </p>
       </div>
       <p className="shrink-0 text-right leading-none">
-        <span className="font-display text-[32px] font-black tabular-nums" data-testid={`${testId}-xp`}>
+        <span className="font-display block text-[30px] font-black tabular-nums" data-testid={`${testId}-xp`}>
           {formatXp(row.score)}
         </span>
-        <span className="ml-1 text-meta text-ink-dim">XP</span>
+        <span className="block pt-0.5 text-label leading-none text-ink-dim">XP</span>
       </p>
     </li>
   );
