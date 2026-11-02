@@ -107,6 +107,7 @@ describe('useProgress: cloud sync hooks', () => {
     const { result } = await loadedHook();
     act(() => {
       result.current.updateSettings({ toneId: 'clean', instrumentChosen: true });
+      result.current.record({ type: 'lesson-done', lessonId: 'strings' });
     });
 
     act(() => {

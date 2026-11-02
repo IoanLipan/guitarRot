@@ -234,7 +234,11 @@ describe('mergeProgress: field by field', () => {
 
     it('stay this phone’s own', () => {
       const merged = mergeProgress(
-        local({ instrument: 'guitar', instrumentChosen: true, toneId: 'clean', preferFlats: true, defaultSpeed: 0.5 }),
+        // Played a little, so not a new phone.
+        {
+          ...local({ instrument: 'guitar', instrumentChosen: true, toneId: 'clean', preferFlats: true, defaultSpeed: 0.5 }),
+          xp: 10,
+        },
         local({ instrument: 'ukulele', instrumentChosen: true, toneId: 'acoustic', preferFlats: false, defaultSpeed: 1.5 }),
       );
       expect(merged.settings).toMatchObject({
@@ -267,6 +271,19 @@ describe('mergeProgress: field by field', () => {
       });
     });
 
+    it('a phone that chose a moment ago but has played nothing takes the account’s instrument too', () => {
+      const newPhone = local({ instrument: 'guitar', instrumentChosen: true, toneId: 'acoustic' });
+      const account = local({ instrument: 'ukulele', instrumentChosen: true, toneId: 'uke-soft' });
+      const merged = mergeProgress(newPhone, { ...account, xp: 300, lessonsDone: ['a'] });
+      expect(merged.settings).toMatchObject({ instrument: 'ukulele', instrumentChosen: true, toneId: 'uke-soft' });
+    });
+
+    it('a phone that has played anything keeps its own instrument', () => {
+      const played = { ...local({ instrument: 'guitar', instrumentChosen: true }), xp: 5 };
+      const account = { ...local({ instrument: 'ukulele', instrumentChosen: true }), xp: 300 };
+      expect(mergeProgress(played, account).settings.instrument).toBe('guitar');
+    });
+
     it('a phone that chose, merged with an account that never did, stays chosen on its own instrument', () => {
       const merged = mergeProgress(
         local({ instrument: 'ukulele', instrumentChosen: true }),
@@ -292,6 +309,16 @@ describe('mergeProgress: the whole state', () => {
   it('merging with a fresh state changes nothing that matters', () => {
     const progress = busyState(7);
     expect(mergeProgress(progress, emptyProgressState())).toEqual(progress);
+  });
+
+  it('settles the same way whichever way round a new phone and its account are merged', () => {
+    const newPhone = { ...emptyProgressState(), settings: { ...emptyProgressState().settings, instrumentChosen: true } };
+    const account = busyState(5);
+    account.settings = { ...account.settings, instrument: 'ukulele', instrumentChosen: true };
+    const once = mergeProgress(newPhone, account);
+    expect(once.settings.instrument).toBe('ukulele');
+    expect(mergeProgress(account, newPhone).settings.instrument).toBe('ukulele');
+    expect(mergeProgress(newPhone, once)).toEqual(once);
   });
 
   it('merging into a fresh state brings everything over (a new phone signing in)', () => {

@@ -4,6 +4,7 @@ import {
   DAILY_KEEP_DAYS,
   PROGRESS_VERSION,
   QUIZ_DIFFICULTIES,
+  emptyProgressState,
   emptyQuizBests,
   pruneDaily,
   type DailyStat,
@@ -57,8 +58,13 @@ export function mergeProgress(local: ProgressState, remote: ProgressState): Prog
     srs: mergeSrs(local.srs, remote.srs),
     // What was shown on this phone is this phone's business.
     seenContent: [...local.seenContent],
-    settings: mergeSettings(local.settings, remote.settings),
+    settings: mergeSettings(local.settings, remote.settings, isPristine(local)),
   };
+}
+
+/** Nothing earned yet: a phone fresh out of the box, whatever it has been told about the instrument. */
+function isPristine(state: ProgressState): boolean {
+  return syncSignature(state) === syncSignature(emptyProgressState());
 }
 
 /** `first`, then whatever `second` has that `first` does not, each in its own order. */
@@ -212,16 +218,17 @@ function mergeSrs(a: Record<string, SrsItem>, b: Record<string, SrsItem>): Recor
 
 /**
  * Settings are this device's preferences, so the local ones stay, with one
- * exception: a device that has never been asked which instrument is learned
- * (a fresh install being signed in) takes the account's instrument and
- * voicings, or it would land on the guitar with a ukulele player's lessons.
- * Anything else, such as a consent switch, is never carried over from another
- * phone. Once either side has chosen, the device counts as having chosen.
+ * exception: a phone that has nothing yet (never asked which instrument is
+ * learned, or asked a moment ago and not played since: the first screen of a
+ * new phone asks before there is any way to sign in) takes the account's
+ * instrument and voicings, or it would land on the guitar with a ukulele
+ * player's lessons. Anything else, such as a consent switch, is never carried
+ * over from another phone. Once either side has chosen, the phone counts as
+ * having chosen.
  */
-function mergeSettings(local: Settings, remote: Settings): Settings {
-  if (local.instrumentChosen || !remote.instrumentChosen) {
-    return { ...local, toneByInstrument: { ...local.toneByInstrument } };
-  }
+function mergeSettings(local: Settings, remote: Settings, localIsPristine: boolean): Settings {
+  const adopt = remote.instrumentChosen && (!local.instrumentChosen || localIsPristine);
+  if (!adopt) return { ...local, toneByInstrument: { ...local.toneByInstrument } };
   return {
     ...local,
     instrument: remote.instrument,
