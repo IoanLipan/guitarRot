@@ -23,6 +23,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (!cloudEnabled || uid === null) return;
     let cancelled = false;
     let stop: (() => void) | undefined;
+    // Its own chunk, fetched only once somebody is signed in: a build without accounts, or a signed-out visit, never asks for it.
     void import('./usernames')
       .then(({ watchProfile }) => {
         if (!cancelled) stop = watchProfile(uid, (state) => setProfile({ uid, state }));

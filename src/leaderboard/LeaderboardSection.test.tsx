@@ -206,6 +206,37 @@ describe('signed in, not on the board', () => {
     expect(board()).not.toHaveTextContent('ada.lovelace');
   });
 
+  it('asks a person with no username to pick one first, instead of offering a join with a name from somewhere else', () => {
+    const open = vi.fn();
+    render(
+      <OpenAccountSheetProvider value={open}>
+        <ProfileContext.Provider value={{ status: 'ready', username: null }}>
+          <AccountContext.Provider value={account({})}>
+            <LeaderboardSection progress={progressWith()} />
+          </AccountContext.Provider>
+        </ProfileContext.Provider>
+      </OpenAccountSheetProvider>,
+    );
+    show({ entry: null, pending: false });
+
+    expect(board()).toHaveAttribute('data-state', 'needs-username');
+    expect(screen.queryByTestId('lb-join')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Pick a username' }));
+    expect(open).toHaveBeenCalledWith('username');
+  });
+
+  it('keeps a person who is already on the board on it, whatever their username says', () => {
+    render(
+      <ProfileContext.Provider value={{ status: 'ready', username: null }}>
+        <AccountContext.Provider value={account({})}>
+          <LeaderboardSection progress={progressWith()} />
+        </AccountContext.Provider>
+      </ProfileContext.Provider>,
+    );
+    show({ entry: ME, pending: false });
+    expect(board()).toHaveAttribute('data-state', 'joined');
+  });
+
   it('prefills with the username, so joining is one tap', () => {
     render(
       <ProfileContext.Provider value={{ status: 'ready', username: 'ada_l' }}>

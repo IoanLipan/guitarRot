@@ -168,19 +168,26 @@ export function claimIn(db: Firestore, sdk: FirestoreSdk, uid: string, handle: s
 export async function removeUsername(uid: string): Promise<void> {
   const { db, sdk } = await open();
   const profileRef = sdk.doc(db, PROFILES_COLLECTION, uid);
-  await withinTime(
-    sdk.runTransaction(db, async (transaction) => {
-      const profile = await transaction.get(profileRef);
-      if (!profile.exists()) return;
-      const username = (profile.data() as { username?: unknown }).username;
-      const claimRef = typeof username === 'string' ? sdk.doc(db, USERNAMES_COLLECTION, username) : null;
-      const claim = claimRef === null ? null : await transaction.get(claimRef);
-      if (claimRef !== null && claim?.exists() === true && (claim.data() as { uid?: unknown }).uid === uid) {
-        transaction.delete(claimRef);
-      }
-      transaction.delete(profileRef);
-    }),
-  );
+  try {
+    await withinTime(
+      sdk.runTransaction(db, async (transaction) => {
+        const profile = await transaction.get(profileRef);
+        if (!profile.exists()) return;
+        const username = (profile.data() as { username?: unknown }).username;
+        const claimRef = typeof username === 'string' ? sdk.doc(db, USERNAMES_COLLECTION, username) : null;
+        const claim = claimRef === null ? null : await transaction.get(claimRef);
+        if (claimRef !== null && claim?.exists() === true && (claim.data() as { uid?: unknown }).uid === uid) {
+          transaction.delete(claimRef);
+        }
+        transaction.delete(profileRef);
+      }),
+    );
+  } catch (error) {
+    // A project whose rules do not have the `profiles` block yet refuses even the read of one's own profile,
+    // and then there can be none: nothing is stored, so nothing is left behind, and deleting the account must
+    // not be blocked on that. (With the rules deployed, a person can always read and delete their own.)
+    if (firestoreCode(error) !== 'permission-denied') throw error;
+  }
 }
 
 /** Cleans up the profile and the handle when an account is deleted (see ./deleteHooks), after every other clean-up has worked. */

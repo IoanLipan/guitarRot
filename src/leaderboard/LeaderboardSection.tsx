@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type R
 import { useAccount } from '@/cloud/AccountProvider';
 import { useOpenAccountSheet } from '@/cloud/AccountSheetContext';
 import { Field } from '@/cloud/Field';
-import { useProfile } from '@/cloud/ProfileProvider';
+import { needsUsername, useProfile } from '@/cloud/ProfileProvider';
 import type { AccountUser } from '@/cloud/types';
 import type { ProgressHandle } from '@/app/useProgress';
 import { ConfirmDialog } from '@/game/ConfirmDialog';
@@ -235,6 +235,7 @@ export function LeaderboardSection({
   onView?: () => void;
 }) {
   const account = useAccount();
+  const profile = useProfile();
   const openSheet = useOpenAccountSheet();
   const online = useOnline();
   const [attempt, setAttempt] = useState(0);
@@ -326,6 +327,23 @@ export function LeaderboardSection({
         <div aria-hidden="true" className="h-5 w-4/5 rounded-full bg-surface-2" />
         <div aria-hidden="true" className="h-12 rounded-full bg-surface-2" />
         <div aria-hidden="true" className="h-12 rounded-full bg-surface-2" />
+      </Card>
+    );
+  }
+
+  // Joining shows the username to everyone, so a person who has none yet picks it first (the Account card has the one amber button for that).
+  if (joined === null && needsUsername(account, profile)) {
+    return (
+      <Card state="needs-username" delay={delay}>
+        <p className="text-body leading-snug text-ink-dim">Pick a username to join the leaderboard. It’s the name other players see.</p>
+        <button
+          type="button"
+          onClick={() => openSheet('username')}
+          data-testid="lb-pick-username"
+          className="press flex min-h-12 items-center justify-center rounded-full bg-surface-2 px-4 text-base font-bold text-ink"
+        >
+          Pick a username
+        </button>
       </Card>
     );
   }

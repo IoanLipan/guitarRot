@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Style, StatusBar } from '@capacitor/status-bar';
 import { getToneProfile } from '@/audio';
 import { analyticsAvailable, track } from '@/cloud/analytics';
-import { AccountSheet } from '@/cloud/AccountSheet';
 import { OpenAccountSheetProvider, type AccountSheetIntent } from '@/cloud/AccountSheetContext';
 import { useAccount } from '@/cloud/AccountProvider';
 import { ConsentSheet } from '@/cloud/ConsentSheet';
@@ -38,6 +37,10 @@ import { useWakeAudio } from './useWakeAudio';
 import { GearIcon } from '@/ui/icons';
 import { useViewTransition } from '@/ui/motion';
 import { AndroidAppBanner } from './AndroidAppBanner';
+
+// The account sheet is its own chunk, fetched only in a build that has accounts (it is never rendered, so never
+// requested, where they are off): that build's first download stays what it was.
+const AccountSheet = lazy(() => import('@/cloud/AccountSheet').then((module) => ({ default: module.AccountSheet })));
 
 export function AppShell() {
   const { ready, engine, loading, failed, start } = useAudioEngine();
@@ -271,7 +274,11 @@ export function AppShell() {
   }
 
   const accountSheet =
-    account.status === 'disabled' ? null : <AccountSheet intent={accountIntent} onClose={() => setAccountIntent(null)} />;
+    account.status === 'disabled' ? null : (
+      <Suspense fallback={null}>
+        <AccountSheet intent={accountIntent} onClose={() => setAccountIntent(null)} />
+      </Suspense>
+    );
 
   if (!ready || engine === null) {
     return (

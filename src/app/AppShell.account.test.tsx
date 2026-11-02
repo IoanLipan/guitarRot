@@ -13,7 +13,14 @@ const world = vi.hoisted(() => ({
   engine: null as unknown as AudioEngine,
   /** How many times any part of the Firebase SDK was imported (a mock factory runs on first import). */
   firebaseImports: 0,
+  /** How many times the account sheet's chunk was asked for. */
+  sheetImports: 0,
 }));
+
+vi.mock('@/cloud/AccountSheet', async (importOriginal) => {
+  world.sheetImports += 1;
+  return importOriginal<typeof import('@/cloud/AccountSheet')>();
+});
 
 for (const part of ['firebase/app', 'firebase/auth', 'firebase/firestore', '@capacitor-firebase/authentication']) {
   vi.doMock(part, () => {
@@ -80,6 +87,8 @@ function withAccount(api: Partial<AccountApi>, children: ReactNode) {
 
 async function openApp(ui: ReactNode = <AppShell />) {
   render(ui);
+  // The account sheet is its own chunk; let it arrive, the way it has by the time anybody taps.
+  await act(() => vi.dynamicImportSettled());
   await act(async () => {
     fireEvent.click(screen.getByTestId('start-feed'));
   });
@@ -113,6 +122,8 @@ describe('the app shell and accounts', () => {
       await new Promise((resolve) => setTimeout(resolve, 400));
     });
     expect(world.firebaseImports).toBe(0);
+    // The sheet's code is not even downloaded: the first download of a build without accounts is what it was.
+    expect(world.sheetImports).toBe(0);
   });
 
   it('puts the Account card in the You tab, and an Account row in Settings, once there are accounts', async () => {
@@ -123,6 +134,12 @@ describe('the app shell and accounts', () => {
 
     openSettings();
     expect(screen.getByTestId('settings-account-row')).toHaveTextContent('Create account or sign in');
+  });
+
+  it('fetches the account sheet only in a build that has accounts', async () => {
+    await openApp(withAccount({}, <AppShell />));
+    // (A mock factory runs on the first import only, so once is all there is to count.)
+    expect(world.sheetImports).toBe(1);
   });
 
   it('opens the one account sheet from the You tab, over the You tab', async () => {

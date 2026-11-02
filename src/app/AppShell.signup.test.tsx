@@ -126,8 +126,15 @@ function earn(event: AwardNotice['event'], award = { ...NO_AWARD, xp: 20 }) {
 const LESSON_DONE: AwardNotice['event'] = { type: 'lesson-done', lessonId: 'any' };
 const pressBack = () => act(() => world.backButton?.());
 
+/** Renders the shell and lets the account sheet's own chunk arrive, the way it has by the time anybody taps. */
+async function mount(ui: ReactNode) {
+  const view = render(ui);
+  await act(() => vi.dynamicImportSettled());
+  return view;
+}
+
 async function openApp(ui: ReactNode, button = 'start-feed') {
-  render(ui);
+  await mount(ui);
   await act(async () => {
     fireEvent.click(screen.getByTestId(button));
   });
@@ -151,7 +158,7 @@ afterEach(() => {
 
 describe('the start screen', () => {
   it('has a quiet "I already have an account" for somebody signed out, and it opens sign-in over the start screen', async () => {
-    render(withAccount({}, <AppShell />));
+    await mount(withAccount({}, <AppShell />));
     const link = screen.getByTestId('start-sign-in');
     expect(link).toHaveTextContent('I already have an account');
 
@@ -163,9 +170,9 @@ describe('the start screen', () => {
     expect(screen.getByTestId('start-feed')).toBeInTheDocument();
   });
 
-  it('is on the first question (guitar or ukulele) of a new phone as well', () => {
+  it('is on the first question (guitar or ukulele) of a new phone as well', async () => {
     world.progress = progressWithAwards(emptyProgressState());
-    render(withAccount({}, <AppShell />));
+    await mount(withAccount({}, <AppShell />));
     expect(screen.getByRole('heading', { name: 'What do you play?' })).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('start-sign-in'));
     expect(screen.getByTestId('account-sheet-title')).toHaveTextContent('Sign in');
@@ -186,8 +193,7 @@ describe('the start screen', () => {
   });
 
   it('closes the sheet on Back before it leaves the app', async () => {
-    render(withAccount({}, <AppShell />));
-    await act(async () => undefined);
+    await mount(withAccount({}, <AppShell />));
     fireEvent.click(screen.getByTestId('start-sign-in'));
     expect(screen.getByTestId('account-sheet')).toHaveAttribute('data-state', 'open');
 
@@ -209,7 +215,7 @@ describe('the start screen', () => {
       });
       return withAccount(account, <AppShell />, account.status === 'signed-in' ? { status: 'ready', username: 'ada_l' } : NO_PROFILE);
     }
-    render(<Harness />);
+    await mount(<Harness />);
 
     fireEvent.click(screen.getByTestId('start-sign-in'));
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'ada@example.com' } });
