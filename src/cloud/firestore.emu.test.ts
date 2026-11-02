@@ -1,7 +1,7 @@
 /**
- * Phase 1 only wires Firestore up; this checks the wiring reaches the
- * emulator and that the placeholder rules (firestore.rules) deny everything,
- * so nothing can be read or written until the sync phase writes real rules.
+ * Checks the app's Firestore wiring reaches the emulator, and that the rules
+ * (firestore.rules) refuse a request from nobody signed in. What a signed-in
+ * person can and can not do is in firestore.rules.emu.test.ts.
  */
 import { describe, expect, it } from 'vitest';
 import { getFirebaseApp, getFirestoreDb, loadFirestoreSdk } from './firebase';
@@ -13,7 +13,7 @@ describe('Firestore, against the emulator', () => {
     expect((await getFirebaseApp()).options.projectId).toBe('demo-guitarrot');
   });
 
-  it('reaches the emulator, whose placeholder rules refuse every read and write', async () => {
+  it('reaches the emulator, whose rules refuse a read or write from nobody signed in', async () => {
     const db = await getFirestoreDb();
     const { doc, getDoc, setDoc } = await loadFirestoreSdk();
 
