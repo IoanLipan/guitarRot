@@ -26,6 +26,11 @@ export type CloudConfig = {
   emulators: boolean;
   /** What to initialise the Firebase app with; null while disabled. */
   firebase: FirebaseWebConfig | null;
+  /**
+   * Show "Continue with Apple". Off until the project has Apple's sign-in set up (a paid Apple Developer
+   * account, a Services ID and a key: docs/ACCOUNTS.md), because a button that cannot work is worse than none.
+   */
+  appleSignIn: boolean;
 };
 
 /** The only project the emulators ever see. The `demo-` prefix keeps them offline by design. */
@@ -51,6 +56,7 @@ export type CloudEnv = Readonly<{
   VITE_FIREBASE_MESSAGING_SENDER_ID?: string;
   VITE_FIREBASE_MEASUREMENT_ID?: string;
   VITE_FIREBASE_EMULATORS?: string;
+  VITE_AUTH_APPLE?: string;
 }>;
 
 function present(value: string | undefined): value is string {
@@ -63,8 +69,9 @@ function present(value: string | undefined): value is string {
  * the real project by running against the emulators.
  */
 export function readCloudConfig(env: CloudEnv): CloudConfig {
+  const appleSignIn = env.VITE_AUTH_APPLE === '1';
   if (env.VITE_FIREBASE_EMULATORS === '1') {
-    return { enabled: true, emulators: true, firebase: EMULATOR_CONFIG };
+    return { enabled: true, emulators: true, firebase: EMULATOR_CONFIG, appleSignIn };
   }
   const { VITE_FIREBASE_API_KEY: apiKey, VITE_FIREBASE_AUTH_DOMAIN: authDomain } = env;
   const { VITE_FIREBASE_PROJECT_ID: projectId, VITE_FIREBASE_APP_ID: appId } = env;
@@ -76,12 +83,13 @@ export function readCloudConfig(env: CloudEnv): CloudConfig {
     !present(appId) ||
     !present(messagingSenderId)
   ) {
-    return { enabled: false, emulators: false, firebase: null };
+    return { enabled: false, emulators: false, firebase: null, appleSignIn: false };
   }
   const measurementId = env.VITE_FIREBASE_MEASUREMENT_ID;
   return {
     enabled: true,
     emulators: false,
+    appleSignIn,
     firebase: {
       apiKey,
       authDomain,
@@ -105,7 +113,13 @@ export const cloud: CloudConfig = readCloudConfig({
   VITE_FIREBASE_MESSAGING_SENDER_ID: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   VITE_FIREBASE_MEASUREMENT_ID: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
   VITE_FIREBASE_EMULATORS: import.meta.env.VITE_FIREBASE_EMULATORS,
+  VITE_AUTH_APPLE: import.meta.env.VITE_AUTH_APPLE,
 });
 
 /** True when this build has cloud features. */
 export const cloudEnabled: boolean = cloud.enabled;
+
+/** True when the Apple button should be shown: cloud features on, and Apple's sign-in switched on for the build. */
+export function appleSignInAvailable(): boolean {
+  return cloud.enabled && cloud.appleSignIn;
+}

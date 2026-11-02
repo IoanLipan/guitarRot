@@ -11,7 +11,7 @@ const COMPLETE = {
 
 describe('readCloudConfig', () => {
   it('is off with nothing configured', () => {
-    expect(readCloudConfig({})).toEqual({ enabled: false, emulators: false, firebase: null });
+    expect(readCloudConfig({})).toEqual({ enabled: false, emulators: false, firebase: null, appleSignIn: false });
   });
 
   it('is on with a complete web config, and keeps the measurement id only when given', () => {
@@ -50,6 +50,17 @@ describe('readCloudConfig', () => {
     expect(config.firebase?.apiKey).not.toBe('AIza-key');
   });
 
+  it('shows the Apple button only for a literal 1, and only where there are cloud features', () => {
+    expect(readCloudConfig(COMPLETE).appleSignIn).toBe(false);
+    expect(readCloudConfig({ ...COMPLETE, VITE_AUTH_APPLE: '1' }).appleSignIn).toBe(true);
+    expect(readCloudConfig({ VITE_FIREBASE_EMULATORS: '1', VITE_AUTH_APPLE: '1' }).appleSignIn).toBe(true);
+    for (const value of ['0', 'true', '', 'yes', ' 1']) {
+      expect(readCloudConfig({ ...COMPLETE, VITE_AUTH_APPLE: value }).appleSignIn, value).toBe(false);
+    }
+    // Without a Firebase config there is no account UI at all, whatever the flag says.
+    expect(readCloudConfig({ VITE_AUTH_APPLE: '1' })).toEqual({ enabled: false, emulators: false, firebase: null, appleSignIn: false });
+  });
+
   it('only a literal 1 switches the emulators on', () => {
     for (const value of ['0', 'true', '', 'yes']) {
       expect(readCloudConfig({ VITE_FIREBASE_EMULATORS: value }).enabled).toBe(false);
@@ -80,6 +91,13 @@ describe('cloudEnabled, as the build reads it from the environment', () => {
     const { cloudEnabled, cloud } = await freshConfig();
     expect(cloudEnabled).toBe(true);
     expect(cloud.firebase?.projectId).toBe('guitarrot');
+  });
+
+  it('reads the Apple switch from the environment, off by default', async () => {
+    vi.stubEnv('VITE_FIREBASE_EMULATORS', '1');
+    expect((await freshConfig()).appleSignInAvailable()).toBe(false);
+    vi.stubEnv('VITE_AUTH_APPLE', '1');
+    expect((await freshConfig()).appleSignInAvailable()).toBe(true);
   });
 
   it('is true with the emulator switch alone', async () => {
