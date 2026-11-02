@@ -88,3 +88,15 @@ export class AccountError extends Error {
     return this.code === 'cancelled';
   }
 }
+
+/**
+ * An email sign-up that made the account but could not give it the username (somebody claimed it
+ * a moment earlier, or the connection dropped). The person IS signed in; what is missing is the
+ * username, so the sheet asks for another one rather than for the whole form again.
+ */
+export class UsernameMissingError extends AccountError {
+  constructor(cause: AccountError) {
+    super(cause.code, cause.message, 'username');
+    this.name = 'UsernameMissingError';
+  }
+}

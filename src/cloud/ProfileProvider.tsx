@@ -5,7 +5,8 @@ import type { ProfileState } from './types';
 
 const UNKNOWN: ProfileState = { status: 'unknown', username: null };
 
-const ProfileContext = createContext<ProfileState>(UNKNOWN);
+/** Exported so a test can say what the profile is without a Firestore behind it. */
+export const ProfileContext = createContext<ProfileState>(UNKNOWN);
 
 /**
  * Follows the signed-in person's profile (their username) for the whole app. It does nothing, and

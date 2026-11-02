@@ -13,7 +13,7 @@ import {
   watchAccount,
 } from './auth';
 import { onBeforeAccountDelete } from './deleteHooks';
-import { AccountError, type AccountState } from './types';
+import { AccountError, UsernameMissingError, type AccountState } from './types';
 
 // The Firebase SDK is stood in for: these tests are about what the service asks of it, and in what order.
 const sdk = vi.hoisted(() => {
@@ -203,6 +203,8 @@ describe('email and password', () => {
     usernames.checkUsername.mockResolvedValue('taken');
     const error = await failure(signUpWithEmail({ email: 'a@b.co', password: 'secret12', username: 'ada' }));
     expect(error).toMatchObject({ code: 'username-taken', field: 'username' });
+    // Refused up front: no account was made, so this is not the signed-in-without-a-name case.
+    expect(error).not.toBeInstanceOf(UsernameMissingError);
     expect(sdk.createUserWithEmailAndPassword).not.toHaveBeenCalled();
   });
 
@@ -220,6 +222,7 @@ describe('email and password', () => {
     const error = await failure(signUpWithEmail({ email: 'a@b.co', password: 'secret12', username: 'ada' }));
 
     expect(error).toMatchObject({ code: 'username-taken', field: 'username' });
+    expect(error).toBeInstanceOf(UsernameMissingError);
     expect(sdk.createUserWithEmailAndPassword).toHaveBeenCalledTimes(1);
     expect(sdk.deleteUser).not.toHaveBeenCalled();
     expect(sdk.updateProfile).not.toHaveBeenCalled();

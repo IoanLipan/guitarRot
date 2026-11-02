@@ -31,6 +31,7 @@ import {
   type DeleteAccountInput,
   type SignInInput,
   type SignUpInput,
+  UsernameMissingError,
 } from './types';
 import { normalizeUsername, validateUsername } from './username';
 import { checkUsername, claimUsername, registerProfileCleanup } from './usernames';
@@ -158,9 +159,11 @@ export async function signUpWithEmail({ email, password, username }: SignUpInput
     track('sign_up', { method: 'password' });
     // A courtesy, never a gate: the app works unverified, and a failure here is no one's problem.
     void sdk.sendEmailVerification(user).catch(() => undefined);
-    // The account exists now. If the name is lost to someone who was a moment faster, this throws and the
-    // person is signed in without a username: the sheet then asks for another one.
-    await giveUsername(sdk, user, handle);
+    // The account exists now. If the name is lost to someone who was a moment faster, the person is signed in
+    // without a username: the sheet then asks for another one.
+    await giveUsername(sdk, user, handle).catch((error: unknown) => {
+      throw new UsernameMissingError(toAccountError(error));
+    });
   } catch (error) {
     throw toAccountError(error);
   }

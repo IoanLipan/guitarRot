@@ -27,5 +27,7 @@ export {
   type AccountUser,
   type DeleteAccountInput,
   type SignInInput,
+  type ProfileState,
   type SignUpInput,
+  UsernameMissingError,
 } from './types';
