@@ -9,6 +9,7 @@ import { emptyCursor, generateFeedPage, type FeedCursor, type FeedItem } from '.
 import { QuizCard } from './QuizCard';
 import { RiffCard } from './RiffCard';
 import { useActiveCard } from './useActiveCard';
+import { useCardViewTracking } from './useCardViewTracking';
 
 /** Cards fetched per page, and how close to the end triggers the next one. */
 const PAGE_SIZE = 8;
@@ -52,6 +53,8 @@ export function Feed({
   const { activeIndex, containerRef, cardProps, scrollToCard, shiftActiveIndex } = useActiveCard(
     items.length,
   );
+  // Which kinds of card get looked at, for the opt-in usage analytics (a no-op without consent).
+  useCardViewTracking(items[activeIndex]);
   /** Height to claw back from the scroller after cards are dropped. */
   const scrollDebtRef = useRef(0);
 

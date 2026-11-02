@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -7,6 +7,21 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <!-- Usage analytics (src/cloud/analytics.ts) is opt-in. Firebase Analytics starts OFF:
+             nothing is collected until the person says yes in the app, which turns it on
+             (FirebaseAnalytics.setEnabled) and keeps it on across launches; saying no turns it
+             off again. Advertising is never part of it: no advertising ID, no ad personalisation,
+             no ad storage, no SSAID, and no automatic per-activity screen events (the app is one
+             activity; the screens that matter are reported by the app itself). With no
+             google-services.json none of this does anything, the SDK has no project to report to. -->
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_adid_collection_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_ssaid_collection_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_storage" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_user_data" android:value="false" />
+        <meta-data android:name="google_analytics_automatic_screen_reporting_enabled" android:value="false" />
+
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
@@ -31,6 +46,13 @@
     </application>
 
     <!-- Permissions -->
+
+    <!-- The analytics SDK adds the advertising-ID permission, and the two Privacy Sandbox ad
+         permissions, by default. guitarRot has no ads and never reads an advertising ID, so all
+         three are removed: the Play Console's advertising ID question is then a plain "No". -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- The tuner and "play this note" lesson checks listen through the microphone.

@@ -3,6 +3,8 @@ import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Style, StatusBar } from '@capacitor/status-bar';
 import { getToneProfile } from '@/audio';
+import { track } from '@/cloud/analytics';
+import { ConsentSheet } from '@/cloud/ConsentSheet';
 import { courseFor, getSong, riffsFor, songPlayableOn } from '@/content';
 import { InstrumentProvider } from '@/instrument';
 import type { InstrumentId } from '@/music';
@@ -24,6 +26,7 @@ import { useAppLifecycle } from './useAppLifecycle';
 import { useAudioEngine } from './useAudioEngine';
 import { backAction, minimizeApp, useBackButton, type QuizLayer } from './useBackButton';
 import { useProgress } from './useProgress';
+import { useUsageTracking } from './useUsageTracking';
 import { useWakeAudio } from './useWakeAudio';
 import { GearIcon } from '@/ui/icons';
 import { useViewTransition } from '@/ui/motion';
@@ -104,6 +107,7 @@ export function AppShell() {
    */
   function switchInstrument(next: InstrumentId) {
     if (next === instrumentId) return;
+    track('instrument_switch', { to: next });
     // The switch in Learn's header is inside the panes that are remounted, so keyboard focus on it would be lost.
     refocusSwitch.current = document.activeElement?.hasAttribute('data-instrument-switch') === true;
     engine?.stopAll();
@@ -190,6 +194,17 @@ export function AppShell() {
     }
   });
 
+  // What the person does, for the opt-in usage analytics (a no-op without a Firebase config or without consent).
+  useUsageTracking({
+    active: ready && engine !== null,
+    tab,
+    settingsOpen,
+    learnPlace,
+    openSongId,
+    instrumentId,
+    progress,
+  });
+
   const plan = planStart(progress.loaded, progress.state.lessonsDone, courseFor(instrumentId));
   // A lesson has its own close button and its own Next bar, and needs every pixel of height: no tab bar, no gear.
   const inLesson = tab === 'learn' && learnPlace.lessonId !== null;
@@ -262,7 +277,10 @@ export function AppShell() {
                 engine={engine}
                 openSongId={openSongId}
                 onOpenSongChange={setOpenSongId}
-                onSongPlayed={(songId) => progress.record({ type: 'song-played', songId })}
+                onSongPlayed={(songId) => {
+                  track('song_play', { song_id: songId, instrument: instrumentId });
+                  progress.record({ type: 'song-played', songId });
+                }}
               />
             )}
             {tab === 'learn' && (
@@ -319,6 +337,11 @@ export function AppShell() {
         {!inLesson && <TabBar active={tab} onChange={changeTab} />}
 
         <AwardLayer progress={progress} phase={awardPhase} onOpenPick={showPick} />
+
+        {/* Asked once, after the instrument choice, and never over a lesson, a run or Settings. */}
+        <ConsentSheet
+          ready={progress.loaded && progress.state.settings.instrumentChosen && !inLesson && !settingsOpen && quizLayer !== 'run'}
+        />
 
         <SettingsSheet
           open={settingsOpen}

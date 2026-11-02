@@ -15,7 +15,7 @@ export type FirebaseWebConfig = {
   projectId: string;
   appId: string;
   messagingSenderId: string;
-  /** Google Analytics only; the analytics phase reads it. */
+  /** Google Analytics only; usage analytics (./analytics) exists only where this is set. */
   measurementId?: string;
 };
 

@@ -52,6 +52,12 @@ folder; screenshots in `screenshots/`.
 
 ## Data safety (Policy → App content → Data safety)
 
+> These answers are for the build **without** accounts and analytics (1.2.x).
+> Once accounts, sync, the leaderboard or usage analytics ship, the answers
+> change (data is collected, optionally): use the Play Console section of
+> [`docs/ACCOUNTS.md`](../docs/ACCOUNTS.md) instead, and drop "No account. No
+> tracking." from the long description above.
+
 - Does your app collect or share any of the required user data types? **No.**
   - The microphone is used for pitch detection only. Audio is processed
     on-device, in memory, and never stored or transmitted. Google's definition

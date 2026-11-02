@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { getToneProfile, toneProfilesFor, type AudioEngine } from '@/audio';
 import { accountName } from '@/cloud/accountName';
 import { useAccount } from '@/cloud/AccountProvider';
+import { UsageSetting } from '@/cloud/UsageSetting';
 import { ALL_SONGS, getChord } from '@/content';
 import { useFocusTrap } from '@/game/useFocusTrap';
 import { withInstrument } from '@/progress';
@@ -357,6 +358,9 @@ export function SettingsSheet({
             exact pitches, so quizzes are always in tune.
           </p>
         </section>
+
+        {/* "Share anonymous usage": only where the build has analytics. */}
+        <UsageSetting />
 
         <section className="px-6 pt-8" data-testid="about-section">
           <h3 className="label">About</h3>
