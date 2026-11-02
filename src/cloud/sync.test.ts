@@ -114,6 +114,19 @@ describe('signing in: the first merge', () => {
     expect(empty.statuses.at(-1)).toBe('synced');
   });
 
+  it('is saved within a moment when the device and the account already agree, even if told of a change at once', async () => {
+    const server = new FakeServer();
+    const same = progress({ xp: 70, lessonsDone: ['a'] });
+    server.docs.set(PATH, cloudDoc(same));
+    const p = phone(server, same);
+    const session = p.start();
+    // What the app does the moment the sync has started.
+    session.localChanged();
+    await pass(600);
+    expect(p.statuses.at(-1)).toBe('synced');
+    expect(server.accepted).toBe(0);
+  });
+
   it('writes nothing when the device already has everything the account has', async () => {
     const server = new FakeServer();
     const same = progress({ xp: 70, lessonsDone: ['a'] });
@@ -436,6 +449,30 @@ describe('offline', () => {
     await pass(2000);
     expect(p.device.state).toMatchObject({ xp: 400, lessonsDone: ['strings', 'rhythm'] });
     expect(cloudProgress(server)).toMatchObject({ xp: 400, lessonsDone: ['strings', 'rhythm'] });
+    expect(p.statuses.at(-1)).toBe('synced');
+  });
+
+  it('even with the account in its cache, an offline phone holds its writes until the server answers', async () => {
+    const server = new FakeServer();
+    server.docs.set(PATH, cloudDoc(progress({ xp: 100 })));
+    const p = phone(server, progress({ xp: 100 }), { offlineAfterMs: 1000 });
+    const earlier = p.start();
+    await pass(1000);
+    earlier.stop();
+
+    // A later session starts with no connection, with the cached account and progress played since.
+    p.client.setOnline(false);
+    p.device.play((s) => ({ ...s, xp: 150 }));
+    const session = p.start();
+    session.localChanged();
+    await pass(30_000);
+    expect(p.client.queued).toBe(0);
+    expect(server.accepted).toBe(0);
+    expect(p.statuses.at(-1)).toBe('offline');
+
+    p.client.setOnline(true);
+    await pass(2000);
+    expect(cloudProgress(server)).toMatchObject({ xp: 150 });
     expect(p.statuses.at(-1)).toBe('synced');
   });
 

@@ -314,7 +314,13 @@ export function startSync(options: SyncOptions): SyncSession {
     } else {
       remoteSignature = EMPTY_SIGNATURE;
     }
-    if (localSignature() !== remoteSignature) schedule(PUSH_AFTER_MERGE_MS, false);
+    if (localSignature() !== remoteSignature) {
+      schedule(PUSH_AFTER_MERGE_MS, false);
+    } else {
+      // Whatever was waiting to be written is already there: no need to wait for it to find that out.
+      clearWriteTimer();
+      firstUnsentAt = null;
+    }
     report();
   }
 
@@ -362,6 +368,11 @@ export function startSync(options: SyncOptions): SyncSession {
   return {
     localChanged() {
       if (stopped || paused) return;
+      // Until the server has been heard from nothing can be written; the first snapshots decide what is.
+      if (!serverSeen) {
+        report();
+        return;
+      }
       const signature = localSignature();
       // New progress is worth another try after a failure.
       if (failure !== null && failure.signature !== signature) {
