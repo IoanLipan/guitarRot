@@ -86,7 +86,12 @@ async function load(): Promise<Analytics> {
 
 /** Lets the queue and the dynamic imports behind it run to the end. */
 async function settle() {
-  for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+  // The SDK arrives through dynamic imports, which a loaded machine can take
+  // longer than a fixed number of ticks to resolve; wait for them explicitly.
+  for (let round = 0; round < 3; round += 1) {
+    await vi.dynamicImportSettled();
+    for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+  }
 }
 
 const KEY = 'guitarrot.analytics-consent.v1';

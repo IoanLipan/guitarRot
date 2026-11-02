@@ -7,5 +7,76 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
+
+    // ======================================================================
+    // leaderboard (accounts phase 3). Self-contained: every function this
+    // block uses is declared inside it, so it merges next to other blocks.
+    //
+    // One public row per player who chose to be on the board, at
+    // leaderboard/{uid}: { name, level, xp, weekKey, weekXp, instrument,
+    // updatedAt }. Any signed-in player can read the board; a row can only be
+    // written, changed or removed by the player it belongs to.
+    //
+    // This is a friendly board, not a tournament: the client reports its own
+    // XP, so these rules cannot know what was really earned. They keep the
+    // board well-formed and make a casual cheat slow (XP only goes up, and by
+    // at most 2000 per write).
+    // ======================================================================
+    match /leaderboard/{uid} {
+      function ownRow() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+
+      function row() {
+        return request.resource.data;
+      }
+
+      // 3 to 20 characters: letters of any alphabet, digits, . _ - and single
+      // spaces inside; no space at either end. (The same shape as src/leaderboard/name.ts.)
+      function validName(name) {
+        return name is string
+          && name.size() >= 3
+          && name.size() <= 20
+          && name.matches('^[\\p{L}\\p{N}._-]([\\p{L}\\p{N} ._-]*[\\p{L}\\p{N}._-])?$');
+      }
+
+      // ISO week key such as 2026-W44.
+      function validWeekKey(key) {
+        return key is string && key.matches('^[0-9]{4}-W(0[1-9]|[1-4][0-9]|5[0-3])$');
+      }
+
+      // Exactly these fields, each of the right kind and size.
+      function wellFormed() {
+        return row().keys().hasOnly(['name', 'level', 'xp', 'weekKey', 'weekXp', 'instrument', 'updatedAt'])
+          && row().keys().hasAll(['name', 'level', 'xp', 'weekKey', 'weekXp', 'instrument', 'updatedAt'])
+          && validName(row().name)
+          && row().level is int && row().level >= 1 && row().level <= 999
+          && row().xp is int && row().xp >= 0 && row().xp <= 10000000
+          && row().weekXp is int && row().weekXp >= 0 && row().weekXp <= 10000000
+          && validWeekKey(row().weekKey)
+          && row().instrument in ['guitar', 'ukulele']
+          && row().updatedAt == request.time;
+      }
+
+      // Any signed-in player may look at the board.
+      allow read: if request.auth != null;
+
+      // Joining. XP may be anything (a player who has been practising for a
+      // year joins with all of it); this week's XP starts near zero.
+      allow create: if ownRow() && wellFormed() && row().weekXp <= 2000;
+
+      // Playing, renaming. All-time XP never goes down and grows by at most
+      // 2000 a write. In the same week the weekly XP never goes down and grows
+      // by at most 2000 a write; a later week starts it again, up to 2000.
+      allow update: if ownRow() && wellFormed()
+        && row().xp >= resource.data.xp
+        && row().xp - resource.data.xp <= 2000
+        && (row().weekKey == resource.data.weekKey
+          ? row().weekXp >= resource.data.weekXp && row().weekXp - resource.data.weekXp <= 2000
+          : row().weekKey > resource.data.weekKey && row().weekXp <= 2000);
+
+      // Leaving the board.
+      allow delete: if ownRow();
+    }
   }
 }

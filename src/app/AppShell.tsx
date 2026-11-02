@@ -7,6 +7,7 @@ import { track } from '@/cloud/analytics';
 import { ConsentSheet } from '@/cloud/ConsentSheet';
 import { courseFor, getSong, riffsFor, songPlayableOn } from '@/content';
 import { InstrumentProvider } from '@/instrument';
+import { LeaderboardSync } from '@/leaderboard/LeaderboardSync';
 import type { InstrumentId } from '@/music';
 import { Feed } from '@/feed/Feed';
 import { AwardLayer } from '@/game/AwardLayer';
@@ -342,6 +343,9 @@ export function AppShell() {
         <ConsentSheet
           ready={progress.loaded && progress.state.settings.instrumentChosen && !inLesson && !settingsOpen && quizLayer !== 'run'}
         />
+
+        {/* Keeps a leaderboard entry up to date with the XP earned; nothing at all without an account on the board. */}
+        <LeaderboardSync progress={progress} />
 
         <SettingsSheet
           open={settingsOpen}
