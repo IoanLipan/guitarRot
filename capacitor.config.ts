@@ -38,8 +38,12 @@ const config: CapacitorConfig = {
       // native Google dialog. The plugin only fetches the Google ID token; the
       // JS SDK signs in with it (src/cloud/auth.ts), so there is one auth state
       // for the whole app and the plugin never keeps a second, native user.
+      // Apple is Firebase's browser flow, run by the same plugin. Its Apple handler
+      // ignores skipNativeAuth and signs a native user in too, so the app takes the
+      // ID token and raw nonce from the result and signs that native user out again.
+      // The Apple button itself shows only with VITE_AUTH_APPLE=1 (docs/ACCOUNTS.md).
       skipNativeAuth: true,
-      providers: ['google.com'],
+      providers: ['google.com', 'apple.com'],
     },
   },
 };

@@ -78,7 +78,7 @@ export function BottomSheet({
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="sheet-panel relative max-h-[88%] overflow-y-auto rounded-t-3xl bg-surface pb-[calc(env(safe-area-inset-bottom)+1.5rem)] shadow-[0_-20px_60px_rgba(0,0,0,0.6)] outline-none"
+        className="sheet-panel relative max-h-[88%] overflow-y-auto overscroll-contain rounded-t-3xl bg-surface pb-[calc(env(safe-area-inset-bottom)+1.5rem)] shadow-[0_-20px_60px_rgba(0,0,0,0.6)] outline-none"
       >
         {children}
       </div>

@@ -6,7 +6,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { signOut, signUpWithEmail } from '@/cloud/auth';
 import { EMULATOR_PROJECT_ID, FIRESTORE_EMULATOR } from '@/cloud/config';
-import { uniqueEmail, waitForAccount } from '@/cloud/emulatorKit';
+import { uniqueEmail, uniqueUsername, waitForAccount } from '@/cloud/emulatorKit';
 import { getFirestoreDb, loadFirestoreSdk } from '@/cloud/firebase';
 import { planUpdates, type BoardEntry } from './model';
 import {
@@ -31,8 +31,9 @@ type Player = { uid: string; name: string };
 
 /** Signs a new account up (which also signs it in) and gives its uid. */
 async function newPlayer(name: string): Promise<Player> {
-  await signUpWithEmail({ email: uniqueEmail(name.toLowerCase().replace(/\W/g, '')), password: PASSWORD, displayName: name });
-  const state = await waitForAccount((s) => s.status === 'signed-in' && s.user.displayName === name);
+  const username = uniqueUsername(name);
+  await signUpWithEmail({ email: uniqueEmail(name.toLowerCase().replace(/\W/g, '')), password: PASSWORD, username });
+  const state = await waitForAccount((s) => s.status === 'signed-in' && s.user.displayName === username);
   if (state.user === null) throw new Error('not signed in');
   return { uid: state.user.uid, name };
 }

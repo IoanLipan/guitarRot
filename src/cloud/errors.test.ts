@@ -10,7 +10,7 @@ describe('plain words for the common Firebase errors', () => {
     ['auth/invalid-credential', 'password', /don’t match/],
     ['auth/user-not-found', 'email', /no account/i],
     ['auth/email-already-in-use', 'email', /already has an account/],
-    ['auth/weak-password', 'password', /at least 6/],
+    ['auth/weak-password', 'password', /at least 8/],
     ['auth/invalid-email', 'email', /doesn’t look like an email/],
     ['auth/network-request-failed', undefined, /No connection/],
     ['auth/too-many-requests', undefined, /Too many tries/],

@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { AccountContext } from '@/cloud/AccountProvider';
+import { OpenAccountSheetProvider } from '@/cloud/AccountSheetContext';
+import { ProfileContext } from '@/cloud/ProfileProvider';
 import type { AccountApi, AccountUser } from '@/cloud/types';
 import { emptyProgressState, type ProgressState } from '@/progress';
 import type { BoardEntry } from './model';
@@ -54,6 +56,8 @@ const actions = {
   signInWithEmail: vi.fn(),
   sendPasswordReset: vi.fn(),
   signInWithGoogle: vi.fn(),
+  signInWithApple: vi.fn(),
+  setUsername: vi.fn(),
   signOut: vi.fn(),
   deleteAccount: vi.fn(),
 };
@@ -154,33 +158,25 @@ describe('telling analytics the section was seen', () => {
 });
 
 describe('signed out', () => {
-  it('says what it is in one line and points at the Account card', () => {
+  it('says what it is in one line and offers to make an account', () => {
     renderSection(account({ status: 'signed-out', user: null }));
     expect(board()).toHaveAttribute('data-state', 'signed-out');
     expect(screen.getByRole('heading', { name: 'Leaderboard' })).toBeInTheDocument();
-    expect(board()).toHaveTextContent('Sign in to see how you rank against other players.');
+    expect(board()).toHaveTextContent('Make an account to see how you rank against other players.');
     expect(world.watched).toEqual([]);
   });
 
-  it('takes you to the Account card, and puts focus on its first button', () => {
-    const scroll = vi.fn();
+  it('opens the account sheet on its create-an-account form, where Google, Apple and email all are', () => {
+    const open = vi.fn();
     render(
-      <>
-        <section aria-label="Account">
-          <button type="button">Continue with Google</button>
-        </section>
+      <OpenAccountSheetProvider value={open}>
         <AccountContext.Provider value={account({ status: 'signed-out', user: null })}>
           <LeaderboardSection progress={progressWith()} />
         </AccountContext.Provider>
-      </>,
+      </OpenAccountSheetProvider>,
     );
-    const card = screen.getByRole('region', { name: 'Account' });
-    card.scrollIntoView = scroll;
-
-    fireEvent.click(screen.getByTestId('lb-sign-in'));
-
-    expect(scroll).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('button', { name: 'Continue with Google' })).toHaveFocus();
+    fireEvent.click(screen.getByRole('button', { name: 'Create account to join' }));
+    expect(open).toHaveBeenCalledWith('sign-up');
   });
 
   it('is a quiet placeholder while the account is still being checked', () => {
@@ -208,6 +204,72 @@ describe('signed in, not on the board', () => {
     expect(screen.getByRole('button', { name: 'Show me on the leaderboard' })).toBeInTheDocument();
     // The email is never on screen.
     expect(board()).not.toHaveTextContent('ada.lovelace');
+  });
+
+  it('asks a person with no username to pick one first, instead of offering a join with a name from somewhere else', () => {
+    const open = vi.fn();
+    render(
+      <OpenAccountSheetProvider value={open}>
+        <ProfileContext.Provider value={{ status: 'ready', username: null }}>
+          <AccountContext.Provider value={account({})}>
+            <LeaderboardSection progress={progressWith()} />
+          </AccountContext.Provider>
+        </ProfileContext.Provider>
+      </OpenAccountSheetProvider>,
+    );
+    show({ entry: null, pending: false });
+
+    expect(board()).toHaveAttribute('data-state', 'needs-username');
+    expect(screen.queryByTestId('lb-join')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Pick a username' }));
+    expect(open).toHaveBeenCalledWith('username');
+  });
+
+  it('keeps a person who is already on the board on it, whatever their username says', () => {
+    render(
+      <ProfileContext.Provider value={{ status: 'ready', username: null }}>
+        <AccountContext.Provider value={account({})}>
+          <LeaderboardSection progress={progressWith()} />
+        </AccountContext.Provider>
+      </ProfileContext.Provider>,
+    );
+    show({ entry: ME, pending: false });
+    expect(board()).toHaveAttribute('data-state', 'joined');
+  });
+
+  it('prefills with the username, so joining is one tap', () => {
+    render(
+      <ProfileContext.Provider value={{ status: 'ready', username: 'ada_l' }}>
+        <AccountContext.Provider value={account({})}>
+          <LeaderboardSection progress={progressWith()} />
+        </AccountContext.Provider>
+      </ProfileContext.Provider>,
+    );
+    show({ entry: null, pending: false });
+    expect(screen.getByLabelText('Name on the board')).toHaveValue('ada_l');
+
+    fireEvent.click(screen.getByTestId('lb-join-button'));
+    expect(service.joinBoard).toHaveBeenCalledWith('me', expect.objectContaining({ name: 'ada_l' }));
+  });
+
+  it('follows the username when it arrives after the form, until the person types their own', () => {
+    const tree = (username: string | null) => (
+      <ProfileContext.Provider value={username === null ? { status: 'unknown', username: null } : { status: 'ready', username }}>
+        <AccountContext.Provider value={account({})}>
+          <LeaderboardSection progress={progressWith()} />
+        </AccountContext.Provider>
+      </ProfileContext.Provider>
+    );
+    const { rerender } = render(tree(null));
+    show({ entry: null, pending: false });
+    expect(screen.getByLabelText('Name on the board')).toHaveValue('Ada');
+
+    rerender(tree('ada_l'));
+    expect(screen.getByLabelText('Name on the board')).toHaveValue('ada_l');
+
+    fireEvent.change(screen.getByLabelText('Name on the board'), { target: { value: 'Lady Ada' } });
+    rerender(tree('ada_lovelace'));
+    expect(screen.getByLabelText('Name on the board')).toHaveValue('Lady Ada');
   });
 
   it('prefills from the start of the email when there is no name, and never the whole address', () => {

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import { useAccount } from '@/cloud/AccountProvider';
+import { useOpenAccountSheet } from '@/cloud/AccountSheetContext';
 import { Field } from '@/cloud/Field';
+import { needsUsername, useProfile } from '@/cloud/ProfileProvider';
 import type { AccountUser } from '@/cloud/types';
 import type { ProgressHandle } from '@/app/useProgress';
 import { ConfirmDialog } from '@/game/ConfirmDialog';
@@ -15,15 +17,6 @@ export const LEAVE_BODY =
   'Your name comes off the board for everyone. Your progress stays on this phone, and you can join again any time.';
 
 const FRAME = 'rise-in flex flex-col gap-4 rounded-3xl bg-surface p-4';
-
-/** Takes the person up to the Account card, where signing in lives, and puts the cursor on its first button. */
-function showAccountCard() {
-  const card = document.querySelector<HTMLElement>('section[aria-label="Account"]');
-  if (card === null) return;
-  const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
-  card.scrollIntoView?.({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
-  card.querySelector<HTMLElement>('button')?.focus({ preventScroll: true });
-}
 
 function Card({ state, delay, children }: { state: string; delay: string; children: ReactNode }) {
   return (
@@ -48,7 +41,12 @@ function Notice({ title, body, action }: { title: string; body: string; action?:
 
 /** Joining: the name to go by, then the one amber button. */
 function JoinForm({ user, xp, instrument, uid }: { user: AccountUser; xp: number; instrument: ProgressHandle['state']['settings']['instrument']; uid: string }) {
-  const [name, setName] = useState(() => suggestName(user));
+  // The name on the board starts as the username, so joining is one tap; until the person types, it follows the username
+  // (which may arrive a moment after the form), and without one it starts from their name or email as before.
+  const { username } = useProfile();
+  const [typed, setTyped] = useState<string | null>(null);
+  const name = typed ?? username ?? suggestName(user);
+  const setName = (value: string) => setTyped(value);
   const [problem, setProblem] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -237,6 +235,8 @@ export function LeaderboardSection({
   onView?: () => void;
 }) {
   const account = useAccount();
+  const profile = useProfile();
+  const openSheet = useOpenAccountSheet();
   const online = useOnline();
   const [attempt, setAttempt] = useState(0);
   const uid = account.status === 'signed-in' ? account.user.uid : null;
@@ -269,14 +269,14 @@ export function LeaderboardSection({
   if (account.status === 'signed-out') {
     return (
       <Card state="signed-out" delay={delay}>
-        <p className="text-body leading-snug text-ink-dim">Sign in to see how you rank against other players.</p>
+        <p className="text-body leading-snug text-ink-dim">Make an account to see how you rank against other players.</p>
         <button
           type="button"
-          onClick={showAccountCard}
+          onClick={() => openSheet('sign-up')}
           data-testid="lb-sign-in"
           className="press flex min-h-12 items-center justify-center rounded-full bg-surface-2 px-4 text-base font-bold text-ink"
         >
-          Sign in to join
+          Create account to join
         </button>
       </Card>
     );
@@ -327,6 +327,23 @@ export function LeaderboardSection({
         <div aria-hidden="true" className="h-5 w-4/5 rounded-full bg-surface-2" />
         <div aria-hidden="true" className="h-12 rounded-full bg-surface-2" />
         <div aria-hidden="true" className="h-12 rounded-full bg-surface-2" />
+      </Card>
+    );
+  }
+
+  // Joining shows the username to everyone, so a person who has none yet picks it first (the Account card has the one amber button for that).
+  if (joined === null && needsUsername(account, profile)) {
+    return (
+      <Card state="needs-username" delay={delay}>
+        <p className="text-body leading-snug text-ink-dim">Pick a username to join the leaderboard. It’s the name other players see.</p>
+        <button
+          type="button"
+          onClick={() => openSheet('username')}
+          data-testid="lb-pick-username"
+          className="press flex min-h-12 items-center justify-center rounded-full bg-surface-2 px-4 text-base font-bold text-ink"
+        >
+          Pick a username
+        </button>
       </Card>
     );
   }

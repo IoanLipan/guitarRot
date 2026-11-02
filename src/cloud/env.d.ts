@@ -11,4 +11,6 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_MEASUREMENT_ID?: string;
   /** "1" points Auth and Firestore at the local Firebase Emulator Suite. */
   readonly VITE_FIREBASE_EMULATORS?: string;
+  /** "1" shows "Continue with Apple" (once Apple sign-in is set up in Firebase: docs/ACCOUNTS.md). */
+  readonly VITE_AUTH_APPLE?: string;
 }

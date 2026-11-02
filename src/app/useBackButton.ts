@@ -26,7 +26,7 @@ export type BackState = {
   songOpen: boolean;
   /** A pick is open in the You tab (it need not be the tab on screen). */
   pickOpen?: boolean;
-  /** The account's email sheet is open in the You tab. */
+  /** The account sheet (create an account, sign in, pick a username) is open. It can be opened from anywhere. */
   accountSheetOpen?: boolean;
   /** Where the Quiz tab is, if it is mounted. */
   quizLayer?: QuizLayer;
@@ -34,7 +34,7 @@ export type BackState = {
 
 /**
  * Back peels one layer off the screen you are looking at: the Settings sheet
- * first, then the account sheet over the You tab, then the lesson, song, pick or quiz run you are inside, then the tab
+ * first, then the account sheet (it opens over any screen), then the lesson, song, pick or quiz run you are inside, then the tab
  * itself (back to the Feed), and only from the Feed does it leave the app. A
  * lesson open in the Learn tab does not count while another tab is showing:
  * closing something you cannot see would look like Back did nothing.
@@ -49,7 +49,7 @@ export function backAction({
   quizLayer = 'select',
 }: BackState): BackAction {
   if (settingsOpen) return 'close-settings';
-  if (tab === 'you' && accountSheetOpen) return 'close-account';
+  if (accountSheetOpen) return 'close-account';
   if (tab === 'learn' && lessonOpen) return 'close-lesson';
   if (tab === 'songs' && songOpen) return 'close-song';
   if (tab === 'you' && pickOpen) return 'close-pick';

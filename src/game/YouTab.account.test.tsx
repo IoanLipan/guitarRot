@@ -14,6 +14,8 @@ const api = {
   signInWithEmail: noop,
   sendPasswordReset: noop,
   signInWithGoogle: noop,
+  signInWithApple: noop,
+  setUsername: noop,
   signOut: noop,
   deleteAccount: noop,
 };

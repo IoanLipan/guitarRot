@@ -10,6 +10,8 @@ This file is the one place that explains the cloud layer and holds the
 Google account can do). Code lives in `src/cloud/`.
 
 - [What the layer does](#what-the-layer-does)
+- [Creating an account: the sheet, usernames, Apple](#creating-an-account-the-sheet-usernames-apple)
+- [Apple sign-in (optional)](#apple-sign-in-optional)
 - [Environment variables](#environment-variables)
 - [Developing without a Firebase project (emulators)](#developing-without-a-firebase-project-emulators)
 - [Usage analytics](#usage-analytics)
@@ -21,7 +23,7 @@ Google account can do). Code lives in `src/cloud/`.
 
 | Phase | What | Where | Needs in Firebase |
 |---|---|---|---|
-| 1. Accounts | Sign up and sign in with email and password or Google; sign out; password reset; delete account (and, through `onBeforeAccountDelete` hooks, the cloud data). | `src/cloud/auth.ts`, `AccountProvider.tsx`, `AccountCard.tsx`, `EmailSheet.tsx` | Authentication (Email/Password, Google) |
+| 1. Accounts | Sign up with a username, email and password, or with Google or Apple; sign in; sign out; password reset; delete account (and, through `onBeforeAccountDelete` hooks, the cloud data). | `src/cloud/auth.ts`, `AccountProvider.tsx`, `AccountCard.tsx`, `AccountSheet.tsx`, `usernames.ts` | Authentication (Email/Password, Google, optionally Apple), Firestore `usernames` and `profiles` |
 | 2. Progress sync | Signed-in players' progress follows them to another device. | `src/progress` (sync), Firestore `users/{uid}` | Firestore + rules |
 | 3. Leaderboard | Optional public name and XP; a ranking in the You tab. | `leaderboard/` collection, You tab | Firestore + rules + indexes |
 | 4. Usage analytics | Opt-in, anonymous: which screens and features are used, and for how long. | `src/cloud/analytics.ts`, `analyticsBackend.ts`, `ConsentSheet.tsx`, `UsageSetting.tsx`, `src/app/useUsageTracking.ts` | Google Analytics enabled on the project |
@@ -35,6 +37,214 @@ Google account can do). Code lives in `src/cloud/`.
 Everything cloud is loaded on demand (`import()` after the first paint, or after
 consent for analytics), so a build with the features off ships the same first
 download as before, and a build with them on pays for the SDK only when it is used.
+
+## Creating an account: the sheet, usernames, Apple
+
+### One sheet, five doors
+
+`src/cloud/AccountSheet.tsx` is the only place an account is made or signed
+into. The app shell owns it (`AppShell.tsx`: one `accountIntent`, so Android Back
+closes it from anywhere) and hands every screen the way to open it
+(`useOpenAccountSheet()`), so all of these open the same sheet:
+
+| Door | Opens | Shown when |
+|---|---|---|
+| Start screen (and the "What do you play?" question) | `sign-in`: a quiet **I already have an account** link, for a new phone. Signing in restores the progress through the normal sync, and the start screen carries on ("Continue: ..."). | cloud on, signed out |
+| You tab, Account card | `sign-up` (**Create account**, the one amber button on the card) or `sign-in` | cloud on, signed out |
+| Settings > Account row | `sign-up` ("Create account or sign in") | signed out; signed in goes to the You tab |
+| The one-time offer | `nudge`: **Save your progress**, Google / Apple / email, and **Not now** | see below |
+| Leaderboard card | `sign-up` ("Create account to join") | signed out |
+
+The sheet: Google and Apple on top (same size, same stack; Google's dark button
+with their four-colour G, Apple's white button with their logo, "Continue with
+Apple"), then "or", then **Username, Email, Password** (show/hide; "At least 8
+characters") and one amber **Create account**; under it "Already have an
+account? **Sign in**". Sign in is the providers, then email and password, "Forgot
+your password?" and **Sign in**; "New here? **Create an account**". Problems are
+said once, in words, under the field they belong to (username taken or invalid,
+email in use, weak password, no connection). The minimum for a **new** password is
+8 characters (`validate.ts`); an older, shorter password still signs in.
+
+**The one-time offer** (`src/app/useSaveNudge.ts`): the first win after the app
+opened (a lesson finished for the first time, or a badge unlocked, whichever
+comes first) is held until a calm moment (no lesson, no quiz run or results,
+no Settings, no open pick, no other question, and the analytics question
+answered or not asked in this build), then **Save your progress** appears about
+0.9 s later. Only when signed out and cloud is on. It is made **once per
+device** (`localStorage` key `guitarrot.save-nudge.v1`; it is about the phone, so
+it never syncs) and never again whatever the answer: "Not now", a tap outside,
+Back and creating an account all count. Where storage is blocked it is made at
+most once per visit.
+
+### Usernames
+
+A username is the one name a person goes by: unique, case-insensitive, public
+(the leaderboard starts from it). **3 to 20 characters of `a-z`, `0-9`, `_` and
+`.`, starting and ending with a letter or digit** (which also keeps a handle clear
+of Firestore's reserved `__x__` ids), stored lowercase, minus a few reserved
+words (`admin`, `guitarrot`, `support`, ...). `src/cloud/username.ts` validates,
+suggests (a number after the word) and seeds the field from a person's name (the
+first word, accents removed, else the start of the email, never an Apple "hide my
+email" relay address, else `player`). The rules hold the same shape, and
+`usernames.rules.emu.test.ts` checks the two agree on every example.
+
+**Data model** (`src/cloud/usernames.ts`):
+
+```
+usernames/{handle} = { uid, createdAt }                       the claim; the id IS the username
+profiles/{uid}     = { username, createdAt, updatedAt }       the person's side of it
+```
+
+Being the document id is what makes a handle unique: two people claiming `ada`
+at once write the same document and only one create can win. Claiming, changing
+and leaving all happen in **one Firestore transaction** (`claimIn`): read the
+profile and the handle; refuse with `username-taken` if somebody else holds it;
+create the handle, delete the one being left, write the profile. The loser of a
+race is retried by the SDK, sees the winner's claim and is told "That username is
+taken." Choosing the name you already have is a no-op.
+
+**Rules** (`firestore.rules`, the "USERNAMES AND PROFILES" block; they use
+`getAfter`/`existsAfter`, which look at the state a commit would leave):
+
+- a handle document can be **created** only by a signed-in person, as
+  `{ uid: their uid, createdAt: server time }`, for a valid handle, and only if
+  *their profile, after the commit, names that handle*;
+- it can never be **updated**, and **deleted** only by its owner and only if
+  their profile, after the commit, no longer names it (or is gone);
+- a **profile** is created or updated only by its owner, in exactly the shape
+  above, naming a handle *whose claim, after the commit, is theirs*; a changed
+  name must also **free the old handle in the same commit**; its `createdAt`
+  never changes; it can be deleted by its owner;
+- a single handle can be **read by anyone, signed in or not** (`get`; the sign-up
+  form asks "is it free?" while the person types, before an account exists, and
+  what it learns is only a uid), nobody can **list** either collection, and a
+  profile is read by its owner only.
+
+So: you can't claim a taken handle, can't write someone else's profile, can't
+create a handle without your own matching profile, can't hold two handles, and
+can't leave one claimed by nobody's profile. All of it is tested in
+`usernames.rules.emu.test.ts` (including a race of three at once, and the app's
+own transaction run by two people at once: exactly one wins) and
+`usernames.emu.test.ts` (the real SDK: signing up, changing, freeing,
+deleting).
+
+**Flows.**
+
+- *Email sign-up*: the sheet checks the username's shape, then asks the server
+  (debounced 0.4 s while typing: **Available** / **Taken**, with free names to tap
+  when taken); `signUpWithEmail` asks once more, creates the Auth user, claims the
+  handle and sets the Auth `displayName` to the username. If the name is lost in
+  that last moment the person is signed in without one (`UsernameMissingError`)
+  and the sheet asks for another, not the whole form again.
+- *Google or Apple, then the username step*: after a provider sign-in the sheet
+  waits for the profile (`ProfileProvider`, a Firestore listener that fetches
+  nothing until somebody is signed in). A person who has none is asked once for a
+  username, starting from their name, with one **Continue**; they cannot skip
+  inside the step. Closing it leaves them signed in and the Account card shows
+  **Pick a username** (and the leaderboard asks for one before joining) until
+  it is done. A sign-in that comes back from a full-page redirect (popup blocked)
+  shows that card prompt the same way.
+- *Changing it*: Account card > **Change username** opens the same step; the old
+  handle is freed in the same transaction.
+- *Deleting the account* removes both documents. The hook is registered **last**
+  (`onBeforeAccountDelete(..., { last: true })`, from `auth.ts`), so a failed
+  progress or leaderboard clean-up keeps the account with its name intact.
+- *Offline*: availability can't be checked ("Can't check right now"); the claim at
+  the end decides and needs a connection (it fails with "No connection"; nothing is
+  queued).
+
+Analytics: `sign_up` and `login` carry `method: google | apple | password`;
+`username_set` (no parameters, never the name) fires when a handle is claimed or
+changed.
+
+## Apple sign-in (optional)
+
+Off until the project is set up: the button shows only when the build has
+`VITE_AUTH_APPLE=1` (and cloud features on). Apple's **Sign in with Apple needs a
+paid Apple Developer Program membership** (about 99 USD a year), a Services ID
+and a key, so there is nothing to switch on in the repo until you have them.
+(App Store rule 4.8 is why a future iOS build offering Google would have to offer
+Apple; the web and Android builds have no such rule, so Apple is optional here.)
+
+### How it works
+
+- **Web:** `signInWithPopup` with `new OAuthProvider('apple.com')`, scopes `email`
+  and `name`; where the browser blocks popups it falls back to
+  `signInWithRedirect` (the page comes back to `getRedirectResult`, exactly as for
+  Google). Apple shares the name **only the first time** a person authorises the
+  app; Firebase puts it in `displayName` then. A person who hides their email gets
+  a `...@privaterelay.appleid.com` address: the app never builds a username or a
+  display name from it.
+- **Android:** `@capacitor-firebase/authentication`'s `signInWithApple` (so
+  `apple.com` is in `providers` in `capacitor.config.ts`). It runs Firebase's own
+  browser flow (a Custom Tab on `<project>.firebaseapp.com/__/auth/handler`;
+  nothing extra to configure beyond the web setup below, and the SHA
+  fingerprints from the Android step). Read from the plugin's source
+  (`AppleAuthProviderHandler.java`, 8.6.x): **`skipNativeAuth: true` does not
+  apply to Apple**, because that handler calls `startActivityForSignInWithProvider`,
+  which signs a *native* Firebase user in itself. What it returns is
+  `credential.idToken` (Apple's ID token) and `credential.nonce` (the **raw**
+  nonce; it sent Apple the SHA-256 of it). The app feeds those to the JS SDK with
+  `new OAuthProvider('apple.com').credential({ idToken, rawNonce })` and
+  `signInWithCredential`, then **signs the plugin's native user out again**, so
+  there is still one auth state (the JS SDK's). Apple's ID token carries no name;
+  the name the plugin's native user received (first authorisation only) is saved
+  on the JS user if it has none. **This path cannot be tested without a real
+  Apple Services ID and a phone**: the unit and emulator tests stand in for the
+  plugin and use the Auth emulator's fake Apple provider. The one thing only a real
+  run can show is that Firebase accepts Apple's ID token a second time (once in
+  the plugin, once in the JS SDK). The token and nonce are valid for that and, as
+  far as is documented, Firebase keeps no used-token list, but verify it on the
+  first real device.
+- **Deleting an Apple account** signs in with Apple again when Firebase wants a
+  recent sign-in (popup on the web, the plugin on Android). An iOS App Store
+  build would also have to revoke the Apple token (`revokeAccessToken`); there is
+  no iOS build.
+- **Locally:** `VITE_AUTH_APPLE=1 npm run dev:emulators`. The Auth emulator's fake
+  Apple window opens for the real button (email, optional name), so the whole
+  flow, username step included, runs with no Apple account.
+
+### Manual setup (once)
+
+1. [ ] Enrol in the **Apple Developer Program** (developer.apple.com/programs).
+2. [ ] Certificates, Identifiers & Profiles > Identifiers > **+** > **App IDs** >
+       App. Description `guitarRot`, bundle id `com.guitarrot.app`; under
+       Capabilities tick **Sign in with Apple** (Enable as a primary App ID).
+       Register.
+3. [ ] Identifiers > **+** > **Services IDs**. Identifier `com.guitarrot.app.web`
+       (must differ from the App ID). Register, then open it: tick **Sign in with
+       Apple** > **Configure**:
+       - Primary App ID: the one from step 2;
+       - Domains and Subdomains: `<project-id>.firebaseapp.com` (your
+         `VITE_FIREBASE_AUTH_DOMAIN`);
+       - Return URLs: `https://<project-id>.firebaseapp.com/__/auth/handler`
+         (Firebase shows this exact URL when you enable Apple, step 6).
+       Next > Done > Continue > Save.
+4. [ ] **Domain verification.** Newer Apple setups do not ask for it. If yours
+       does, download `apple-developer-domain-association.txt` and serve it at
+       `https://<authDomain>/.well-known/apple-developer-domain-association.txt`
+       (for the default `firebaseapp.com` domain that means a Firebase Hosting
+       deploy of that one file; with a custom auth domain, your own host), then
+       press **Verify**.
+5. [ ] Keys > **+** > name `guitarRot Firebase`, tick **Sign in with Apple** >
+       Configure > the primary App ID > Save > Continue > Register. **Download the
+       `.p8` now (Apple lets you once)** and note its **Key ID**. Your **Team ID**
+       is in the top-right of the developer pages (and Membership details).
+6. [ ] Firebase console > Authentication > Sign-in method > **Apple** > Enable.
+       Services ID: `com.guitarrot.app.web`; Apple team ID; Key ID; Private key:
+       paste the `.p8`'s text. Save. Check the redirect URL it shows is the one in
+       step 3. (Never commit the `.p8`.)
+7. [ ] Build with `VITE_AUTH_APPLE=1` (Vercel's environment variables for the web;
+       the shell or `.env.local` before `npm run build && npx cap sync android` for
+       the app) and redeploy: Vite inlines it at build time.
+8. [ ] Try it: on the website, **Continue with Apple** opens Apple's window and
+       returns signed in, then asks for a username; on a phone, the same through a
+       browser tab. Firebase console > Authentication > Users shows provider
+       `apple.com`.
+9. [ ] Optional: if you ever email people who hide their address (this app only
+       sends password and verification emails to password accounts, so you do
+       not need it now), register your sending domain under Apple's "Sign in with
+       Apple for Email Communication".
 
 ## Environment variables
 
@@ -51,6 +261,7 @@ leave any out and they all stay off.
 | `VITE_FIREBASE_APP_ID` | yes | The **web** app's id, `1:…:web:…` |
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | yes | The project number |
 | `VITE_FIREBASE_MEASUREMENT_ID` | for analytics | `G-XXXXXXXXXX`, shown once Google Analytics is enabled. Without it there is no analytics at all: no consent question and no Settings switch. |
+| `VITE_AUTH_APPLE` | no | `1` shows **Continue with Apple**. Only after Apple sign-in is set up ([below](#apple-sign-in-optional)). Works with the emulators too. |
 | `VITE_FIREBASE_EMULATORS` | dev only | `1` points Auth and Firestore at the local emulators (project `demo-guitarrot`). Wins over any real config in the same environment. Analytics is always off on the emulators. |
 
 The Android app is a Capacitor wrapper around the same web build, so the same
@@ -64,6 +275,9 @@ npm run emulators         # Auth on 9099, Firestore on 8080, project demo-guitar
 npm run dev:emulators     # the app, pointed at them
 npm run test:cloud        # starts the emulators, runs src/**/*.emu.test.ts, stops them
 ```
+
+The Auth emulator fakes Google and Apple (each opens a small "add new account"
+window; try Apple with `VITE_AUTH_APPLE=1 npm run dev:emulators`).
 
 Needs the `firebase` CLI and a JDK (`scripts/with-java.sh` finds Homebrew's
 `openjdk@21`). The `demo-` project id keeps the emulators offline by design:
@@ -161,7 +375,8 @@ Events:
 | `instrument_switch` | `to` | `switchInstrument` (not the first pick) |
 | `tuner_open` | | the Tuner comes up |
 | `feed_card_view` | `kind` (`riff`/`chord`/`quiz`), `level` (riffs and chords) | a card stays active 1.5 s, so at most one per 1.5 s |
-| `sign_up`, `login` | `method` (`google`/`password`) | `src/cloud/auth.ts` (GA4 recommended events; a first Google sign-in is `sign_up`) |
+| `sign_up`, `login` | `method` (`google`/`apple`/`password`) | `src/cloud/auth.ts` (GA4 recommended events; a first Google or Apple sign-in is `sign_up`) |
+| `username_set` | | `src/cloud/auth.ts`, when a username is claimed or changed (never the name itself) |
 | `leaderboard_view` | | **not wired yet**: the leaderboard section has to call `track('leaderboard_view')` when it is shown |
 
 Adding an event: add it to `AnalyticsEvents` in `analytics.ts` (the type is the
@@ -252,6 +467,8 @@ it once, in order. Tick as you go.
 - [ ] Sign-in method > enable **Email/Password** (leave "Email link" off).
 - [ ] Sign-in method > enable **Google**; set the **public-facing name**
       (`guitarRot`) and a **support email**.
+- [ ] Optional: **Apple** (needs a paid Apple Developer account; follow
+      [Apple sign-in](#apple-sign-in-optional), then build with `VITE_AUTH_APPLE=1`).
 - [ ] Settings > **Authorized domains**: `localhost` is there by default; add
       `guitar-rot.vercel.app` and any custom domain. Preview deployments
       (`*.vercel.app` hashes) are not wildcard-matched: add the ones you want
@@ -311,7 +528,11 @@ it once, in order. Tick as you go.
       shows the leaderboard indexes as **Enabled** (a new index can take minutes).
       A query that needs an index fails with a console link to create it.
 - [ ] Re-run the deploy whenever `firestore.rules` or `firestore.indexes.json`
-      change.
+      change. **The username sign-up needs the `usernames` and `profiles` rules
+      live**: with an older deployment, creating an account says "We couldn't save
+      your username" and the person is left signed in with no username. Deploy the
+      rules **before** shipping a build that has the sheet. (The collections need
+      no setup; the first claim creates them.)
 
 ### 6. Play Console
 
@@ -391,7 +612,7 @@ either. Say so if the form asks.)
 
 | Category > type | Collected | Optional? | Purpose | Notes |
 |---|---|---|---|---|
-| Personal info > **Name** | yes | yes (needs an account) | App functionality, Account management | display name; Google profile name |
+| Personal info > **Name** | yes | yes (needs an account) | App functionality, Account management | username (public: it is the leaderboard's starting name); display name; Google or Apple profile name |
 | Personal info > **Email address** | yes | yes (needs an account) | App functionality, Account management | |
 | Personal info > **User IDs** | yes | yes (needs an account) | App functionality, Account management | the Firebase uid; the leaderboard entry |
 | App activity > **App interactions** | yes | yes, **users can choose** (the consent question) | Analytics | screens, features, durations; progress (lessons, points) is account data, same category |
@@ -418,6 +639,18 @@ Policy": no (target audience 13+).
   not the emulator mode), an instrument already chosen, and no lesson, quiz run
   or Settings on screen. It is asked once: clear the site data (or
   `localStorage.removeItem('guitarrot.analytics-consent.v1')`) to see it again.
+- **Creating an account says "We couldn't save your username".** The `usernames`
+  and `profiles` rules are not deployed to this project
+  (`firebase deploy --only firestore:rules --project <id>`). The Auth account was
+  made; the person is signed in and the Account card offers **Pick a username**
+  once the rules are live.
+- **The Apple button is not there.** The build needs `VITE_AUTH_APPLE=1` (and
+  the Firebase config); rebuild after setting it. **It is there but fails with
+  "That way of signing in isn't turned on yet"**: Apple is not enabled in
+  Authentication > Sign-in method. **"Signing in isn't set up for this web
+  address yet"**: the domain is missing from Authentication > Settings >
+  Authorized domains. Apple's own page showing `invalid_request`: the Services
+  ID's return URL or domain does not match the Firebase auth domain exactly.
 - **Google sign-in "developer error" on Android.** A signing key's SHA-1 or
   SHA-256 is missing from the Android app in Firebase (the Play App Signing key
   is the usual one), or `google-services.json` was downloaded before it was

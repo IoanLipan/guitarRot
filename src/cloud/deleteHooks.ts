@@ -4,6 +4,7 @@ import { AccountError, type AccountUser } from './types';
 export type BeforeDeleteHook = (user: AccountUser) => void | Promise<void>;
 
 const hooks = new Set<BeforeDeleteHook>();
+const lastHooks = new Set<BeforeDeleteHook>();
 
 /**
  * Registers a clean-up that runs when somebody deletes their account, before
@@ -14,17 +15,22 @@ const hooks = new Set<BeforeDeleteHook>();
  * Hooks run one after another in the order they were added. If one throws,
  * the account is NOT deleted and the person is told to try again, because an
  * account that is gone with its data still in the cloud cannot be cleaned up.
+ *
+ * `last` is for a clean-up that must not happen unless all the others did: the
+ * username goes only when everything else has already gone, so a failed attempt
+ * does not leave a person with an account that has lost its name.
  */
-export function onBeforeAccountDelete(hook: BeforeDeleteHook): () => void {
-  hooks.add(hook);
+export function onBeforeAccountDelete(hook: BeforeDeleteHook, { last = false }: { last?: boolean } = {}): () => void {
+  const group = last ? lastHooks : hooks;
+  group.add(hook);
   return () => {
-    hooks.delete(hook);
+    group.delete(hook);
   };
 }
 
 /** Runs every registered hook for `user`, stopping at the first that fails. */
 export async function runBeforeDeleteHooks(user: AccountUser): Promise<void> {
-  for (const hook of [...hooks]) {
+  for (const hook of [...hooks, ...lastHooks]) {
     try {
       await hook(user);
     } catch {

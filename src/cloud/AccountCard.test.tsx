@@ -3,13 +3,17 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { AccountCard, DELETE_BODY } from './AccountCard';
 import { AccountContext } from './AccountProvider';
-import { AccountError, type AccountApi, type AccountUser } from './types';
+import { OpenAccountSheetProvider, type AccountSheetIntent } from './AccountSheetContext';
+import { ProfileContext } from './ProfileProvider';
+import { AccountError, type AccountApi, type AccountUser, type ProfileState } from './types';
 
 const actions = {
   signUpWithEmail: vi.fn(),
   signInWithEmail: vi.fn(),
   sendPasswordReset: vi.fn(),
   signInWithGoogle: vi.fn(),
+  signInWithApple: vi.fn(),
+  setUsername: vi.fn(),
   signOut: vi.fn(),
   deleteAccount: vi.fn(),
 };
@@ -22,11 +26,15 @@ const ADA: AccountUser = {
   emailVerified: false,
 };
 
-function show(state: Partial<AccountApi>) {
+function show(state: Partial<AccountApi>, open: (intent: AccountSheetIntent) => void = vi.fn(), profile: ProfileState = { status: 'unknown', username: null }) {
   render(
-    <AccountContext.Provider value={{ status: 'signed-out', user: null, ...actions, ...state } as AccountApi}>
-      <AccountCard />
-    </AccountContext.Provider>,
+    <OpenAccountSheetProvider value={open}>
+      <ProfileContext.Provider value={profile}>
+        <AccountContext.Provider value={{ status: 'signed-out', user: null, ...actions, ...state } as AccountApi}>
+          <AccountCard />
+        </AccountContext.Provider>
+      </ProfileContext.Provider>
+    </OpenAccountSheetProvider>,
   );
   return userEvent.setup();
 }
@@ -56,64 +64,38 @@ describe('the account card', () => {
   });
 
   describe('signed out', () => {
-    it('says why in one line, and offers Google and email', () => {
+    it('says why in one line, and offers to create an account or sign in', () => {
       show({ status: 'signed-out' });
       expect(screen.getByRole('region', { name: 'Account' })).toBeInTheDocument();
       expect(screen.getByText('Save your progress so it follows you to a new phone.')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Use email' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Create account' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     });
 
-    it('draws Google’s button as Google asks: their dark colours and their four-colour G', () => {
+    it('makes the account the one amber thing on the card, and keeps the other way in quiet', () => {
       show({ status: 'signed-out' });
-      const button = screen.getByTestId('google-sign-in');
-      expect(button.className).toContain('bg-[#131314]');
-      expect(button.className).toContain('text-[#e3e3e3]');
-      expect(button.className).toContain('border-[#8e918f]');
-      const fills = [...button.querySelectorAll('path')].map((path) => path.getAttribute('fill'));
-      expect(fills).toEqual(['#EA4335', '#4285F4', '#FBBC05', '#34A853']);
-      expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+      expect(screen.getByTestId('create-account').className).toContain('bg-accent');
+      expect(screen.getByTestId('sign-in').className).not.toContain('bg-accent');
     });
 
-    it('signs in with Google', async () => {
-      actions.signInWithGoogle.mockResolvedValue(undefined);
-      const user = show({ status: 'signed-out' });
-      await user.click(screen.getByTestId('google-sign-in'));
-      expect(actions.signInWithGoogle).toHaveBeenCalledTimes(1);
-      expect(screen.queryByRole('alert')).toBeNull();
+    it('opens the account sheet on create account', async () => {
+      const open = vi.fn();
+      const user = show({ status: 'signed-out' }, open);
+      await user.click(screen.getByRole('button', { name: 'Create account' }));
+      expect(open).toHaveBeenCalledWith('sign-up');
     });
 
-    it('says why Google failed, but not when the person only closed its window', async () => {
-      actions.signInWithGoogle
-        .mockRejectedValueOnce(new AccountError('auth/network-request-failed', 'No connection. Check your internet and try again.'))
-        .mockRejectedValueOnce(new AccountError('cancelled', ''));
-      const user = show({ status: 'signed-out' });
-
-      await user.click(screen.getByTestId('google-sign-in'));
-      expect(await screen.findByRole('alert')).toHaveTextContent('No connection');
-
-      await user.click(screen.getByTestId('google-sign-in'));
-      await waitFor(() => expect(actions.signInWithGoogle).toHaveBeenCalledTimes(2));
-      await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+    it('opens the same sheet on sign in', async () => {
+      const open = vi.fn();
+      const user = show({ status: 'signed-out' }, open);
+      await user.click(screen.getByRole('button', { name: 'Sign in' }));
+      expect(open).toHaveBeenCalledWith('sign-in');
     });
 
-    it('opens the email sheet from Use email', async () => {
-      const user = show({ status: 'signed-out' });
-      expect(screen.queryByRole('dialog')).toBeNull();
-      await user.click(screen.getByRole('button', { name: 'Use email' }));
-      expect(screen.getByRole('dialog', { name: 'Sign in or create an account' })).toBeInTheDocument();
-    });
-
-    it('can leave the email sheet to its owner, so Back can close it', async () => {
-      const onEmailOpenChange = vi.fn();
-      render(
-        <AccountContext.Provider value={{ status: 'signed-out', user: null, ...actions } as AccountApi}>
-          <AccountCard emailOpen={false} onEmailOpenChange={onEmailOpenChange} />
-        </AccountContext.Provider>,
-      );
-      await userEvent.setup().click(screen.getByRole('button', { name: 'Use email' }));
-      expect(onEmailOpenChange).toHaveBeenCalledWith(true);
-      expect(screen.queryByRole('dialog')).toBeNull();
+    it('has no provider buttons of its own: Google and Apple live in the sheet', () => {
+      show({ status: 'signed-out' });
+      expect(screen.queryByTestId('google-sign-in')).toBeNull();
+      expect(screen.queryByTestId('apple-sign-in')).toBeNull();
     });
   });
 
@@ -125,7 +107,7 @@ describe('the account card', () => {
       expect(screen.getByRole('img', { name: 'Signed in with email' })).toHaveAttribute('data-provider', 'password');
       expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Delete account' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Continue with Google' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Create account' })).toBeNull();
     });
 
     it('marks a Google account with Google’s G, and shows its photo', () => {
@@ -137,6 +119,42 @@ describe('the account card', () => {
       expect(mark).toHaveAttribute('data-provider', 'google');
       expect(mark.querySelector('svg')).not.toBeNull();
       expect(screen.getByTestId('account-card').querySelector('img')).toHaveAttribute('src', 'https://example.com/ada.png');
+    });
+
+    it('marks an Apple account with Apple’s logo', () => {
+      show({ status: 'signed-in', user: { ...ADA, providers: ['apple.com'] } });
+      const mark = screen.getByRole('img', { name: 'Signed in with Apple' });
+      expect(mark).toHaveAttribute('data-provider', 'apple');
+      expect(mark.querySelector('svg')).not.toBeNull();
+    });
+
+    it('goes by the username, not the name the provider gave', () => {
+      show({ status: 'signed-in', user: ADA }, vi.fn(), { status: 'ready', username: 'ada_l' });
+      expect(screen.getByTestId('account-name')).toHaveTextContent('ada_l');
+      expect(screen.queryByTestId('pick-username')).toBeNull();
+    });
+
+    it('offers to change the username, in the same sheet', async () => {
+      const open = vi.fn();
+      const user = show({ status: 'signed-in', user: ADA }, open, { status: 'ready', username: 'ada_l' });
+      await user.click(screen.getByRole('button', { name: 'Change username' }));
+      expect(open).toHaveBeenCalledWith('change-username');
+    });
+
+    it('says "Pick a username" until a signed-in person has one, and opens the username step', async () => {
+      const open = vi.fn();
+      const user = show({ status: 'signed-in', user: ADA }, open, { status: 'ready', username: null });
+      expect(screen.getByTestId('username-missing')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Change username' })).toBeNull();
+      await user.click(screen.getByRole('button', { name: 'Pick a username' }));
+      expect(open).toHaveBeenCalledWith('username');
+    });
+
+    it('does not nag while it can not tell whether there is a username (offline, nothing saved)', () => {
+      show({ status: 'signed-in', user: ADA }, vi.fn(), { status: 'unknown', username: null });
+      expect(screen.queryByTestId('username-missing')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Change username' })).toBeNull();
+      expect(screen.getByTestId('account-name')).toHaveTextContent('Ada Lovelace');
     });
 
     it('goes by the start of the email when the account has no name', () => {

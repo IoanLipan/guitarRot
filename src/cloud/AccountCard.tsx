@@ -2,13 +2,15 @@ import { useState, type CSSProperties } from 'react';
 import { ConfirmDialog } from '@/game/ConfirmDialog';
 import { MailIcon } from '@/ui/icons';
 import { useAccount } from './AccountProvider';
+import { useOpenAccountSheet } from './AccountSheetContext';
 import { accountName } from './accountName';
-import { EmailSheet } from './EmailSheet';
+import { AppleMark } from './AppleMark';
 import { toAccountError } from './errors';
 import { GoogleMark } from './GoogleMark';
+import { needsUsername, useProfile } from './ProfileProvider';
 import { ReauthSheet } from './ReauthSheet';
 import type { SyncStatus } from './sync';
-import { GOOGLE_PROVIDER } from './types';
+import { APPLE_PROVIDER, GOOGLE_PROVIDER } from './types';
 import { useSync } from './useCloudSync';
 
 /** Said in full, because deleting is the one thing here that cannot be taken back. */
@@ -47,47 +49,38 @@ function Avatar({ name, photoURL }: { name: string; photoURL: string | undefined
   );
 }
 
-/** How the account signs in, as a small mark: Google's G, or an envelope for email and password. */
+/** How the account signs in, as a small mark: Google's G, Apple's apple, or an envelope for email and password. */
 function ProviderMark({ providers }: { providers: string[] }) {
-  const google = providers.includes(GOOGLE_PROVIDER);
+  const provider = providers.includes(GOOGLE_PROVIDER) ? 'google' : providers.includes(APPLE_PROVIDER) ? 'apple' : 'password';
+  const label = { google: 'Signed in with Google', apple: 'Signed in with Apple', password: 'Signed in with email' }[provider];
   return (
     <span
       role="img"
-      aria-label={google ? 'Signed in with Google' : 'Signed in with email'}
+      aria-label={label}
       data-testid="account-provider"
-      data-provider={google ? 'google' : 'password'}
+      data-provider={provider}
       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-dim"
     >
-      {google ? <GoogleMark size={18} /> : <MailIcon size={18} />}
+      {provider === 'google' ? <GoogleMark size={18} /> : provider === 'apple' ? <AppleMark size={18} /> : <MailIcon size={18} />}
     </span>
   );
 }
 
-type Busy = 'google' | 'sign-out' | 'delete' | null;
+type Busy = 'sign-out' | 'delete' | null;
 
 /**
  * The Account card of the You tab. Where accounts do not exist (a build
  * without a Firebase config) it renders nothing at all. Signed out it offers
- * Google and email; signed in it shows who you are, with Sign out and Delete
- * account (behind a dialog that says what goes).
- *
- * The email sheet's open state can be owned by the caller, because the Android
- * Back button has to close it before it does anything else.
+ * to create an account or sign in, both through the app's one account sheet;
+ * signed in it shows who you are (the username), with Sign out and Delete
+ * account (behind a dialog that says what goes). Somebody who is signed in but
+ * has no username yet is offered one here, until they pick it.
  */
-export function AccountCard({
-  emailOpen,
-  onEmailOpenChange,
-  delay = '0ms',
-}: {
-  emailOpen?: boolean;
-  onEmailOpenChange?: (open: boolean) => void;
-  delay?: string;
-}) {
+export function AccountCard({ delay = '0ms' }: { delay?: string }) {
   const account = useAccount();
+  const profile = useProfile();
   const sync = useSync();
-  const [localEmailOpen, setLocalEmailOpen] = useState(false);
-  const sheetOpen = emailOpen ?? localEmailOpen;
-  const setSheetOpen = onEmailOpenChange ?? setLocalEmailOpen;
+  const openSheet = useOpenAccountSheet();
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -98,21 +91,6 @@ export function AccountCard({
 
   const working = busy !== null;
   const style = { '--delay': delay } as CSSProperties;
-
-  async function withGoogle() {
-    if (working) return;
-    setBusy('google');
-    setError(null);
-    setNotice(null);
-    try {
-      await account.signInWithGoogle();
-    } catch (failure) {
-      const problem = toAccountError(failure);
-      if (!problem.cancelled) setError(problem.message);
-    } finally {
-      setBusy(null);
-    }
-  }
 
   async function leave() {
     if (working) return;
@@ -163,7 +141,8 @@ export function AccountCard({
 
   if (account.status === 'signed-in') {
     const { user } = account;
-    const name = accountName(user);
+    const name = profile.username ?? accountName(user);
+    const pickUsername = needsUsername(account, profile);
     return (
       <section aria-label="Account" className={frame} style={style} data-testid="account-card" data-state="signed-in">
         <h2 className="label">Account</h2>
@@ -186,6 +165,20 @@ export function AccountCard({
           <p role="status" className="-mt-2 text-meta text-ink-dim" data-testid="sync-status" data-sync={sync.status}>
             {SYNC_TEXT[sync.status]}
           </p>
+        )}
+
+        {pickUsername && (
+          <div className="flex flex-col items-start gap-2" data-testid="username-missing">
+            <p className="text-meta text-ink-dim">Choose a username to finish setting up. It’s how you show up to other players.</p>
+            <button
+              type="button"
+              onClick={() => openSheet('username')}
+              data-testid="pick-username"
+              className="press flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-4 text-base font-extrabold text-ground"
+            >
+              Pick a username
+            </button>
+          </div>
         )}
 
         {error !== null && (
@@ -214,6 +207,17 @@ export function AccountCard({
             {busy === 'delete' ? 'Deleting…' : 'Delete account'}
           </button>
         </div>
+
+        {profile.username !== null && (
+          <button
+            type="button"
+            onClick={() => openSheet('change-username')}
+            data-testid="change-username"
+            className="press -mt-1 flex min-h-11 items-center self-start text-meta font-bold text-ink-dim underline underline-offset-4"
+          >
+            Change username
+          </button>
+        )}
 
         {confirmingDelete && (
           <ConfirmDialog
@@ -244,41 +248,30 @@ export function AccountCard({
       )}
       <p className="text-body leading-snug text-ink-dim">Save your progress so it follows you to a new phone.</p>
 
-      {error !== null && (
-        <p role="alert" className="text-meta text-bad" data-testid="account-error">
-          {error}
-        </p>
-      )}
-
-      <div className="flex flex-col gap-2">
-        {/* Google's own button, in their dark-theme colours and with their mark, so it reads as theirs on our dark ground. */}
+      <div className="flex flex-col gap-1">
         <button
           type="button"
-          onClick={() => void withGoogle()}
-          disabled={working}
-          data-testid="google-sign-in"
-          className="press flex min-h-12 items-center justify-center gap-3 rounded-full border border-[#8e918f] bg-[#131314] px-4 text-[15px] font-medium text-[#e3e3e3] [font-family:Roboto,ui-sans-serif,system-ui,sans-serif] disabled:opacity-60"
+          onClick={() => {
+            setNotice(null);
+            openSheet('sign-up');
+          }}
+          data-testid="create-account"
+          className="press flex min-h-12 items-center justify-center rounded-full bg-accent px-4 text-base font-extrabold text-ground"
         >
-          <GoogleMark size={20} />
-          {busy === 'google' ? 'Opening Google…' : 'Continue with Google'}
+          Create account
         </button>
         <button
           type="button"
           onClick={() => {
             setNotice(null);
-            setError(null);
-            setSheetOpen(true);
+            openSheet('sign-in');
           }}
-          disabled={working}
-          data-testid="email-sign-in"
-          className="press flex min-h-12 items-center justify-center gap-3 rounded-full bg-surface-2 px-4 text-base font-bold text-ink disabled:opacity-60"
+          data-testid="sign-in"
+          className="press flex min-h-11 items-center justify-center rounded-full px-4 text-base font-bold text-ink"
         >
-          <MailIcon size={20} className="text-ink-dim" />
-          Use email
+          Sign in
         </button>
       </div>
-
-      <EmailSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </section>
   );
 }

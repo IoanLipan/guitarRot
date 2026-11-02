@@ -24,16 +24,11 @@ export function YouTab({
   progress,
   openPickId,
   onOpenPickChange,
-  accountSheetOpen,
-  onAccountSheetOpenChange,
   today = localDateIso(new Date()),
 }: {
   progress: Pick<ProgressHandle, 'state'>;
   openPickId: string | null;
   onOpenPickChange: (id: string | null) => void;
-  /** The account's email sheet, when the caller owns it (Android Back closes it first). It keeps its own state otherwise. */
-  accountSheetOpen?: boolean;
-  onAccountSheetOpenChange?: (open: boolean) => void;
   /** Local ISO date; tests pin it. */
   today?: string;
 }) {
@@ -64,7 +59,7 @@ export function YouTab({
         </section>
 
         {/* Renders nothing in a build without accounts. Under the level, not above it: the gear sits in this corner. */}
-        <AccountCard emailOpen={accountSheetOpen} onEmailOpenChange={onAccountSheetOpenChange} delay="30ms" />
+        <AccountCard delay="30ms" />
 
         {/* Also nothing without accounts. Right under the Account card, because signing in is how you get here. */}
         <LeaderboardSection progress={progress} delay="45ms" onView={() => track('leaderboard_view')} />

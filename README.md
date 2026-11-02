@@ -87,8 +87,8 @@ Deploys to production automatically on every push to `master` (Vercel).
 
 ## Accounts (optional)
 
-Sign-in with Google or email/password (Firebase Auth) lives in `src/cloud/`.
-It is off unless the build has the `VITE_FIREBASE_*` variables from
+Sign-in with Google, Apple (once set up, see below) or a username, email and
+password (Firebase Auth) lives in `src/cloud/`. It is off unless the build has the `VITE_FIREBASE_*` variables from
 [`.env.example`](.env.example); without them the app is the offline app, shows
 no account UI, makes no network call and never downloads the Firebase SDK
 (it is loaded with `import()`, after the first paint, only when enabled).
@@ -102,6 +102,35 @@ npm run emulators         # Auth on 9099, Firestore on 8080, project demo-guitar
 npm run dev:emulators     # the app, pointed at them
 npm run test:cloud        # starts the emulators, runs src/**/*.emu.test.ts, stops them
 ```
+
+### Creating an account
+
+One bottom sheet (`AccountSheet.tsx`) does it all: **Continue with Google**,
+**Continue with Apple** (only with `VITE_AUTH_APPLE=1`), "or", then **Username,
+Email, Password** and one amber **Create account**; "Already have an account?
+Sign in" switches to email and password (with a password reset). It opens from
+the You tab's Account card, Settings, a quiet **I already have an account** link
+on the start screen (for a new phone: signing in restores the progress), and a
+one-time **Save your progress** offer after the first finished lesson or first
+badge (only when signed out, never during a lesson or quiz run, never again
+once shown).
+
+**Usernames** are unique and case-insensitive: 3 to 20 characters of `a-z`,
+`0-9`, `_` and `.`, starting and ending with a letter or digit. They live in two
+Firestore collections that only ever change together, `usernames/{handle}` =
+`{ uid, createdAt }` (the handle is the document id, which is what makes it
+unique) and `profiles/{uid}` = `{ username, createdAt, updatedAt }`. The rules use
+`getAfter`/`existsAfter`, so a handle can be created only together with its
+owner's profile, a profile can name only a handle its owner holds, and changing
+the name frees the old handle in the same commit. Somebody who signs in with
+Google or Apple and has no username is asked for one once (starting from their
+name); until they pick it the Account card says **Pick a username**. The
+leaderboard name starts as the username. Deleting the account removes both
+documents.
+
+**Apple** needs a paid Apple Developer account, so its button is hidden until
+the project is set up: follow [`docs/ACCOUNTS.md`](docs/ACCOUNTS.md#apple-sign-in-optional)
+and build with `VITE_AUTH_APPLE=1`.
 
 ### Progress sync
 
@@ -120,10 +149,13 @@ out leaves the progress on the phone; deleting the account deletes the document.
 
 The security rules are in [`firestore.rules`](firestore.rules) (each person can
 reach only their own `users/{uid}`, in exactly the shape the sync writes; the
-rest is denied, with a marked spot for the leaderboard). In a real Firebase
-project, once: console > Build > Firestore Database > Create database (pick the
-region closest to your players; it can't be changed later), then
-`firebase deploy --only firestore:rules --project <your-project-id>`.
+leaderboard, `usernames` and `profiles` have their own blocks; the rest is
+denied). In a real Firebase project, once: console > Build > Firestore Database
+> Create database (pick the region closest to your players; it can't be changed
+later), then `firebase deploy --only firestore:rules,firestore:indexes --project
+<your-project-id>`. **Redeploy the rules whenever the file changes**: the
+username sign-up fails (it says "We couldn't save your username") until the
+`usernames` and `profiles` rules are live.
 
 `npm test` never needs the emulators. Android Google sign-in needs
 `android/app/google-services.json` from the Firebase console; without it the
