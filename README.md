@@ -103,6 +103,28 @@ npm run dev:emulators     # the app, pointed at them
 npm run test:cloud        # starts the emulators, runs src/**/*.emu.test.ts, stops them
 ```
 
+### Progress sync
+
+Signed in, the progress on the phone is kept in step with the account: one
+Firestore document per person, `users/{uid}` = `{ progress, schemaVersion,
+updatedAt }`. Signing in on a new phone **merges** (never replaces): lessons,
+songs, achievements and practice days are unions, XP, quiz bests and daily
+tallies take the bigger value, the day streak is rebuilt from the merged days,
+and each spaced-repetition card takes whichever phone reviewed it last
+(`src/progress/mergeProgress.ts`). Settings and the feed's memory stay on the
+phone, except that a phone that was never asked which instrument it plays takes
+the account's. Changes are written about four seconds after the last one (and
+when the app goes to the background or you sign out), only if the account does
+not already have them; writes made offline wait in Firestore's cache. Signing
+out leaves the progress on the phone; deleting the account deletes the document.
+
+The security rules are in [`firestore.rules`](firestore.rules) (each person can
+reach only their own `users/{uid}`, in exactly the shape the sync writes; the
+rest is denied, with a marked spot for the leaderboard). In a real Firebase
+project, once: console > Build > Firestore Database > Create database (pick the
+region closest to your players; it can't be changed later), then
+`firebase deploy --only firestore:rules --project <your-project-id>`.
+
 `npm test` never needs the emulators. Android Google sign-in needs
 `android/app/google-services.json` from the Firebase console; without it the
 debug build still assembles (see the note in `android/app/build.gradle`).
