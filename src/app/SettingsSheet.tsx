@@ -230,7 +230,7 @@ export function SettingsSheet({
                     ? accountName(account.user)
                     : account.status === 'loading'
                       ? 'Account'
-                      : 'Sign in'}
+                      : 'Create account or sign in'}
                 </span>
                 <span className="block truncate text-meta leading-snug text-ink-dim">
                   {account.status === 'signed-in'

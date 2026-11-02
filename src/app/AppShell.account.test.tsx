@@ -122,20 +122,47 @@ describe('the app shell and accounts', () => {
     expect(screen.getByTestId('account-card')).toHaveAttribute('data-state', 'signed-out');
 
     openSettings();
-    expect(screen.getByTestId('settings-account-row')).toHaveTextContent('Sign in');
+    expect(screen.getByTestId('settings-account-row')).toHaveTextContent('Create account or sign in');
   });
 
-  it('takes the Settings row to the Account card, closing Settings on the way', async () => {
+  it('opens the one account sheet from the You tab, over the You tab', async () => {
+    await openApp(withAccount({}, <AppShell />));
+    youTab();
+    expect(screen.queryByTestId('account-sheet')).toBeNull();
+
+    fireEvent.click(screen.getByTestId('create-account'));
+    expect(screen.getByTestId('account-sheet')).toBeInTheDocument();
+    expect(screen.getByTestId('account-sheet-title')).toHaveTextContent('Create account');
+    expect(screen.getByTestId('you-tab')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close sign in' }));
+    fireEvent.click(screen.getByTestId('sign-in'));
+    expect(screen.getByTestId('account-sheet-title')).toHaveTextContent('Sign in');
+  });
+
+  it('takes the Settings row straight to the sheet that makes an account, closing Settings on the way', async () => {
     await openApp(withAccount({}, <AppShell />));
     expect(screen.getByTestId('feed-screen')).toBeInTheDocument();
 
     openSettings();
     fireEvent.click(screen.getByTestId('settings-account-row'));
 
-    expect(await screen.findByTestId('account-card')).toBeInTheDocument();
-    expect(screen.queryByTestId('feed-screen')).toBeNull();
+    expect(await screen.findByTestId('account-sheet')).toBeInTheDocument();
+    expect(screen.getByTestId('account-sheet-title')).toHaveTextContent('Create account');
+    // Still on the Feed behind it: the sheet is the same one everywhere, not a trip to another tab.
+    expect(screen.getByTestId('feed-screen')).toBeInTheDocument();
     // Settings is on its way out (it slides away, so it may still be mounted a moment).
     expect(screen.queryByTestId('settings-sheet')?.getAttribute('data-state') ?? 'closing').toBe('closing');
+  });
+
+  it('takes the Settings row to the Account card for somebody who is signed in', async () => {
+    const user = { uid: 'u1', email: 'ada@example.com', displayName: 'ada_l', providers: ['password'], emailVerified: false };
+    await openApp(withAccount({ status: 'signed-in', user }, <AppShell />));
+    openSettings();
+    fireEvent.click(screen.getByTestId('settings-account-row'));
+    expect(await screen.findByTestId('account-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('feed-screen')).toBeNull();
+    expect(screen.queryByTestId('account-sheet')).toBeNull();
   });
 
   it('shows who is signed in on the Settings row', async () => {
