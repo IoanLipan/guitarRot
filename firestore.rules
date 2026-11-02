@@ -1,9 +1,51 @@
 rules_version = '2';
 
-// Placeholder: nothing reads or writes Firestore yet, so nothing is allowed.
-// The cloud-progress phase replaces this with per-user rules.
+// Deploy with `firebase deploy --only firestore:rules` (see the README's Accounts section).
+// Tests: src/cloud/firestore.rules.emu.test.ts, run by `npm run test:cloud`.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function signedInAs(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // What the progress sync writes to users/{uid}:
+    //   { progress: <map>, schemaVersion: <int>, updatedAt: serverTimestamp() }
+    // and nothing else. The caps are generous sanity limits (real progress is far below
+    // them); Firestore's own 1 MiB per document is the hard stop.
+    function isProgressDoc() {
+      let doc = request.resource.data;
+      return doc.keys().hasOnly(['progress', 'schemaVersion', 'updatedAt'])
+        && doc.keys().hasAll(['progress', 'schemaVersion', 'updatedAt'])
+        && doc.progress is map
+        && doc.schemaVersion is int
+        && doc.schemaVersion >= 1 && doc.schemaVersion <= 100
+        && doc.updatedAt == request.time
+        && doc.progress.keys().size() <= 40
+        && doc.progress.get('srs', {}).size() <= 5000
+        && doc.progress.get('daily', {}).size() <= 800
+        && doc.progress.get('achievements', {}).size() <= 500
+        && doc.progress.get('practiceDays', []).size() <= 800
+        && doc.progress.get('lessonsDone', []).size() <= 2000
+        && doc.progress.get('songsPlayed', []).size() <= 2000
+        && doc.progress.get('seenContent', []).size() <= 1000;
+    }
+
+    // ---- Progress sync ------------------------------------------------------
+    // One document per person, theirs alone: only that signed-in person can read,
+    // write or delete it (deleting happens when they delete their account).
+    match /users/{uid} {
+      allow read: if signedInAs(uid);
+      allow create, update: if signedInAs(uid) && isProgressDoc();
+      allow delete: if signedInAs(uid);
+    }
+
+    // ---- LEADERBOARD ----------------------------------------------------------
+    // The leaderboard phase adds its own `match /leaderboard/...` block right here,
+    // with its own rules. Nothing below needs to change for it.
+
+    // ---- Everything else is denied. -------------------------------------------
+    // (Anything no rule allows is refused anyway; this says so out loud.)
     match /{document=**} {
       allow read, write: if false;
     }

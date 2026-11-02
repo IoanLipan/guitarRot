@@ -15,6 +15,8 @@ export {
   loadFirestoreSdk,
 } from './firebase';
 export { AccountContext, AccountProvider, useAccount } from './AccountProvider';
+export { SyncContext, useCloudSync, useSync, type SyncApi, type SyncableProgress } from './useCloudSync';
+export type { SyncStatus } from './sync';
 export {
   AccountError,
   type AccountActions,

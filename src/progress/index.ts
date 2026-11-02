@@ -7,3 +7,4 @@ export * from './game';
 export * from './migrate';
 export * from './repo';
 export * from './applyAnswer';
+export * from './mergeProgress';

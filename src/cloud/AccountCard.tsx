@@ -7,12 +7,22 @@ import { EmailSheet } from './EmailSheet';
 import { toAccountError } from './errors';
 import { GoogleMark } from './GoogleMark';
 import { ReauthSheet } from './ReauthSheet';
+import type { SyncStatus } from './sync';
 import { GOOGLE_PROVIDER } from './types';
+import { useSync } from './useCloudSync';
 
 /** Said in full, because deleting is the one thing here that cannot be taken back. */
 export const DELETE_TITLE = 'Delete your account?';
 export const DELETE_BODY =
   'This permanently deletes your guitarRot account (your name, email and sign-in) and everything saved in the cloud for it, such as synced progress and your leaderboard entry. Progress on this phone stays, and you can keep playing without an account. This can’t be undone.';
+
+/** What the card says about the saved progress, quietly, under who you are. */
+export const SYNC_TEXT: Record<SyncStatus, string> = {
+  synced: 'Saved to your account',
+  syncing: 'Saving…',
+  offline: 'Will save when you’re back online',
+  error: 'Couldn’t save to your account. We’ll keep trying.',
+};
 
 const DELETED_NOTICE = 'Your account was deleted. Your progress on this phone is untouched.';
 
@@ -74,6 +84,7 @@ export function AccountCard({
   delay?: string;
 }) {
   const account = useAccount();
+  const sync = useSync();
   const [localEmailOpen, setLocalEmailOpen] = useState(false);
   const sheetOpen = emailOpen ?? localEmailOpen;
   const setSheetOpen = onEmailOpenChange ?? setLocalEmailOpen;
@@ -108,6 +119,8 @@ export function AccountCard({
     setBusy('sign-out');
     setError(null);
     try {
+      // Whatever is still waiting to be saved goes first: once signed out, it can't be.
+      await sync.flush().catch(() => undefined);
       await account.signOut();
     } catch (failure) {
       setError(toAccountError(failure).message);
@@ -168,6 +181,12 @@ export function AccountCard({
           </div>
           <ProviderMark providers={user.providers} />
         </div>
+
+        {sync.status !== null && (
+          <p role="status" className="-mt-2 text-meta text-ink-dim" data-testid="sync-status" data-sync={sync.status}>
+            {SYNC_TEXT[sync.status]}
+          </p>
+        )}
 
         {error !== null && (
           <p role="alert" className="text-meta text-bad" data-testid="account-error">

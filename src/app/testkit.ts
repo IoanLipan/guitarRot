@@ -23,8 +23,9 @@ export function returningState(): ProgressState {
 
 /** A progress handle whose every action is a spy, for tests of the screens that take one. */
 export function fakeProgressHandle(overrides: Partial<ProgressHandle> = {}): ProgressHandle {
+  const state = overrides.state ?? returningState();
   return {
-    state: returningState(),
+    state,
     loaded: true,
     recordAnswer: vi.fn(),
     record: vi.fn(() => NO_AWARD),
@@ -34,6 +35,8 @@ export function fakeProgressHandle(overrides: Partial<ProgressHandle> = {}): Pro
     setInstrument: vi.fn(),
     completeLesson: vi.fn(),
     flush: vi.fn(),
+    getState: vi.fn(() => state),
+    mergeRemote: vi.fn((remote: ProgressState) => remote),
     ...overrides,
   };
 }
