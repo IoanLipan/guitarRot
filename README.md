@@ -107,6 +107,14 @@ npm run test:cloud        # starts the emulators, runs src/**/*.emu.test.ts, sto
 `android/app/google-services.json` from the Firebase console; without it the
 debug build still assembles (see the note in `android/app/build.gradle`).
 
+**Usage analytics** (opt-in, anonymous: which screens and features are used and
+for how long) is part of the same layer and switches on only when
+`VITE_FIREBASE_MEASUREMENT_ID` is set too. Nothing is collected or loaded until
+the player says yes to the one-time question (and Settings has the switch).
+Everything about it, the env vars, and the owner's **manual setup checklist**
+(Firebase project, Auth providers, SHA fingerprints, Firestore, Play Console
+Data safety, DebugView) is in [`docs/ACCOUNTS.md`](docs/ACCOUNTS.md).
+
 ## Android
 
 Wrapped with Capacitor (`android/` is a real, committed platform project).
