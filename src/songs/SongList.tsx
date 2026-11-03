@@ -1,10 +1,15 @@
-import { DIFFICULTIES, type Difficulty, type Song } from '@/content';
+import { DIFFICULTIES, GENRES, GENRE_LABELS, type Difficulty, type Song } from '@/content';
 import { tapHaptic } from '@/app/haptics';
 import { SearchIcon } from '@/ui/icons';
 import { stagger } from '@/ui/motion';
-import type { DifficultyFilter, SongFilter } from './searchSongs';
+import type { DifficultyFilter, GenreFilter, SongFilter } from './searchSongs';
 
 const FILTERS: readonly DifficultyFilter[] = ['all', ...DIFFICULTIES];
+const GENRE_FILTERS: readonly GenreFilter[] = ['all', ...GENRES];
+
+/** The same scrolling strip for both chip rows. */
+const CHIP_ROW =
+  '-mx-5 flex gap-2 overflow-x-auto overscroll-x-contain px-5 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /** Only the first screenful of rows rises in, one after another; a long list never makes you wait for its tail. */
 export const RISE_ROWS = 8;
@@ -74,7 +79,7 @@ export function SongList({
             instead of wrapping or squeezing; overscroll-x-contain keeps a swipe
             that runs out of chips from chaining into the page. */}
         <div
-          className="-mx-5 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-5 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className={`${CHIP_ROW} mt-2`}
           role="group"
           aria-label="Filter songs"
           data-testid="filter-row"
@@ -110,6 +115,28 @@ export function SongList({
           >
             Movies
           </button>
+        </div>
+
+        {/* Seven families and All: the free-text styles are far too many for chips, so the genre is the coarse bucket. A second strip, scrolling the same way. */}
+        <div className={CHIP_ROW} role="group" aria-label="Filter by genre" data-testid="genre-row">
+          {GENRE_FILTERS.map((genre) => {
+            const isActive = filter.genre === genre;
+            return (
+              <button
+                key={genre}
+                type="button"
+                aria-pressed={isActive}
+                data-testid={`genre-${genre}`}
+                onClick={() => {
+                  tapHaptic();
+                  onFilterChange({ ...filter, genre });
+                }}
+                className={`${CHIP} ${isActive ? 'bg-accent text-ground' : 'bg-surface-2 text-ink-dim'}`}
+              >
+                {genre === 'all' ? 'All' : GENRE_LABELS[genre]}
+              </button>
+            );
+          })}
         </div>
 
         {/* Said, not shown: what the filter and the search left, so they are not typed into silence. */}
