@@ -1,6 +1,6 @@
 import { rowsToEvents, type TabRow } from './classicalTabs';
 import { ROOFTOPS_ROWS, SPANISH_ROMANCE_ROWS, TARANTELLA_ROWS } from './italianTabs';
-import { ITALIAN_TAG, type Difficulty, type Song, type SongSection, type StrumPattern } from './songs';
+import { ITALIAN_TAG, type Difficulty, type Song, type SongSection, type StrumPattern, type Genre } from './songs';
 import type { Riff, TimeSignature } from './types';
 
 /*
@@ -31,6 +31,7 @@ type ChartSpec = {
   artist: string;
   difficulty: Difficulty;
   style: string;
+  genre: Genre;
   key: string;
   bpm: number;
   attribution?: string;
@@ -49,6 +50,7 @@ function chartSong(spec: ChartSpec): Song {
     artist: spec.artist,
     difficulty: spec.difficulty,
     style: spec.style,
+    genre: spec.genre,
     key: spec.key,
     bpm: spec.bpm,
     source: spec.source,
@@ -65,6 +67,7 @@ type TabSpec = {
   artist: string;
   difficulty: Difficulty;
   style: string;
+  genre: Genre;
   key: string;
   bpm: number;
   bars: number;
@@ -99,6 +102,7 @@ function tabSong(spec: TabSpec): Song {
     artist: spec.artist,
     difficulty: spec.difficulty,
     style: spec.style,
+    genre: spec.genre,
     key: spec.key,
     bpm: spec.bpm,
     source: spec.source,
@@ -117,6 +121,7 @@ const CHART_NOTE = 'The chord chart is guitarRot\'s own harmonisation, with no l
 
 export const santaLucia: Song = chartSong({
   id: 'santa-lucia',
+  genre: 'folk',
   title: 'Santa Lucia',
   artist: 'Teodoro Cottrau',
   difficulty: 'easy',
@@ -139,6 +144,7 @@ export const santaLucia: Song = chartSong({
 
 export const oSoleMio: Song = chartSong({
   id: 'o-sole-mio',
+  genre: 'pop',
   title: 'O sole mio',
   artist: 'Eduardo di Capua',
   difficulty: 'medium',
@@ -161,6 +167,7 @@ export const oSoleMio: Song = chartSong({
 
 export const funiculiFunicula: Song = chartSong({
   id: 'funiculi-funicula',
+  genre: 'folk',
   title: 'Funiculì, Funiculà',
   artist: 'Luigi Denza',
   difficulty: 'medium',
@@ -183,6 +190,7 @@ export const funiculiFunicula: Song = chartSong({
 
 export const tornaASurriento: Song = chartSong({
   id: 'torna-a-surriento',
+  genre: 'pop',
   title: 'Torna a Surriento',
   artist: 'Ernesto De Curtis',
   difficulty: 'medium',
@@ -206,6 +214,7 @@ export const tornaASurriento: Song = chartSong({
 
 export const bellaCiao: Song = chartSong({
   id: 'bella-ciao',
+  genre: 'folk',
   title: 'Bella ciao',
   artist: 'Traditional',
   difficulty: 'easy',
@@ -232,6 +241,7 @@ export const bellaCiao: Song = chartSong({
 
 export const spanishRomance: Song = tabSong({
   id: 'spanish-romance',
+  genre: 'classical',
   title: 'Spanish Romance',
   artist: 'Anonymous',
   difficulty: 'medium',
@@ -258,6 +268,7 @@ export const spanishRomance: Song = tabSong({
 
 export const rooftopsOfFlorence: Song = tabSong({
   id: 'rooftops-of-florence',
+  genre: 'classical',
   title: 'Rooftops of Florence',
   artist: 'guitarRot',
   difficulty: 'medium',
@@ -278,6 +289,7 @@ export const rooftopsOfFlorence: Song = tabSong({
 
 export const sereDiGiugno: Song = chartSong({
   id: 'sere-di-giugno',
+  genre: 'pop',
   title: 'Sere di giugno',
   artist: 'guitarRot',
   difficulty: 'medium',
@@ -300,6 +312,7 @@ export const sereDiGiugno: Song = chartSong({
 
 export const tarantellaInAMinor: Song = tabSong({
   id: 'tarantella-in-a-minor',
+  genre: 'folk',
   title: 'Tarantella in A minor',
   artist: 'guitarRot',
   difficulty: 'hard',
