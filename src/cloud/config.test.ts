@@ -100,6 +100,38 @@ describe('cloudEnabled, as the build reads it from the environment', () => {
     expect((await freshConfig()).appleSignInAvailable()).toBe(true);
   });
 
+  describe('Continue with Apple, by platform', () => {
+    // Capacitor is read when the button decides, so each platform is a fresh import with that platform stubbed.
+    async function appleOn(platform: 'web' | 'android' | 'ios', env: Record<string, string>) {
+      vi.resetModules();
+      vi.unstubAllEnvs();
+      vi.doMock('@capacitor/core', () => ({ Capacitor: { getPlatform: () => platform } }));
+      for (const [name, value] of Object.entries(env)) vi.stubEnv(name, value);
+      return (await import('./config')).appleSignInAvailable();
+    }
+
+    afterEach(() => {
+      vi.doUnmock('@capacitor/core');
+    });
+
+    it('stays behind VITE_AUTH_APPLE on the web and on Android', async () => {
+      for (const platform of ['web', 'android'] as const) {
+        expect(await appleOn(platform, { ...COMPLETE }), platform).toBe(false);
+        expect(await appleOn(platform, { ...COMPLETE, VITE_AUTH_APPLE: '1' }), platform).toBe(true);
+      }
+    });
+
+    it('is always there on iOS, because App Store rule 4.8 asks for it beside Google', async () => {
+      expect(await appleOn('ios', { ...COMPLETE })).toBe(true);
+      expect(await appleOn('ios', { ...COMPLETE, VITE_AUTH_APPLE: '0' })).toBe(true);
+      expect(await appleOn('ios', { ...COMPLETE, VITE_AUTH_APPLE: '1' })).toBe(true);
+    });
+
+    it('is still off on iOS in a build with no cloud features, which has no account screen at all', async () => {
+      expect(await appleOn('ios', { VITE_FIREBASE_EMULATORS: '' })).toBe(false);
+    });
+  });
+
   it('is true with the emulator switch alone', async () => {
     vi.stubEnv('VITE_FIREBASE_EMULATORS', '1');
     const { cloudEnabled, cloud } = await freshConfig();

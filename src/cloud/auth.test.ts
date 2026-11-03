@@ -411,6 +411,67 @@ describe('Apple', () => {
   });
 });
 
+// The same Apple code path serves iOS; what differs is what the plugin hands back. Its iOS handler runs the system's
+// own Sign in with Apple sheet (ASAuthorization) and honours `skipNativeAuth`, so there is no native Firebase user to
+// clear, the nonce it returns is the raw one (Apple was sent its SHA-256), and the name comes only on the first sign-in.
+describe('Apple on iOS', () => {
+  beforeEach(() => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+  });
+
+  it('signs the JS SDK in with the ID token and raw nonce of the system sheet, and saves the name from the first sign-in', async () => {
+    plugin.signInWithApple.mockResolvedValue({
+      user: { displayName: 'Ada Lovelace' },
+      credential: { providerId: 'apple.com', idToken: 'apple-id-token', nonce: 'raw-nonce', authorizationCode: 'one-time-code' },
+      additionalUserInfo: null,
+    });
+    const user = makeUser({ displayName: null });
+    sdk.signInWithCredential.mockResolvedValue({ user });
+
+    await signInWithApple();
+
+    expect(sdk.OAuthProvider.instances[0]?.credential).toHaveBeenCalledWith({ idToken: 'apple-id-token', rawNonce: 'raw-nonce' });
+    expect(sdk.signInWithCredential).toHaveBeenCalledWith(auth, { kind: 'apple-credential', idToken: 'apple-id-token', rawNonce: 'raw-nonce' });
+    expect(sdk.signInWithPopup).not.toHaveBeenCalled();
+    expect(sdk.updateProfile).toHaveBeenCalledWith(user, { displayName: 'Ada Lovelace' });
+  });
+
+  it('signs in on a return visit, when Apple shares no name and the plugin reports no user at all', async () => {
+    plugin.signInWithApple.mockResolvedValue({
+      user: null,
+      credential: { providerId: 'apple.com', idToken: 'apple-id-token', nonce: 'raw-nonce' },
+      additionalUserInfo: null,
+    });
+    sdk.signInWithCredential.mockResolvedValue({ user: makeUser({ displayName: 'ada_l' }) });
+
+    await signInWithApple();
+
+    expect(sdk.signInWithCredential).toHaveBeenCalledTimes(1);
+    expect(sdk.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('treats the person closing the Apple sheet as a choice, not an error to show', async () => {
+    plugin.signInWithApple.mockRejectedValue(
+      Object.assign(new Error('The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1001.)'), {
+        code: undefined,
+      }),
+    );
+    const error = await failure(signInWithApple());
+    expect(error.cancelled).toBe(true);
+    expect(error.message).toBe('');
+    expect(sdk.signInWithCredential).not.toHaveBeenCalled();
+  });
+
+  it('says something went wrong for Apple’s other failures, such as a phone with no Apple ID', async () => {
+    plugin.signInWithApple.mockRejectedValue(
+      new Error('The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)'),
+    );
+    const error = await failure(signInWithApple());
+    expect(error.cancelled).toBe(false);
+    expect(error.message).toBe('Something went wrong. Please try again.');
+  });
+});
+
 describe('signing out', () => {
   it('signs the JS SDK out, and in the Android app the native Google choice too', async () => {
     sdk.signOut.mockResolvedValue(undefined);

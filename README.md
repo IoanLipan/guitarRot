@@ -242,4 +242,22 @@ one is always at
 Bump `versionCode` in `android/app/build.gradle` before each Play upload.
 Store listing copy, policy answers and graphics are in [`store/`](store/listing.md). See
 [`docs/FUTURE_WORK.md`](docs/FUTURE_WORK.md)'s Plan 3 section for what's
-wired (Preferences, Haptics, StatusBar, SplashScreen) and what isn't (iOS).
+wired (Preferences, Haptics, StatusBar, SplashScreen).
+
+## iOS
+
+Also Capacitor (`ios/` is a committed Xcode project, Swift Package Manager, no CocoaPods;
+iPhone only, iOS 16.4 or newer, portrait). With Xcode 16.3 or newer:
+
+```bash
+npm run build && npx cap sync ios
+open ios/App/App.xcodeproj          # or build for a simulator with xcodebuild
+node scripts/ios-version.mjs        # after bumping: version from package.json, build number from versionCode
+```
+
+The Firebase file is `ios/App/App/GoogleService-Info.plist`; Google sign-in needs the plist
+re-downloaded after Google is enabled in the console, then `scripts/ios-google-url-scheme.sh`.
+The app shows **Continue with Apple** on iOS whatever `VITE_AUTH_APPLE` says (App Store
+rule 4.8). Everything about it, the manual steps (Apple Developer team, App Store Connect,
+TestFlight), the privacy labels and age rating answers, and the known review risks are in
+[`docs/IOS.md`](docs/IOS.md).

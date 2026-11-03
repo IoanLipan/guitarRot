@@ -39,15 +39,22 @@ const FRIENDLY: Readonly<Record<string, Friendly>> = {
 /** Closing or abandoning a sign-in window is a choice, not a failure. */
 const CANCELLED = new Set(['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/user-cancelled']);
 
+/**
+ * Dismissing iPhone's Sign in with Apple sheet is ASAuthorizationError.canceled (1001). The plugin passes it on
+ * as a bare message with no code, and the sentence before the brackets is translated and never says "cancel";
+ * the domain and number in the brackets are the same in every language.
+ */
+const APPLE_SHEET_DISMISSED = /AuthenticationServices\.AuthorizationError error 1001\b/;
+
 const GENERIC = 'Something went wrong. Please try again.';
 
 type Coded = { code?: unknown; message?: unknown };
 
 /**
  * Turns anything an account action can throw into an {@link AccountError}:
- * Firebase's own errors, the Android plugin's (a bare message when Google's
- * dialog was dismissed or the phone has no Google account), or our own, which
- * pass through untouched.
+ * Firebase's own errors, the native plugin's (a bare message when Google's
+ * dialog or Apple's sheet was dismissed or the phone has no Google account), or
+ * our own, which pass through untouched.
  */
 export function toAccountError(error: unknown): AccountError {
   if (error instanceof AccountError) return error;
@@ -55,7 +62,7 @@ export function toAccountError(error: unknown): AccountError {
   const text = typeof message === 'string' ? message : '';
   const raw = typeof code === 'string' ? code : '';
 
-  if (CANCELLED.has(raw) || (raw === '' && /cancel/i.test(text))) {
+  if (CANCELLED.has(raw) || (raw === '' && (/cancel/i.test(text) || APPLE_SHEET_DISMISSED.test(text)))) {
     return new AccountError('cancelled', '');
   }
   const friendly = FRIENDLY[raw];

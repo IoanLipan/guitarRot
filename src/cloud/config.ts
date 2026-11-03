@@ -8,6 +8,8 @@
  * Firebase code even downloaded.
  */
 
+import { Capacitor } from '@capacitor/core';
+
 /** The web-app config of a Firebase project (Project settings, "Your apps"). */
 export type FirebaseWebConfig = {
   apiKey: string;
@@ -119,7 +121,13 @@ export const cloud: CloudConfig = readCloudConfig({
 /** True when this build has cloud features. */
 export const cloudEnabled: boolean = cloud.enabled;
 
-/** True when the Apple button should be shown: cloud features on, and Apple's sign-in switched on for the build. */
+/**
+ * True when the Apple button should be shown: cloud features on, and either Apple's sign-in switched on
+ * for the build or this is the iOS app. On iOS it is not optional: App Store rule 4.8 says an app that
+ * offers Google sign-in must offer Sign in with Apple too, and there it is the system's own sheet (the
+ * app's Apple ID and the App ID's capability), not the Services ID the web and Android flow need.
+ * Web and Android are unchanged.
+ */
 export function appleSignInAvailable(): boolean {
-  return cloud.enabled && cloud.appleSignIn;
+  return cloud.enabled && (cloud.appleSignIn || Capacitor.getPlatform() === 'ios');
 }

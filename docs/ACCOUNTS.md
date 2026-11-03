@@ -161,11 +161,12 @@ changed.
 ## Apple sign-in (optional)
 
 Off until the project is set up: the button shows only when the build has
-`VITE_AUTH_APPLE=1` (and cloud features on). Apple's **Sign in with Apple needs a
-paid Apple Developer Program membership** (about 99 USD a year), a Services ID
-and a key, so there is nothing to switch on in the repo until you have them.
-(App Store rule 4.8 is why a future iOS build offering Google would have to offer
-Apple; the web and Android builds have no such rule, so Apple is optional here.)
+`VITE_AUTH_APPLE=1` (and cloud features on), **except in the iOS app, where it always
+shows**: App Store rule 4.8 says an app that offers Google must offer Apple too, and
+the web and Android builds have no such rule, so Apple is optional there. Apple's
+**Sign in with Apple needs a paid Apple Developer Program membership** (about 99 USD a
+year), a Services ID and a key, so there is nothing to switch on in the repo until you
+have them. The iOS app's own setup is in [`IOS.md`](IOS.md).
 
 ### How it works
 
@@ -197,10 +198,17 @@ Apple; the web and Android builds have no such rule, so Apple is optional here.)
   the plugin, once in the JS SDK). The token and nonce are valid for that and, as
   far as is documented, Firebase keeps no used-token list, but verify it on the
   first real device.
+- **iOS:** the same plugin call, but the system's own sheet (`ASAuthorizationController`),
+  which **does** honour `skipNativeAuth`: no native user is made, the result carries the ID
+  token and the raw nonce, and the name only on the first authorisation. The app reads it the
+  same way as on Android. Dismissing the sheet comes back as a bare
+  `...AuthorizationError error 1001.` message, which `errors.ts` treats as a cancel. The
+  native flow needs only the App ID's Sign in with Apple capability (no Services ID); see
+  [`IOS.md`](IOS.md#sign-in-with-apple-and-google-on-ios).
 - **Deleting an Apple account** signs in with Apple again when Firebase wants a
-  recent sign-in (popup on the web, the plugin on Android). An iOS App Store
-  build would also have to revoke the Apple token (`revokeAccessToken`); there is
-  no iOS build.
+  recent sign-in (popup on the web, the plugin on Android and iOS). The iOS App Store
+  build must also revoke the Apple token when an account is deleted (guideline 5.1.1(v)):
+  **not done yet**, with the reason and the plan in [`IOS.md`](IOS.md#known-gaps-and-review-risks).
 - **Locally:** `VITE_AUTH_APPLE=1 npm run dev:emulators`. The Auth emulator's fake
   Apple window opens for the real button (email, optional name), so the whole
   flow, username step included, runs with no Apple account.
