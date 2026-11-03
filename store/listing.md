@@ -13,7 +13,8 @@ folder; screenshots in `screenshots/`.
 | Free or paid | Free |
 | Category | Education |
 | Tags | Music, Education |
-| Contact email | (your developer email — shown publicly on the listing) |
+| Developer account | Underdog Labs S.R.L. (the organisation account that publishes CeFacem) |
+| Contact email | `guitar.rot@proton.me` (shown publicly on the listing) |
 | Website | https://guitar-rot.vercel.app |
 | Privacy policy URL | https://guitar-rot.vercel.app/privacy.html |
 
@@ -92,6 +93,7 @@ folder; screenshots in `screenshots/`.
 - Opt in to **Play App Signing** (default). The key in
   `~/.guitarrot/guitarrot-upload.jks` is your *upload* key; Google holds the
   app-signing key. Back up the keystore and `android/keystore.properties`.
-- New personal developer accounts must run a **closed test with at least 12
-  testers for 14 days** before Production access is granted. Plan for it.
+- Publish from the **Underdog Labs S.R.L. organisation account**, as a new app
+  in the same account as CeFacem. The "closed test with 12 testers for 14 days"
+  rule is for new *personal* accounts, so it should not apply here.
 - Every new upload needs a higher `versionCode` in `android/app/build.gradle`.

@@ -206,7 +206,8 @@ Apple; the web and Android builds have no such rule, so Apple is optional here.)
 
 ### Manual setup (once)
 
-1. [ ] Enrol in the **Apple Developer Program** (developer.apple.com/programs).
+1. [ ] Use the **Underdog Labs S.R.L.** team in the Apple Developer Program (the
+       organisation membership CeFacem ships with; no new enrolment needed).
 2. [ ] Certificates, Identifiers & Profiles > Identifiers > **+** > **App IDs** >
        App. Description `guitarRot`, bundle id `com.guitarrot.app`; under
        Capabilities tick **Sign in with Apple** (Enable as a primary App ID).
@@ -419,8 +420,26 @@ installation id; answer both with canned JSON, and answer
 
 ## Manual setup checklist
 
-Everything here needs your Google account and cannot be done from the repo. Do
-it once, in order. Tick as you go.
+Everything here needs the app's own accounts and cannot be done from the repo.
+Do it once, in order. Tick as you go.
+
+guitarRot is published by **Underdog Labs S.R.L.** (the controller named in
+`public/privacy.html`, the same company that publishes CeFacem), and its contact
+address is **`guitar.rot@proton.me`**.
+
+### 0. The app's Google account
+
+- [ ] Make a Google account **for that address** rather than using a personal
+      Gmail: <https://accounts.google.com/signup> > "Use your existing email" >
+      `guitar.rot@proton.me`, then confirm the code Google mails to Proton.
+      Firebase, Google Analytics and the Google sign-in "support email" all
+      hang off this account.
+- [ ] Turn on 2-step verification for it, and later add a second **Owner**
+      (Firebase console > Project settings > Users and permissions) so the
+      project is never locked behind one login.
+- [ ] Point the Firebase CLI at it (this Mac's CLI is logged in as a personal
+      account): `firebase login:add` (opens a browser, sign in as
+      `guitar.rot@proton.me`), then `firebase login:use guitar.rot@proton.me`.
 
 ### 1. Firebase project (with Google Analytics)
 
@@ -466,15 +485,16 @@ it once, in order. Tick as you go.
 - [ ] Build > Authentication > **Get started**.
 - [ ] Sign-in method > enable **Email/Password** (leave "Email link" off).
 - [ ] Sign-in method > enable **Google**; set the **public-facing name**
-      (`guitarRot`) and a **support email**.
+      (`guitarRot`) and the **support email** `guitar.rot@proton.me`.
 - [ ] Optional: **Apple** (needs a paid Apple Developer account; follow
       [Apple sign-in](#apple-sign-in-optional), then build with `VITE_AUTH_APPLE=1`).
 - [ ] Settings > **Authorized domains**: `localhost` is there by default; add
       `guitar-rot.vercel.app` and any custom domain. Preview deployments
       (`*.vercel.app` hashes) are not wildcard-matched: add the ones you want
       to sign in from, or test sign-in on production only.
-- [ ] Templates: set the sender name and the "Reset password" and "Verify
-      email" texts and language, if you want them in your voice.
+- [ ] Templates: set the sender name (`guitarRot`) and **Reply to**
+      `guitar.rot@proton.me`, and the "Reset password" and "Verify email" texts
+      and language, if you want them in your voice.
 - [ ] Optional hardening later: enable **Email enumeration protection**
       (Settings > User actions); the app's reset flow already answers the same
       way whether or not an address has an account.
@@ -516,7 +536,7 @@ it once, in order. Tick as you go.
       `europe-west*` region.** It cannot be changed afterwards. The privacy
       policy says the cloud database is hosted in Europe.
 - [ ] From the repo, once: `npm i -g firebase-tools` (or use `npx firebase`),
-      `firebase login`, then deploy the rules and indexes to the **real**
+      `firebase login:use guitar.rot@proton.me` (step 0), then deploy the rules and indexes to the **real**
       project (the repo's `.firebaserc` default is the emulator-only
       `demo-guitarrot`, so name the project):
 
@@ -536,10 +556,15 @@ it once, in order. Tick as you go.
 
 ### 6. Play Console
 
+- [ ] Sign in to the **Underdog Labs S.R.L.** developer account (the one that
+      publishes CeFacem) > **Create app** `guitarRot: Learn Guitar`, package
+      `com.guitarrot.app`. The rest of the listing is in `store/listing.md`;
+      the public **contact email** is `guitar.rot@proton.me`.
 - [ ] Fill the **Data safety** form from the section below.
 - [ ] **Account deletion**: Play requires apps with accounts to offer in-app
       deletion (Settings > Account > Delete account) **and** a web link where
-      someone can learn how to request deletion without the app. Enter
+      someone can request deletion without the app (the policy offers an email
+      to `guitar.rot@proton.me`, answered within 30 days). Enter
       `https://guitar-rot.vercel.app/privacy.html#delete-your-data` in
       Policy > App content > Data safety > **Account deletion URL**.
 - [ ] Policy > App content > **Privacy policy**: unchanged URL, now describes
