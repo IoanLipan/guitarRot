@@ -20,14 +20,17 @@ folder; screenshots in `screenshots/`.
 
 **Short description (≤80):**
 
-> Scroll riffs, not reels. Learn guitar with real sound, a tuner and 28 lessons.
+> Scroll riffs, not reels. Learn guitar or ukulele with real sound and a tuner.
 
 **Full description (≤4000):**
 
 > Swap doomscrolling for guitar. guitarRot is a feed you can't put down — except every swipe is a riff to play, a chord to learn or a quick quiz on the fretboard.
 >
+> GUITAR OR UKULELE
+> Pick your instrument and switch any time: every fretboard, chord, tab, song and quiz follows it, and your points carry over.
+>
 > LEARN FROM ZERO
-> A 28-lesson course takes you from "which string is which?" to strumming songs and your first solo scale: tuning, reading tab, every note on the neck, your first chords, strumming patterns, melodies, power chords, keys, the 12-bar blues, hammer-ons, bends and the F barre chord. Each lesson explains, lets you hear it, has you play it on your own guitar, then checks you got it.
+> A 28-lesson guitar course and a 21-lesson ukulele course. The guitar one takes you from "which string is which?" to strumming songs and your first solo scale: tuning, reading tab, every note on the neck, your first chords, strumming patterns, melodies, power chords, keys, the 12-bar blues, hammer-ons, bends and the F barre chord. Each lesson explains, lets you hear it, has you play it on your own guitar, then checks you got it.
 >
 > IT HEARS YOU PLAY
 > The built-in tuner and the "play this note" steps listen through your phone's microphone and tell you when you've hit the right note. Sound is analysed on your phone and never recorded.
@@ -41,7 +44,13 @@ folder; screenshots in `screenshots/`.
 > PLAY ALONG
 > 32 songs and studies with tab or chord charts, a metronome with count-in, slow-down and loop-a-section. 29 chord shapes with diagrams you can strum. A fretboard explorer and a quiz that drills note names until they stick.
 >
-> No account. No ads. No tracking. Works offline.
+> LEVELS, PICKS AND STREAKS
+> Quiz runs at easy, medium and hard with a score at the end, levels to climb, picks to unlock and a daily streak. Join the weekly leaderboard if you like.
+>
+> YOUR PROGRESS, ON EVERY PHONE
+> Optional account with Google, Apple or a username and email: your progress follows you to a new phone. Everything works without one.
+>
+> No ads. Works offline.
 
 ## Graphics
 
@@ -53,11 +62,11 @@ folder; screenshots in `screenshots/`.
 
 ## Data safety (Policy → App content → Data safety)
 
-> These answers are for the build **without** accounts and analytics (1.2.x).
-> Once accounts, sync, the leaderboard or usage analytics ship, the answers
-> change (data is collected, optionally): use the Play Console section of
-> [`docs/ACCOUNTS.md`](../docs/ACCOUNTS.md) instead, and drop "No account. No
-> tracking." from the long description above.
+> **Outdated from the accounts release on:** these answers are for the
+> 1.2.x build without accounts. The build with accounts, sync, the leaderboard
+> and usage statistics collects data (optionally): fill the form from the
+> "Play Console: Data safety answers" section of
+> [`docs/ACCOUNTS.md`](../docs/ACCOUNTS.md) instead.
 
 - Does your app collect or share any of the required user data types? **No.**
   - The microphone is used for pitch detection only. Audio is processed
