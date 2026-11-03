@@ -1,7 +1,11 @@
 import { useId, useRef, useState, type KeyboardEvent } from 'react';
+import { isObjectionable } from '@/cloud/nameFilter';
 import { Pick } from '@/game/Pick';
 import { tierForLevel } from '@/game/materials';
+import { MoreIcon } from '@/ui/icons';
+import { useHiddenPlayers } from './hidden';
 import { scoreOf, type BoardEntry, type BoardKind } from './model';
+import { PlayerSheet } from './PlayerSheet';
 import { useBoard } from './useBoard';
 import { isoWeekKey } from './week';
 
@@ -23,9 +27,10 @@ type RowData = { name: string; level: number; score: number; rank: number | null
  * One player: place, name, level, XP. The place and the XP are in the display
  * face like the You tab's other numbers. The XP stacks its label under the
  * number, and "You" sits on the level line, so the name gets the rest of the
- * width (about 115px on a 320px phone, enough for most names) and is cut with an ellipsis.
+ * width and is cut with an ellipsis. Another player's row ends in the dots that open the
+ * report and hide sheet (`onMore`); the player's own row has none.
  */
-function Row({ row, you, testId }: { row: RowData; you: boolean; testId: string }) {
+function Row({ row, you, testId, onMore }: { row: RowData; you: boolean; testId: string; onMore?: (opener: HTMLButtonElement) => void }) {
   return (
     <li
       data-testid={testId}
@@ -57,6 +62,18 @@ function Row({ row, you, testId }: { row: RowData; you: boolean; testId: string 
         </span>
         <span className="block pt-0.5 text-label leading-none text-ink-dim">XP</span>
       </p>
+      {onMore !== undefined && (
+        <button
+          type="button"
+          onClick={(event) => onMore(event.currentTarget)}
+          aria-label={`Report or hide ${row.name}`}
+          aria-haspopup="dialog"
+          data-testid={`${testId}-more`}
+          className="press -mr-1.5 -ml-1 flex h-11 w-9 shrink-0 items-center justify-center rounded-full text-ink-dim"
+        >
+          <MoreIcon size={20} />
+        </button>
+      )}
     </li>
   );
 }
@@ -97,6 +114,9 @@ export function BoardView({
 }) {
   const [kind, setKind] = useState<BoardKind>('week');
   const [expanded, setExpanded] = useState(false);
+  const [player, setPlayer] = useState<BoardEntry | null>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const { isHidden, count: hiddenCount, hide, showAll } = useHiddenPlayers();
   const { state, retry } = useBoard(kind, me, weekKey, settled);
   const id = useId();
   const tabRefs = useRef<Partial<Record<BoardKind, HTMLButtonElement | null>>>({});
@@ -116,9 +136,29 @@ export function BoardView({
     tabRefs.current[next]?.focus();
   }
 
+  function closePlayer() {
+    setPlayer(null);
+    // The dots that opened the sheet get the cursor back, unless that player has just gone from the list.
+    const back = opener.current;
+    queueMicrotask(() => {
+      if (back?.isConnected) back.focus({ preventScroll: true });
+    });
+  }
+
+  function hidePlayer(uid: string) {
+    hide(uid);
+    setPlayer(null);
+  }
+
   const you: RowData = { name: me.name, level: me.level, score: scoreOf(me, kind, weekKey), rank: null };
-  const listed = state.status === 'ready' ? state.rows.slice(0, expanded ? state.rows.length : COLLAPSED_ROWS) : [];
-  const hidden = state.status === 'ready' ? state.rows.length - listed.length : 0;
+  // Left out for this person: the players they hid, and any name the filter would now refuse (a row written
+  // before the filter, or by a client that skipped it). Done after ranking, so a place stays the true place.
+  const visible =
+    state.status === 'ready'
+      ? state.rows.filter((row) => row.uid === me.uid || (!isHidden(row.uid) && !isObjectionable(row.name)))
+      : [];
+  const listed = visible.slice(0, expanded ? visible.length : COLLAPSED_ROWS);
+  const unlisted = visible.length - listed.length;
   const youListed = listed.some((row) => row.uid === me.uid);
 
   return (
@@ -189,10 +229,19 @@ export function BoardView({
           <>
             {listed.length === 0 ? (
               <div className="flex flex-col gap-1 rounded-2xl bg-surface-2 p-4" data-testid="lb-empty">
-                <p className="font-display text-[30px] leading-none font-black">
-                  {kind === 'week' ? 'Be the first this week' : 'Nobody is here yet'}
-                </p>
-                <p className="text-meta text-ink-dim">Practice anything to put your name at the top.</p>
+                {hiddenCount > 0 && state.rows.length > 0 ? (
+                  <>
+                    <p className="font-display text-[30px] leading-none font-black">Everyone here is hidden</p>
+                    <p className="text-meta text-ink-dim">Show them again from the foot of the board.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-display text-[30px] leading-none font-black">
+                      {kind === 'week' ? 'Be the first this week' : 'Nobody is here yet'}
+                    </p>
+                    <p className="text-meta text-ink-dim">Practice anything to put your name at the top.</p>
+                  </>
+                )}
               </div>
             ) : (
               <ol aria-label={kind === 'week' ? 'Top players this week' : 'Top players of all time'} className="flex flex-col gap-1" data-testid="lb-list">
@@ -202,19 +251,27 @@ export function BoardView({
                     row={row}
                     you={row.uid === me.uid}
                     testId={`lb-row-${row.uid}`}
+                    onMore={
+                      row.uid === me.uid
+                        ? undefined
+                        : (button) => {
+                            opener.current = button;
+                            setPlayer(row);
+                          }
+                    }
                   />
                 ))}
               </ol>
             )}
 
-            {hidden > 0 && (
+            {unlisted > 0 && (
               <button
                 type="button"
                 onClick={() => setExpanded(true)}
                 data-testid="lb-more"
                 className="press flex min-h-11 items-center justify-center rounded-full bg-surface-2 px-5 text-meta font-bold text-ink"
               >
-                Show {hidden} more
+                Show {unlisted} more
               </button>
             )}
 
@@ -233,7 +290,26 @@ export function BoardView({
             )}
           </>
         )}
+
+        {/* The way back from hiding someone: always at the foot, whatever list is showing. */}
+        {hiddenCount > 0 && (
+          <p className="flex flex-wrap items-center gap-x-1.5 text-meta text-ink-dim" data-testid="lb-hidden">
+            <span>
+              {hiddenCount} {hiddenCount === 1 ? 'player' : 'players'} hidden.
+            </span>
+            <button
+              type="button"
+              onClick={showAll}
+              data-testid="lb-show-hidden"
+              className="press flex min-h-11 items-center rounded-full px-1 font-bold text-ink underline underline-offset-4"
+            >
+              Show them
+            </button>
+          </p>
+        )}
       </div>
+
+      <PlayerSheet player={player} onClose={closePlayer} onHide={hidePlayer} />
     </div>
   );
 }
