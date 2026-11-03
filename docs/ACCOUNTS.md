@@ -535,7 +535,7 @@ address is **`guitar.rot@proton.me`**.
 - [ ] **Location: a European one, `eur3` (Europe multi-region) or a single
       `europe-west*` region.** It cannot be changed afterwards. The privacy
       policy says the cloud database is hosted in Europe.
-- [ ] From the repo, once: `npm i -g firebase-tools` (or use `npx firebase`),
+- [ ] From the repo, once: `npm i -g firebase-tools` (or use `npx firebase-tools`; plain `npx firebase` finds the app SDK, which has no CLI),
       `firebase login:use guitar.rot@proton.me` (step 0), then deploy the rules and indexes to the **real**
       project (the repo's `.firebaserc` default is the emulator-only
       `demo-guitarrot`, so name the project):
