@@ -278,6 +278,75 @@ describe('create account', () => {
   });
 });
 
+describe('the terms line', () => {
+  const TERMS = 'https://guitar-rot.vercel.app/terms.html';
+  const PRIVACY = 'https://guitar-rot.vercel.app/privacy.html';
+
+  it('says what making an account means, with the Terms and the Privacy policy linked', () => {
+    setup();
+    const line = screen.getByTestId('account-terms');
+    expect(line).toHaveTextContent('By creating an account you agree to the Terms and the Privacy policy.');
+    expect(within(line).getByRole('link', { name: 'Terms' })).toHaveAttribute('href', TERMS);
+    expect(within(line).getByRole('link', { name: 'Privacy policy' })).toHaveAttribute('href', PRIVACY);
+  });
+
+  it('opens both outside the app, the way Settings opens the privacy policy', () => {
+    setup();
+    for (const link of within(screen.getByTestId('account-terms')).getAllByRole('link')) {
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    }
+  });
+
+  it('sits right under "Create account", above the switch to sign in', () => {
+    setup();
+    const create = screen.getByRole('button', { name: 'Create account' });
+    const line = screen.getByTestId('account-terms');
+    const switchLine = screen.getByText('Already have an account?');
+    expect(create.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(line.compareDocumentPosition(switchLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Together they are one area, kept on screen when the fields are taller than the sheet (360x640).
+    const actions = screen.getByTestId('account-actions');
+    expect(actions).toContainElement(create);
+    expect(actions).toContainElement(line);
+    expect(actions.className).toContain('sticky');
+  });
+
+  it('keeps "Create account" a submit button of the form, so Enter still creates the account', () => {
+    setup();
+    const create = screen.getByRole('button', { name: 'Create account' });
+    expect(create).toHaveAttribute('type', 'submit');
+    expect(screen.getByTestId('account-form-sign-up')).toContainElement(create);
+  });
+
+  it('keeps a message about the whole form (no connection) in the same area as the button', async () => {
+    api.signUpWithEmail.mockRejectedValueOnce(new AccountError('auth/network-request-failed', 'No connection. Check your internet and try again.'));
+    const { user } = setup();
+    await user.type(username(), 'ada_l');
+    await user.type(email(), 'ada@example.com');
+    await user.type(password(), 'secret12');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    const actions = screen.getByTestId('account-actions');
+    expect(await within(actions).findByTestId('account-form-error')).toHaveTextContent('No connection');
+  });
+
+  it('is there in the one-time offer too, where Google and Apple make the account', () => {
+    setup({ intent: 'nudge' });
+    const line = screen.getByTestId('account-terms');
+    expect(line).toHaveTextContent('By creating an account you agree to the Terms and the Privacy policy.');
+    const notNow = screen.getByRole('button', { name: 'Not now' });
+    expect(line.compareDocumentPosition(notNow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('is not shown to somebody who is only signing in, or choosing a username', () => {
+    const signIn = setup({ intent: 'sign-in' });
+    expect(screen.queryByTestId('account-terms')).toBeNull();
+    signIn.rerender({ intent: 'username', account: SIGNED_IN });
+    expect(screen.queryByTestId('account-terms')).toBeNull();
+  });
+});
+
 describe('the username field', () => {
   beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
 
