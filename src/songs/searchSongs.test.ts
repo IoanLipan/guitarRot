@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIFFICULTIES, MOVIES_TAG, SONGS, isMovieSong, type Difficulty, type Song } from '@/content';
+import { DIFFICULTIES, GENRES, GENRE_LABELS, MOVIES_TAG, SONGS, isMovieSong, type Difficulty, type Song } from '@/content';
 import { EMPTY_FILTER, searchSongs } from './searchSongs';
 
 const titles = (songs: { title: string }[]) => songs.map((song) => song.title);
@@ -104,8 +104,10 @@ describe('searchSongs', () => {
     const folk = searchSongs(SONGS, { ...EMPTY_FILTER, query: 'folk' });
     const easyFolk = searchSongs(SONGS, { ...EMPTY_FILTER, query: 'folk easy' });
 
-    expect(easyFolk.length).toBeLessThanOrEqual(folk.length);
-    expect(easyFolk.every((song) => song.difficulty === 'easy')).toBe(true);
+    // "folk" finds the Folk & traditional genre as well as the style, and "easy" can also be in a song's about line.
+    expect(easyFolk.length).toBeLessThan(folk.length);
+    expect(easyFolk.every((song) => folk.includes(song))).toBe(true);
+    expect(searchSongs(SONGS, { ...EMPTY_FILTER, query: 'folk', difficulty: 'easy' }).every((song) => easyFolk.includes(song))).toBe(true);
   });
 
   it('filters by difficulty independently of the query', () => {
@@ -117,7 +119,9 @@ describe('searchSongs', () => {
 
   it('combines the difficulty filter with the query', () => {
     const results = searchSongs(SONGS, { ...EMPTY_FILTER, query: 'traditional', difficulty: 'easy' });
-    expect(results.every((song) => song.artist === 'Traditional')).toBe(true);
+    // The word is in the artist, or in the Folk & traditional genre's label.
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every((song) => song.artist === 'Traditional' || song.genre === 'folk')).toBe(true);
     expect(results.every((song) => song.difficulty === 'easy')).toBe(true);
   });
 
@@ -191,6 +195,80 @@ describe('searchSongs', () => {
       ];
 
       expect(ids(searchSongs(songs, movies))).toEqual(['with']);
+    });
+  });
+
+  describe('the genre filter', () => {
+    const ids = (songs: readonly Song[]) => songs.map((song) => song.id);
+
+    it('starts on all', () => {
+      expect(EMPTY_FILTER.genre).toBe('all');
+    });
+
+    it('keeps only the songs of one genre, for every genre', () => {
+      for (const genre of GENRES) {
+        const results = searchSongs(SONGS, { ...EMPTY_FILTER, genre });
+
+        expect(results.length, genre).toBeGreaterThan(0);
+        expect(results.every((song) => song.genre === genre), genre).toBe(true);
+        expect(results).toHaveLength(SONGS.filter((song) => song.genre === genre).length);
+      }
+    });
+
+    it('splits the catalogue: the genres together are every song, once', () => {
+      const total = GENRES.reduce((sum, genre) => sum + searchSongs(SONGS, { ...EMPTY_FILTER, genre }).length, 0);
+      expect(total).toBe(SONGS.length);
+    });
+
+    it('is the whole catalogue again on all', () => {
+      expect(searchSongs(SONGS, { ...EMPTY_FILTER, genre: 'all' })).toHaveLength(SONGS.length);
+    });
+
+    it('combines with the difficulty, Movies and the query', () => {
+      const classicalHardMovies = searchSongs(SONGS, {
+        ...EMPTY_FILTER,
+        genre: 'classical',
+        difficulty: 'hard',
+        movies: true,
+      });
+      expect(ids(classicalHardMovies)).toContain('air-on-the-g-string');
+      expect(ids(classicalHardMovies)).not.toContain('the-entertainer');
+      expect(
+        classicalHardMovies.every((song) => song.genre === 'classical' && song.difficulty === 'hard' && isMovieSong(song)),
+      ).toBe(true);
+
+      expect(ids(searchSongs(SONGS, { ...EMPTY_FILTER, genre: 'classical', movies: true, query: 'bach' }))).toEqual([
+        'air-on-the-g-string',
+      ]);
+      expect(searchSongs(SONGS, { ...EMPTY_FILTER, genre: 'kids', movies: true })).toEqual([]);
+    });
+
+    it('filters fixtures on the genre alone', () => {
+      const songs = [fixture('a', 'easy', { genre: 'blues' }), fixture('b', 'easy', { genre: 'rock' })];
+
+      expect(ids(searchSongs(songs, { ...EMPTY_FILTER, genre: 'blues' }))).toEqual(['a']);
+    });
+
+    it('finds a genre by the words of its label, with no chip pressed', () => {
+      const songs = [
+        fixture('a', 'easy', { genre: 'kids', style: 'x', about: 'x', artist: 'x' }),
+        fixture('b', 'easy', { genre: 'rock', style: 'x', about: 'x', artist: 'x' }),
+      ];
+
+      expect(ids(searchSongs(songs, { ...EMPTY_FILTER, query: 'kids' }))).toEqual(['a']);
+      expect(ids(searchSongs(songs, { ...EMPTY_FILTER, query: 'rock' }))).toEqual(['b']);
+      expect(ids(searchSongs(songs, { ...EMPTY_FILTER, query: 'carols' }))).toEqual(['a']);
+      expect(ids(searchSongs(songs, { ...EMPTY_FILTER, query: 'metal' }))).toEqual(['b']);
+    });
+
+    it('finds every genre in the real catalogue by the first word of its label', () => {
+      for (const genre of GENRES) {
+        const word = GENRE_LABELS[genre].split(' ')[0]!;
+        const found = searchSongs(SONGS, { ...EMPTY_FILTER, query: word });
+        const ofGenre = SONGS.filter((song) => song.genre === genre);
+
+        for (const song of ofGenre) expect(ids(found), `${word} -> ${song.id}`).toContain(song.id);
+      }
     });
   });
 

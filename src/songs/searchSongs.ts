@@ -1,22 +1,27 @@
-import { DIFFICULTIES, isMovieSong, type Difficulty, type Song } from '@/content';
+import { DIFFICULTIES, GENRE_LABELS, isMovieSong, type Difficulty, type Genre, type Song } from '@/content';
 
 export type DifficultyFilter = Difficulty | 'all';
+
+export type GenreFilter = Genre | 'all';
 
 export type SongFilter = {
   query: string;
   difficulty: DifficultyFilter;
+  /** One family of songs (see `GENRES`), or all of them. Combines with the difficulty and Movies. */
+  genre: GenreFilter;
   /** Only the Movies category: songs tagged `movies`. Combines with the difficulty. */
   movies: boolean;
 };
 
-export const EMPTY_FILTER: SongFilter = { query: '', difficulty: 'all', movies: false };
+export const EMPTY_FILTER: SongFilter = { query: '', difficulty: 'all', genre: 'all', movies: false };
 
 /**
  * Every word a song can be found by. The `about` line is in it so a film's
- * name finds the song that was heard in that film.
+ * name finds the song that was heard in that film; the genre's label is in it
+ * so typing "kids" or "rock" finds a family without touching the chips.
  */
 function haystack(song: Song): string {
-  return [song.title, song.artist, song.style, song.key, song.difficulty, ...song.tags, song.about]
+  return [song.title, song.artist, song.style, GENRE_LABELS[song.genre], song.key, song.difficulty, ...song.tags, song.about]
     .join(' ')
     .toLowerCase();
 }
@@ -40,6 +45,7 @@ export function searchSongs(songs: readonly Song[], filter: SongFilter): Song[] 
 
   const matched = songs.filter((song) => {
     if (filter.difficulty !== 'all' && song.difficulty !== filter.difficulty) return false;
+    if (filter.genre !== 'all' && song.genre !== filter.genre) return false;
     if (filter.movies && !isMovieSong(song)) return false;
     const text = haystack(song);
     return words.every((word) => text.includes(word));
