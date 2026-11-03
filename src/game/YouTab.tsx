@@ -2,6 +2,8 @@ import type { CSSProperties } from 'react';
 import { activeDayStreak, levelProgress, localDateIso, QUIZ_DIFFICULTIES, rankTitle } from '@/progress';
 import type { ProgressHandle } from '@/app/useProgress';
 import { DIFFICULTY_NAME } from '@/quiz/difficultyCopy';
+import { AccountCard } from '@/cloud/AccountCard';
+import { LeaderboardSection } from '@/leaderboard/LeaderboardSection';
 import { LevelEmblem } from './LevelEmblem';
 import { MiniPicks } from './MiniPicks';
 import { PickCase } from './PickCase';
@@ -9,6 +11,7 @@ import { PickSheet } from './PickSheet';
 import { StreakMark } from './marks';
 import { StreakStrip } from './StreakStrip';
 import { XpBar } from './XpBar';
+import { track } from '@/cloud/analytics';
 
 /**
  * The You tab: where you stand (level, streak, bests) and the case of picks
@@ -54,6 +57,12 @@ export function YouTab({
             </p>
           </div>
         </section>
+
+        {/* Renders nothing in a build without accounts. Under the level, not above it: the gear sits in this corner. */}
+        <AccountCard delay="30ms" />
+
+        {/* Also nothing without accounts. Right under the Account card, because signing in is how you get here. */}
+        <LeaderboardSection progress={progress} delay="45ms" onView={() => track('leaderboard_view')} />
 
         <section
           aria-label="Day streak"

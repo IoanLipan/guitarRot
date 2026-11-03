@@ -13,7 +13,8 @@ folder; screenshots in `screenshots/`.
 | Free or paid | Free |
 | Category | Education |
 | Tags | Music, Education |
-| Contact email | (your developer email — shown publicly on the listing) |
+| Developer account | Underdog Labs S.R.L. (the organisation account that publishes CeFacem) |
+| Contact email | `guitar.rot@proton.me` (shown publicly on the listing) |
 | Website | https://guitar-rot.vercel.app |
 | Privacy policy URL | https://guitar-rot.vercel.app/privacy.html |
 
@@ -52,6 +53,12 @@ folder; screenshots in `screenshots/`.
 
 ## Data safety (Policy → App content → Data safety)
 
+> These answers are for the build **without** accounts and analytics (1.2.x).
+> Once accounts, sync, the leaderboard or usage analytics ship, the answers
+> change (data is collected, optionally): use the Play Console section of
+> [`docs/ACCOUNTS.md`](../docs/ACCOUNTS.md) instead, and drop "No account. No
+> tracking." from the long description above.
+
 - Does your app collect or share any of the required user data types? **No.**
   - The microphone is used for pitch detection only. Audio is processed
     on-device, in memory, and never stored or transmitted. Google's definition
@@ -68,7 +75,7 @@ folder; screenshots in `screenshots/`.
 | Privacy policy | https://guitar-rot.vercel.app/privacy.html |
 | Ads | No, the app does not contain ads |
 | App access | All functionality is available without special access |
-| Content rating (IARC) | Category: Reference, News, or Educational → answer No to every content question → expect *Everyone / PEGI 3* |
+| Content rating (IARC) | Category: Reference, News, or Educational → No to violence, sexuality, language, drugs, gambling. **Yes to "Can users interact or exchange content?"**: usernames and leaderboard names are public (filtered, reportable, hideable; see Moderation in `docs/ACCOUNTS.md`). No chat, no location sharing, no purchases yet → expect *Everyone / PEGI 3* with "Users interact" |
 | Target audience | 13 and over (keeps the app out of the Families programme's extra requirements; nothing in the app is unsuitable for younger users) |
 | News app | No |
 | Government app | No |
@@ -86,6 +93,7 @@ folder; screenshots in `screenshots/`.
 - Opt in to **Play App Signing** (default). The key in
   `~/.guitarrot/guitarrot-upload.jks` is your *upload* key; Google holds the
   app-signing key. Back up the keystore and `android/keystore.properties`.
-- New personal developer accounts must run a **closed test with at least 12
-  testers for 14 days** before Production access is granted. Plan for it.
+- Publish from the **Underdog Labs S.R.L. organisation account**, as a new app
+  in the same account as CeFacem. The "closed test with 12 testers for 14 days"
+  rule is for new *personal* accounts, so it should not apply here.
 - Every new upload needs a higher `versionCode` in `android/app/build.gradle`.

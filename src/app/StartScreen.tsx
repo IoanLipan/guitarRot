@@ -24,6 +24,7 @@ export function StartScreen({
   needsInstrument = false,
   onPickInstrument,
   feedLabel: feedIdle,
+  onSignIn,
 }: {
   plan: StartPlan;
   loading: boolean;
@@ -38,9 +39,14 @@ export function StartScreen({
   onPickInstrument?: (instrument: InstrumentId) => void;
   /** What the second button says when idle, for an instrument whose feed is not riffs. Defaults to "Just scroll riffs". */
   feedLabel?: string;
+  /**
+   * Opens sign-in, for somebody on a new phone who already has an account (their progress comes back once they
+   * are in). Given only where accounts exist and nobody is signed in; without it there is no link.
+   */
+  onSignIn?: () => void;
 }) {
   if (needsInstrument && onPickInstrument !== undefined) {
-    return <InstrumentChoice onPick={onPickInstrument} />;
+    return <InstrumentChoice onPick={onPickInstrument} onSignIn={onSignIn} />;
   }
 
   const learnLabel = labelFor('learn', chosen, loading, failed, startLabel(plan));
@@ -102,7 +108,24 @@ export function StartScreen({
           The sounds could not be loaded. Check your connection and try again.
         </p>
       )}
+
+      {onSignIn !== undefined && <HaveAccountLink onClick={onSignIn} index={8} />}
     </main>
+  );
+}
+
+/** A quiet way in for somebody who already has an account: below the real choices, never competing with them. */
+function HaveAccountLink({ onClick, index }: { onClick: () => void; index: number }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid="start-sign-in"
+      style={stagger(index, 70)}
+      className="rise-in press -mt-2 flex min-h-11 items-center rounded-full px-4 text-meta font-bold text-ink-dim underline underline-offset-4"
+    >
+      I already have an account
+    </button>
   );
 }
 
@@ -113,7 +136,7 @@ const STRING_WORDS: Record<number, string> = { 4: 'Four', 6: 'Six' };
  * the instrument drawn standing up, so it can be answered without reading.
  * Picking one is the whole step; the usual start screen follows.
  */
-function InstrumentChoice({ onPick }: { onPick: (instrument: InstrumentId) => void }) {
+function InstrumentChoice({ onPick, onSignIn }: { onPick: (instrument: InstrumentId) => void; onSignIn: (() => void) | undefined }) {
   return (
     <main className="flex h-dvh flex-col items-center justify-center gap-6 bg-ground p-8 text-center tight:gap-4 tight:p-5">
       <LogoMark className="logo-drop h-24 w-auto tight:h-16" />
@@ -148,6 +171,8 @@ function InstrumentChoice({ onPick }: { onPick: (instrument: InstrumentId) => vo
           })}
         </div>
       </section>
+
+      {onSignIn !== undefined && <HaveAccountLink onClick={onSignIn} index={6} />}
     </main>
   );
 }

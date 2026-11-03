@@ -6,6 +6,7 @@ import type { TabId } from './TabBar';
 /** What the Android Back button does, given what is on screen. */
 export type BackAction =
   | 'close-settings'
+  | 'close-account'
   | 'close-lesson'
   | 'close-song'
   | 'close-pick'
@@ -25,13 +26,15 @@ export type BackState = {
   songOpen: boolean;
   /** A pick is open in the You tab (it need not be the tab on screen). */
   pickOpen?: boolean;
+  /** The account sheet (create an account, sign in, pick a username) is open. It can be opened from anywhere. */
+  accountSheetOpen?: boolean;
   /** Where the Quiz tab is, if it is mounted. */
   quizLayer?: QuizLayer;
 };
 
 /**
  * Back peels one layer off the screen you are looking at: the Settings sheet
- * first, then the lesson, song, pick or quiz run you are inside, then the tab
+ * first, then the account sheet (it opens over any screen), then the lesson, song, pick or quiz run you are inside, then the tab
  * itself (back to the Feed), and only from the Feed does it leave the app. A
  * lesson open in the Learn tab does not count while another tab is showing:
  * closing something you cannot see would look like Back did nothing.
@@ -42,9 +45,11 @@ export function backAction({
   lessonOpen,
   songOpen,
   pickOpen = false,
+  accountSheetOpen = false,
   quizLayer = 'select',
 }: BackState): BackAction {
   if (settingsOpen) return 'close-settings';
+  if (accountSheetOpen) return 'close-account';
   if (tab === 'learn' && lessonOpen) return 'close-lesson';
   if (tab === 'songs' && songOpen) return 'close-song';
   if (tab === 'you' && pickOpen) return 'close-pick';

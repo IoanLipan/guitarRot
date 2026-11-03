@@ -1,0 +1,211 @@
+rules_version = '2';
+
+// Deploy with `firebase deploy --only firestore:rules` (see the README's Accounts section).
+// Tests: src/cloud/firestore.rules.emu.test.ts, run by `npm run test:cloud`.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedInAs(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // What the progress sync writes to users/{uid}:
+    //   { progress: <map>, schemaVersion: <int>, updatedAt: serverTimestamp() }
+    // and nothing else. The caps are generous sanity limits (real progress is far below
+    // them); Firestore's own 1 MiB per document is the hard stop.
+    function isProgressDoc() {
+      let doc = request.resource.data;
+      return doc.keys().hasOnly(['progress', 'schemaVersion', 'updatedAt'])
+        && doc.keys().hasAll(['progress', 'schemaVersion', 'updatedAt'])
+        && doc.progress is map
+        && doc.schemaVersion is int
+        && doc.schemaVersion >= 1 && doc.schemaVersion <= 100
+        && doc.updatedAt == request.time
+        && doc.progress.keys().size() <= 40
+        && doc.progress.get('srs', {}).size() <= 5000
+        && doc.progress.get('daily', {}).size() <= 800
+        && doc.progress.get('achievements', {}).size() <= 500
+        && doc.progress.get('practiceDays', []).size() <= 800
+        && doc.progress.get('lessonsDone', []).size() <= 2000
+        && doc.progress.get('songsPlayed', []).size() <= 2000
+        && doc.progress.get('seenContent', []).size() <= 1000;
+    }
+
+    // ---- Progress sync ------------------------------------------------------
+    // One document per person, theirs alone: only that signed-in person can read,
+    // write or delete it (deleting happens when they delete their account).
+    match /users/{uid} {
+      allow read: if signedInAs(uid);
+      allow create, update: if signedInAs(uid) && isProgressDoc();
+      allow delete: if signedInAs(uid);
+    }
+
+    // ---- USERNAMES AND PROFILES ---------------------------------------------------
+    // Two documents that only ever change together (src/cloud/usernames.ts):
+    //
+    //   usernames/{handle} = { uid, createdAt }                  the claim; the id IS the username
+    //   profiles/{uid}     = { username, createdAt, updatedAt }  the person's side of it
+    //
+    // A handle is unique because it is a document id: a second create of the same id is an
+    // update, and updates are refused. The rules below tie the two documents together with
+    // getAfter/existsAfter, which look at the state a batch or transaction WOULD leave:
+    //   - a handle can be created only by a profile that names it in the same commit;
+    //   - a profile can name only a handle its owner holds, as of the end of the commit;
+    //   - changing the name must free the old handle in the same commit;
+    //   - a handle can be deleted only by its owner, and only if their profile no longer names it.
+    // Nobody can list either collection; a handle can be looked up by its id alone, even
+    // before sign-in, because the sign-up form asks "is it free?" while the person types.
+
+    // 3 to 20 characters: a-z, 0-9, . and _; a letter or digit at each end; not a reserved word.
+    // (The same shape as src/cloud/username.ts, kept in step by a test.)
+    function validHandle(handle) {
+      return handle is string
+        && handle.matches('^[a-z0-9][a-z0-9._]{1,18}[a-z0-9]$')
+        && !(handle in ['admin', 'administrator', 'guitarrot', 'moderator', 'official', 'root', 'staff', 'support', 'system']);
+    }
+
+    function handleDoc(handle) {
+      return /databases/$(database)/documents/usernames/$(handle);
+    }
+
+    function profileDoc(uid) {
+      return /databases/$(database)/documents/profiles/$(uid);
+    }
+
+    match /usernames/{handle} {
+      allow get: if true;
+      allow list: if false;
+
+      allow create: if request.auth != null
+        && validHandle(handle)
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.keys().hasAll(['uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && existsAfter(profileDoc(request.auth.uid))
+        && getAfter(profileDoc(request.auth.uid)).data.username == handle;
+
+      allow update: if false;
+
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && (!existsAfter(profileDoc(request.auth.uid))
+          || getAfter(profileDoc(request.auth.uid)).data.username != handle);
+    }
+
+    match /profiles/{uid} {
+      function wellFormed() {
+        let doc = request.resource.data;
+        return doc.keys().hasOnly(['username', 'createdAt', 'updatedAt'])
+          && doc.keys().hasAll(['username', 'createdAt', 'updatedAt'])
+          && validHandle(doc.username)
+          && doc.createdAt is timestamp
+          && doc.updatedAt == request.time;
+      }
+
+      // The profile's username is held by this person once the commit is done.
+      function holdsHandle() {
+        let handle = request.resource.data.username;
+        return existsAfter(handleDoc(handle)) && getAfter(handleDoc(handle)).data.uid == uid;
+      }
+
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list: if false;
+
+      allow create: if request.auth != null && request.auth.uid == uid
+        && wellFormed()
+        && request.resource.data.createdAt == request.time
+        && holdsHandle();
+
+      allow update: if request.auth != null && request.auth.uid == uid
+        && wellFormed()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && holdsHandle()
+        && (request.resource.data.username == resource.data.username
+          || !existsAfter(handleDoc(resource.data.username)));
+
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ---- LEADERBOARD ----------------------------------------------------------
+    // The leaderboard phase adds its own `match /leaderboard/...` block right here,
+    // with its own rules. Nothing below needs to change for it.
+
+    // ---- Everything else is denied. -------------------------------------------
+    // (Anything no rule allows is refused anyway; this says so out loud.)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ======================================================================
+    // leaderboard (accounts phase 3). Self-contained: every function this
+    // block uses is declared inside it, so it merges next to other blocks.
+    //
+    // One public row per player who chose to be on the board, at
+    // leaderboard/{uid}: { name, level, xp, weekKey, weekXp, instrument,
+    // updatedAt }. Any signed-in player can read the board; a row can only be
+    // written, changed or removed by the player it belongs to.
+    //
+    // This is a friendly board, not a tournament: the client reports its own
+    // XP, so these rules cannot know what was really earned. They keep the
+    // board well-formed and make a casual cheat slow (XP only goes up, and by
+    // at most 2000 per write).
+    // ======================================================================
+    match /leaderboard/{uid} {
+      function ownRow() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+
+      function row() {
+        return request.resource.data;
+      }
+
+      // 3 to 20 characters: letters of any alphabet, digits, . _ - and single
+      // spaces inside; no space at either end. (The same shape as src/leaderboard/name.ts.)
+      function validName(name) {
+        return name is string
+          && name.size() >= 3
+          && name.size() <= 20
+          && name.matches('^[\\p{L}\\p{N}._-]([\\p{L}\\p{N} ._-]*[\\p{L}\\p{N}._-])?$');
+      }
+
+      // ISO week key such as 2026-W44.
+      function validWeekKey(key) {
+        return key is string && key.matches('^[0-9]{4}-W(0[1-9]|[1-4][0-9]|5[0-3])$');
+      }
+
+      // Exactly these fields, each of the right kind and size.
+      function wellFormed() {
+        return row().keys().hasOnly(['name', 'level', 'xp', 'weekKey', 'weekXp', 'instrument', 'updatedAt'])
+          && row().keys().hasAll(['name', 'level', 'xp', 'weekKey', 'weekXp', 'instrument', 'updatedAt'])
+          && validName(row().name)
+          && row().level is int && row().level >= 1 && row().level <= 999
+          && row().xp is int && row().xp >= 0 && row().xp <= 10000000
+          && row().weekXp is int && row().weekXp >= 0 && row().weekXp <= 10000000
+          && validWeekKey(row().weekKey)
+          && row().instrument in ['guitar', 'ukulele']
+          && row().updatedAt == request.time;
+      }
+
+      // Any signed-in player may look at the board.
+      allow read: if request.auth != null;
+
+      // Joining. XP may be anything (a player who has been practising for a
+      // year joins with all of it); this week's XP starts near zero.
+      allow create: if ownRow() && wellFormed() && row().weekXp <= 2000;
+
+      // Playing, renaming. All-time XP never goes down and grows by at most
+      // 2000 a write. In the same week the weekly XP never goes down and grows
+      // by at most 2000 a write; a later week starts it again, up to 2000.
+      allow update: if ownRow() && wellFormed()
+        && row().xp >= resource.data.xp
+        && row().xp - resource.data.xp <= 2000
+        && (row().weekKey == resource.data.weekKey
+          ? row().weekXp >= resource.data.weekXp && row().weekXp - resource.data.weekXp <= 2000
+          : row().weekKey > resource.data.weekKey && row().weekXp <= 2000);
+
+      // Leaving the board.
+      allow delete: if ownRow();
+    }
+  }
+}

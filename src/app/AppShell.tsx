@@ -1,10 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Style, StatusBar } from '@capacitor/status-bar';
 import { getToneProfile } from '@/audio';
+import { analyticsAvailable, track } from '@/cloud/analytics';
+import { OpenAccountSheetProvider, type AccountSheetIntent } from '@/cloud/AccountSheetContext';
+import { useAccount } from '@/cloud/AccountProvider';
+import { ConsentSheet } from '@/cloud/ConsentSheet';
+import { useAnalyticsConsent } from '@/cloud/useAnalyticsConsent';
+import { SyncContext, useCloudSync } from '@/cloud/useCloudSync';
 import { courseFor, getSong, riffsFor, songPlayableOn } from '@/content';
 import { InstrumentProvider } from '@/instrument';
+import { LeaderboardSync } from '@/leaderboard/LeaderboardSync';
 import type { InstrumentId } from '@/music';
 import { Feed } from '@/feed/Feed';
 import { AwardLayer } from '@/game/AwardLayer';
@@ -24,14 +31,22 @@ import { useAppLifecycle } from './useAppLifecycle';
 import { useAudioEngine } from './useAudioEngine';
 import { backAction, minimizeApp, useBackButton, type QuizLayer } from './useBackButton';
 import { useProgress } from './useProgress';
+import { useSaveNudge } from './useSaveNudge';
+import { useUsageTracking } from './useUsageTracking';
 import { useWakeAudio } from './useWakeAudio';
 import { GearIcon } from '@/ui/icons';
 import { useViewTransition } from '@/ui/motion';
 import { AndroidAppBanner } from './AndroidAppBanner';
 
+// The account sheet is its own chunk, fetched only in a build that has accounts (it is never rendered, so never
+// requested, where they are off): that build's first download stays what it was.
+const AccountSheet = lazy(() => import('@/cloud/AccountSheet').then((module) => ({ default: module.AccountSheet })));
+
 export function AppShell() {
   const { ready, engine, loading, failed, start } = useAudioEngine();
   const progress = useProgress();
+  // Signed in, the progress is kept in step with the account (nothing happens otherwise); the You tab shows how it stands.
+  const sync = useCloudSync(progress);
   const [tab, setTab] = useState<TabId>('feed');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shared, setShared] = useState<SharedContent | null>(null);
@@ -43,6 +58,10 @@ export function AppShell() {
   const [openSongId, setOpenSongId] = useState<string | null>(null);
   // The pick open in the You tab. Owned here because an unlock toast can send you to it.
   const [openPickId, setOpenPickId] = useState<string | null>(null);
+  // The one account sheet (create an account, sign in, pick a username). It opens over any screen, the start screen
+  // included, from the You tab, Settings, the start screen's link and the one-time offer; owned here so Back can close it.
+  const account = useAccount();
+  const [accountIntent, setAccountIntent] = useState<AccountSheetIntent | null>(null);
   // Where the Quiz tab is (its mode select, a run, a run's results), and its handle for Back and for leaving mid-run.
   const [quizLayer, setQuizLayer] = useState<QuizLayer>('select');
   const quizApiRef = useRef<QuizApi | null>(null);
@@ -101,6 +120,7 @@ export function AppShell() {
    */
   function switchInstrument(next: InstrumentId) {
     if (next === instrumentId) return;
+    track('instrument_switch', { to: next });
     // The switch in Learn's header is inside the panes that are remounted, so keyboard focus on it would be lost.
     refocusSwitch.current = document.activeElement?.hasAttribute('data-instrument-switch') === true;
     engine?.stopAll();
@@ -146,7 +166,9 @@ export function AppShell() {
 
   useBackButton(() => {
     if (!ready) {
-      minimizeApp();
+      // The sheet over the start screen goes first; with nothing open Back leaves the app.
+      if (accountIntent !== null) setAccountIntent(null);
+      else minimizeApp();
       return;
     }
     switch (
@@ -156,11 +178,15 @@ export function AppShell() {
         lessonOpen: learnPlace.lessonId !== null,
         songOpen: openSongId !== null,
         pickOpen: openPickId !== null,
+        accountSheetOpen: accountIntent !== null,
         quizLayer,
       })
     ) {
       case 'close-settings':
         setSettingsOpen(false);
+        break;
+      case 'close-account':
+        setAccountIntent(null);
         break;
       case 'close-lesson':
         setLearnPlace(placeWithoutLesson);
@@ -181,6 +207,38 @@ export function AppShell() {
         minimizeApp();
         break;
     }
+  });
+
+  // What the person does, for the opt-in usage analytics (a no-op without a Firebase config or without consent).
+  useUsageTracking({
+    active: ready && engine !== null,
+    tab,
+    settingsOpen,
+    learnPlace,
+    openSongId,
+    instrumentId,
+    progress,
+  });
+
+  // The one-time "Save your progress" offer, after the first lesson or badge: only for somebody signed out, and only at a
+  // calm moment (never in a lesson or a quiz run, over Settings, a pick or another question).
+  const consent = useAnalyticsConsent();
+  const calm =
+    ready &&
+    engine !== null &&
+    progress.loaded &&
+    progress.state.settings.instrumentChosen &&
+    !(tab === 'learn' && learnPlace.lessonId !== null) &&
+    !(tab === 'quiz' && quizLayer !== 'select') &&
+    !settingsOpen &&
+    openPickId === null &&
+    accountIntent === null &&
+    !(analyticsAvailable() && consent === 'unset');
+  useSaveNudge({
+    subscribeAwards: progress.subscribeAwards,
+    signedOut: account.status === 'signed-out',
+    calm,
+    onShow: () => setAccountIntent('nudge'),
   });
 
   const plan = planStart(progress.loaded, progress.state.lessonsDone, courseFor(instrumentId));
@@ -215,9 +273,16 @@ export function AppShell() {
     void start();
   }
 
+  const accountSheet =
+    account.status === 'disabled' ? null : (
+      <Suspense fallback={null}>
+        <AccountSheet intent={accountIntent} onClose={() => setAccountIntent(null)} />
+      </Suspense>
+    );
+
   if (!ready || engine === null) {
     return (
-      <>
+      <OpenAccountSheetProvider value={setAccountIntent}>
         <AndroidAppBanner floating />
         <StartScreen
           plan={plan}
@@ -230,12 +295,17 @@ export function AppShell() {
           onPickInstrument={progress.setInstrument}
           // An instrument with no riffs yet has a feed of chords and quizzes: say so on the button.
           feedLabel={riffsFor(instrumentId).length === 0 ? 'Just scroll chords' : undefined}
+          // For a new phone: somebody who already has an account signs in here, and their progress comes back.
+          onSignIn={account.status === 'signed-out' ? () => setAccountIntent('sign-in') : undefined}
         />
-      </>
+        {accountSheet}
+      </OpenAccountSheetProvider>
     );
   }
 
   return (
+    <SyncContext.Provider value={sync}>
+    <OpenAccountSheetProvider value={setAccountIntent}>
     <InstrumentProvider id={instrumentId}>
       <div className="flex h-dvh flex-col bg-ground">
         <AndroidAppBanner />
@@ -255,7 +325,10 @@ export function AppShell() {
                 engine={engine}
                 openSongId={openSongId}
                 onOpenSongChange={setOpenSongId}
-                onSongPlayed={(songId) => progress.record({ type: 'song-played', songId })}
+                onSongPlayed={(songId) => {
+                  track('song_play', { song_id: songId, instrument: instrumentId });
+                  progress.record({ type: 'song-played', songId });
+                }}
               />
             )}
             {tab === 'learn' && (
@@ -272,7 +345,13 @@ export function AppShell() {
             {tab === 'quiz' && (
               <Quiz engine={engine} progress={progress} onLayerChange={setQuizLayer} apiRef={quizApiRef} />
             )}
-            {tab === 'you' && <YouTab progress={progress} openPickId={openPickId} onOpenPickChange={setOpenPickId} />}
+            {tab === 'you' && (
+              <YouTab
+                progress={progress}
+                openPickId={openPickId}
+                onOpenPickChange={setOpenPickId}
+              />
+            )}
           </div>
 
           {/* The switch rides the gear's row. The gear is 16px from the edge. On the Feed the share icon
@@ -305,15 +384,40 @@ export function AppShell() {
 
         <AwardLayer progress={progress} phase={awardPhase} onOpenPick={showPick} />
 
+        {/* Asked once, after the instrument choice, and never over a lesson, a run or Settings. */}
+        <ConsentSheet
+          ready={
+            progress.loaded &&
+            progress.state.settings.instrumentChosen &&
+            !inLesson &&
+            !settingsOpen &&
+            quizLayer !== 'run' &&
+            accountIntent === null
+          }
+        />
+
+        {accountSheet}
+
+        {/* Keeps a leaderboard entry up to date with the XP earned; nothing at all without an account on the board. */}
+        <LeaderboardSync progress={progress} />
+
         <SettingsSheet
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
           engine={engine}
           progress={progress}
           onInstrumentChange={switchInstrument}
+          onOpenAccount={() => {
+            setSettingsOpen(false);
+            // Somebody with no account is taken straight to the sheet that makes one; an account is looked at in the You tab.
+            if (account.status === 'signed-out') setAccountIntent('sign-up');
+            else changeTab('you');
+          }}
         />
       </div>
     </InstrumentProvider>
+    </OpenAccountSheetProvider>
+    </SyncContext.Provider>
   );
 }
 

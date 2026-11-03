@@ -16,6 +16,7 @@ vi.mock('@capacitor/core', async (importOriginal) => {
 const { SettingsSheet } = await import('./SettingsSheet');
 
 const PRIVACY_URL = 'https://guitar-rot.vercel.app/privacy.html';
+const TERMS_URL = 'https://guitar-rot.vercel.app/terms.html';
 const APK_URL = 'https://github.com/IoanLipan/guitarRot/releases/latest/download/guitarRot.apk';
 
 function fakeEngine(): AudioEngine {
@@ -94,6 +95,19 @@ describe('SettingsSheet About section', () => {
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
   });
 
+  it('links to the terms of use next to the privacy policy, and opens them outside the app too', () => {
+    renderSheet();
+    const about = within(screen.getByTestId('about-section'));
+    const link = about.getByRole('link', { name: 'Terms of use' });
+
+    expect(link).toBe(screen.getByTestId('terms-link'));
+    expect(link).toHaveAttribute('href', TERMS_URL);
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    expect(link.querySelector('svg')).not.toBeNull();
+    expect(screen.getByTestId('privacy-link').nextElementSibling).toBe(link);
+  });
+
   it('keeps the sample credit, inside About', () => {
     renderSheet();
 
@@ -128,6 +142,7 @@ describe('SettingsSheet About section', () => {
 
     expect(screen.queryByTestId('android-app-link')).not.toBeInTheDocument();
     expect(screen.getByTestId('privacy-link')).toHaveAttribute('href', PRIVACY_URL);
+    expect(screen.getByTestId('terms-link')).toHaveAttribute('href', TERMS_URL);
   });
 });
 

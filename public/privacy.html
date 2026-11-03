@@ -17,6 +17,9 @@
       h1 { font-size: 30px; line-height: 1.2; margin: 0 0 6px; }
       h2 { font-size: 19px; margin: 36px 0 8px; }
       p, li { color: #d4d4dc; }
+      ul { padding-left: 22px; }
+      li { margin: 6px 0; }
+      strong { color: #f4f4f6; }
       .muted { color: #9a9aa8; font-size: 15px; }
       a { color: #ffb020; }
       .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; font-weight: 900; font-size: 22px; }
@@ -28,18 +31,36 @@
     <main>
       <div class="brand"><img src="/favicon.svg" alt="" />guitar<span>Rot</span></div>
       <h1>Privacy policy</h1>
-      <p class="muted">Effective 18 October 2026</p>
+      <p class="muted">Effective 3 November 2026</p>
 
       <p>
-        guitarRot teaches guitar. It has no accounts, no ads, no analytics and no tracking. It does
-        not collect, store on any server, sell or share personal data about you.
+        guitarRot teaches guitar and ukulele, on the web, on Android and on iPhone. It has no ads,
+        and nothing about you is ever sold. The whole app works with no account and with nothing
+        shared: everything below that sends data anywhere is optional, off until you switch it on,
+        and described here.
+      </p>
+
+      <h2>Who we are</h2>
+      <p>
+        guitarRot is made and run by Underdog Labs S.R.L., the controller of your personal data
+        (in the sense of Art. 4(7) GDPR):<br />
+        Underdog Labs S.R.L.<br />
+        Registered office: Bd. Dinicu Golescu, nr. 7, et. Parter, ap. SP. COM. 3, Sector 1,
+        Bucharest 010861, Romania<br />
+        Tax ID (CUI): 55589141, trade register no.: J2026054454006<br />
+        Email: <a href="mailto:guitar.rot@proton.me">guitar.rot@proton.me</a>
+      </p>
+      <p>
+        We are a small company and are not required to appoint a data protection officer; write to
+        the address above about anything in this policy.
       </p>
 
       <h2>The microphone</h2>
       <p>
         The tuner and the “play this note” checks in lessons listen through your microphone so the
-        app can tell which note your guitar is playing. The microphone only turns on after you tap
-        <em>Start tuner</em> or <em>Listen for me</em>, and it turns off when you leave that screen.
+        app can tell which note your instrument is playing. The microphone only turns on after you
+        tap <em>Start tuner</em> or <em>Listen for me</em>, and it turns off when you leave that
+        screen.
       </p>
       <p>
         The sound is analysed on your device, a few times a second, to estimate its pitch. It is
@@ -47,36 +68,238 @@
         permission, everything else in the app still works.
       </p>
 
-      <h2>Your progress and settings</h2>
+      <h2>On your device</h2>
       <p>
-        Your lesson progress, quiz streak and settings are stored on your device, in the app’s own
-        storage. guitarRot does not upload them and never receives them. Uninstalling the app
-        deletes the copy on your phone.
+        Your lesson progress, quiz streak, points and settings are stored on your device, in the
+        app’s own storage. Without an account, guitarRot does not upload them and never receives
+        them. Uninstalling the app (or clearing the website’s data in your browser) deletes them.
       </p>
       <p>
-        Android may also include the app’s data in your phone’s own Google backup, which is how
-        your progress can come back when you move to a new phone. That backup is made by Android,
-        not by guitarRot: it is encrypted, it is stored by Google, it follows your phone’s backup
-        settings (you can switch it off there), and it is never sent to us.
+        Your phone may include the app’s data in its own backup: Google backup on Android, iCloud
+        backup on iPhone. That is how progress can come back on a new phone even without an
+        account. The backup is made by your phone, not by guitarRot: it follows your phone’s backup
+        settings (you can switch it off there), it is stored by Google or Apple, and it is never sent
+        to us.
+      </p>
+
+      <h2>If you create an account (optional)</h2>
+      <p>
+        An account lets your progress follow you to a new phone. You can sign up with a username, an
+        email address and a password, or with Google or Apple. If you do, we store:
+      </p>
+      <ul>
+        <li>
+          your username. It is unique, so anyone can check whether a name is taken, and it is the
+          name other players see if you join the leaderboard;
+        </li>
+        <li>your email address;</li>
+        <li>
+          with Google sign-in, the name and profile picture your Google account shares with the
+          app; with Apple, the name you choose to share, and either your email or, if you hide it,
+          a private relay address Apple forwards to you (we never receive your Google or Apple
+          password);
+        </li>
+        <li>a sign-in password, kept only as a hash by Firebase Authentication, never readable by us;</li>
+        <li>your progress (lessons done, points, streaks, quiz bests, settings), in our cloud database;</li>
+        <li>
+          if you join the leaderboard, which is its own choice: the name you pick for it and your
+          points, which other players can see. Nothing else about you is shown to anyone.
+        </li>
+      </ul>
+      <p>
+        To protect sign-up and sign-in from abuse, Firebase Authentication also records the IP
+        address and device details of each sign-in; Google keeps those logs for a few weeks.
+      </p>
+      <p>
+        We use this only to run your account: to sign you in, to keep your progress, to show the
+        leaderboard if you joined it, and to keep accounts secure. The legal basis is the contract
+        between us for the account you asked for (Art. 6(1)(b) GDPR), and, for the security logs,
+        our legitimate interest in keeping the service safe (Art. 6(1)(f)). You can sign out at any
+        time and keep playing without an account. When you create an account you agree to our
+        <a href="/terms.html">terms of use</a>, which set the rules for usernames and leaderboard
+        names.
+      </p>
+
+      <h2>Usage statistics (optional)</h2>
+      <p>
+        The first time you use the app it asks whether you would like to share usage statistics,
+        and you can change your answer at any time in Settings, under <em>Share usage statistics</em>.
+        Until you say yes, nothing is collected and the analytics code is not even loaded. If you
+        say yes, the app sends Google Analytics:
+      </p>
+      <ul>
+        <li>which screens you open (a tab, a song, a lesson, the tuner, Settings) and how long you stay;</li>
+        <li>
+          what you do there, as simple events: a lesson started or finished, a song played, a quiz
+          run finished with its score, a pick unlocked, a level reached, the instrument you switch
+          to;
+        </li>
+        <li>your instrument and a rough band of your level (like “3 to 5”);</li>
+        <li>
+          what Google adds on its own: the app or browser version, device type, language, and an
+          approximate place (country or city) worked out from your connection.
+        </li>
+      </ul>
+      <p>
+        It is tied to a random identifier on your device, not to your account: your name, email,
+        account id, progress, anything you type, and anything from the microphone are never part of
+        it. We use it only to see which parts of guitarRot are used and where to improve it. There is
+        no advertising: advertising features, ad personalisation and advertising identifiers are off,
+        Google signals are off, and the data is never sold or shared with advertisers. The legal
+        basis is your consent (Art. 6(1)(a) GDPR), which you can withdraw at any time with the same
+        switch; withdrawing does not affect what was collected before.
+      </p>
+      <p>
+        Analytics data is kept for up to 14 months and then deleted automatically. Switching the
+        setting off stops collection straight away and removes the random identifier from your
+        device (events already sent can take a few seconds to arrive, and are then kept for that
+        long). Because the identifier is random and not linked to your account, we cannot pick one
+        person’s analytics out of the rest afterwards; it simply expires.
+      </p>
+
+      <h2>Cookies and storage on the website</h2>
+      <p>
+        The website keeps your progress and settings in your browser’s local storage, and, when you
+        are signed in, your sign-in session in its IndexedDB storage. Both are needed for the
+        features you use and are never read by anyone else. There are no advertising or tracking
+        cookies. Only if you say yes to usage statistics does Google Analytics set its cookies
+        (<code>_ga</code> and <code>_ga_&lt;id&gt;</code>), which hold the random identifier and last
+        up to 13 months. Saying no, or switching it off later, deletes them.
+      </p>
+
+      <h2>If you report a name</h2>
+      <p>
+        Every other player’s row on the leaderboard has <em>Report</em> and <em>Hide</em>. Report opens an email to us
+        with the reported name and that player’s id; it comes from your own email address, so we
+        see that too. We use it only to review the name and to reply to you, on the basis of our
+        legitimate interest in keeping the leaderboard safe (Art. 6(1)(f) GDPR), and we delete the
+        email once the report is handled, at the latest after 6 months. Hide only stores the
+        player’s id on your device: we never receive that list, and uninstalling the app or clearing
+        its data removes it. We never tell the reported player who reported them.
+      </p>
+
+      <h2>Who handles your data</h2>
+      <ul>
+        <li>
+          <strong>Google (Firebase).</strong> Accounts, the cloud database and analytics run on
+          Google’s Firebase (Firebase Authentication, Cloud Firestore, Google Analytics). Google is
+          our processor under its data processing terms and only acts on our instructions.
+        </li>
+        <li>
+          <strong>Vercel</strong> hosts the website and keeps ordinary server logs (address, time,
+          page), as any web host does.
+        </li>
+        <li>
+          <strong>Proton</strong> (Switzerland) hosts our email inbox, so emails you send us are
+          stored there.
+        </li>
+        <li>
+          <strong>Google and Apple sign-in.</strong> If you sign in with Google or Apple, that
+          company checks who you are under its own privacy policy and tells us only what is listed
+          above.
+        </li>
+        <li>
+          <strong>App stores.</strong> Google Play and the App Store handle downloads, updates and
+          crash reports from your phone under their own policies.
+        </li>
+      </ul>
+      <p>
+        We do not use any other service, and we do not sell or share your data with anyone else.
+      </p>
+
+      <h2>Where your data is stored</h2>
+      <p>
+        The cloud database (your progress, username and leaderboard entry) is in the European Union,
+        in Google’s Europe multi-region (Belgium and the Netherlands). Firebase Authentication runs
+        only from Google’s data centres in the United States, so your email, sign-in details and
+        sign-in logs are processed there, and Google may process analytics data in the United States
+        too. Vercel’s servers are worldwide. These transfers are covered by the EU-U.S. Data Privacy
+        Framework, under which Google and Vercel are certified, and by the European Commission’s
+        standard contractual clauses in their data processing terms. Switzerland, where Proton is,
+        has an EU adequacy decision.
+      </p>
+
+      <h2>How long we keep it</h2>
+      <ul>
+        <li><strong>Account, username, synced progress, leaderboard entry:</strong> for as long as the account exists. Deleting the account removes them at once.</li>
+        <li><strong>Sign-in security logs:</strong> a few weeks (Google’s schedule).</li>
+        <li><strong>Usage statistics:</strong> up to 14 months, then deleted automatically.</li>
+        <li><strong>Report emails:</strong> until the report is handled, at the latest 6 months.</li>
+        <li><strong>Other emails you send us:</strong> as long as we need to answer them, at the latest 12 months.</li>
+      </ul>
+
+      <h2 id="delete-your-data">Deleting your data</h2>
+      <ul>
+        <li>
+          <strong>Account and cloud data:</strong> in the app, open Settings, then Account, then
+          <em>Delete account</em>. That deletes your sign-in, your username and email, your synced
+          progress and your leaderboard entry for good. Progress on your phone stays, and you can
+          keep playing without an account.
+        </li>
+        <li>
+          <strong>Without the app:</strong> email
+          <a href="mailto:guitar.rot@proton.me?subject=Delete%20my%20guitarRot%20account">guitar.rot@proton.me</a>
+          from the address on your account (or tell us your username) and ask us to delete it. We
+          delete the same data as above within 30 days and reply when it is done.
+        </li>
+        <li>
+          <strong>Usage data:</strong> switch <em>Share usage statistics</em> off in Settings; what
+          was already collected expires on its own, after at most 14 months.
+        </li>
+        <li><strong>On your device:</strong> uninstall the app, or clear its data in your phone’s or browser’s settings.</li>
+      </ul>
+
+      <h2>Your rights</h2>
+      <p>Under the GDPR you can ask us, at any time and free of charge:</p>
+      <ul>
+        <li>for a copy of the personal data we hold about you, including in a machine-readable form you can take elsewhere;</li>
+        <li>to correct it (you can also change your username in the app);</li>
+        <li>to delete it, or to restrict how we use it;</li>
+        <li>to stop using it where we rely on our legitimate interest (the security logs and reports);</li>
+        <li>to withdraw a consent you gave (switching usage statistics off does that).</li>
+      </ul>
+      <p>
+        Email <a href="mailto:guitar.rot@proton.me">guitar.rot@proton.me</a>, ideally from the
+        address on your account so we know the request is yours. We answer within one month. You
+        also have the right to complain to a data protection authority; in Romania that is ANSPDCP
+        (<a href="https://www.dataprotection.ro">dataprotection.ro</a>), and you can also go to the
+        authority where you live.
+      </p>
+      <p>
+        Giving us any personal data is optional: without an account and without usage statistics,
+        the whole app still works. An account needs an email address or a Google or Apple sign-in,
+        and a username. We make no automated decisions about you; the leaderboard only sorts points.
       </p>
 
       <h2>Network</h2>
       <p>
-        The Android app works offline: all lessons, sounds and songs are inside the app. When you
-        tap Share on a riff or song, the app opens your phone’s own share sheet with a link that
-        contains only the name of that riff or song. You choose which app, if any, receives it;
-        guitarRot does not see where it goes. Links in Settings, such as this policy, open in your
-        phone’s browser.
+        The Android and iPhone apps work offline: all lessons, sounds and songs are inside the app.
+        They only connect to Google when you have an account (to sign in and keep your progress) or
+        have said yes to usage statistics. When you tap Share on a riff or song, the app opens your
+        phone’s own share sheet with a link that contains only the name of that riff or song. You
+        choose which app, if any, receives it; guitarRot does not see where it goes. Links in
+        Settings, such as this policy, open in your phone’s browser.
       </p>
 
       <h2>Children</h2>
-      <p>The app collects no data from anyone, including children.</p>
+      <p>
+        guitarRot is for anyone who wants to learn, and the app has no ads. It is not directed at
+        children under 13 and does not knowingly collect their data. Anyone can use the whole app
+        with no account and no sharing. If you are under 16, please ask a parent or guardian before
+        you create an account or say yes to usage statistics. If you think a child has given us
+        information they should not have, tell us and we will delete it.
+      </p>
 
       <h2>Changes and contact</h2>
       <p>
-        If this policy changes, the new version will be posted on this page with a new date.
-        Questions: open an issue at
-        <a href="https://github.com/IoanLipan/guitarRot/issues">github.com/IoanLipan/guitarRot/issues</a>.
+        If this policy changes, the new version will be posted on this page with a new date, and if
+        the change is to what the app collects, it will ask you again. Questions or requests about
+        your data: email <a href="mailto:guitar.rot@proton.me">guitar.rot@proton.me</a>. The rules
+        for using guitarRot are in the <a href="/terms.html">terms of use</a>.
+      </p>
+      <p class="muted">
+        Underdog Labs S.R.L., Bd. Dinicu Golescu, nr. 7, et. Parter, ap. SP. COM. 3, Sector 1,
+        Bucharest 010861, Romania. CUI 55589141, J2026054454006.
       </p>
     </main>
   </body>

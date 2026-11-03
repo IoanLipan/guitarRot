@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "demo-guitarrot",
+    "prod": "guitarrot-a27b5"
+  }
+}

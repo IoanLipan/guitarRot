@@ -117,7 +117,7 @@ describe('no text glyphs as icons', () => {
 describe('the game surfaces', () => {
   const ROOT = join(__dirname, '..');
   /** Every directory that holds only game surfaces. */
-  const GAME_DIRS = ['game'];
+  const GAME_DIRS = ['game', 'leaderboard'];
   /** Files of other directories that are game surfaces too (the rest of those directories is older code). */
   const GAME_FILES = [
     join('quiz', 'ModeSelect.tsx'),
