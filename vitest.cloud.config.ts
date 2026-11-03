@@ -7,6 +7,8 @@ import { fileURLToPath, URL } from 'node:url';
  * emulators, runs this config against them and shuts them down again.
  */
 export default defineConfig({
+  // Never the real project from .env.local: these run against the emulators only.
+  envDir: false,
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

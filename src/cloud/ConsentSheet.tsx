@@ -9,7 +9,7 @@ export const ASK_AFTER_MS = 1200;
 
 export const CONSENT_TITLE = 'Help make guitarRot better?';
 export const CONSENT_BODY =
-  'We’d like to see which screens and features you use, and for how long, anonymously: no ads, never sold, and you can change this any time in Settings.';
+  'We’d like to see which screens and features you use, and for how long. It’s tied to a random id, never to your name, email or account: no ads, never sold, and you can change this any time in Settings. Under 16? Ask a parent first.';
 
 /**
  * The one-time question about usage analytics: a calm sheet from the bottom with

@@ -193,7 +193,7 @@ function stop(): void {
 // --- The API -----------------------------------------------------------------
 
 /**
- * Records the answer to "Share anonymous usage?". Yes starts analytics (the
+ * Records the answer to "Share usage statistics?". Yes starts analytics (the
  * SDK is fetched now); no, after a yes, stops it and clears the client id.
  */
 export function setAnalyticsConsent(granted: boolean): void {

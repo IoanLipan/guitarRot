@@ -12,8 +12,11 @@ const { version } = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
 ) as { version: string };
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
+  // Tests never read .env files: a developer's .env.local holds the real Firebase
+  // project, and the tests expect a build with cloud off unless they say otherwise.
+  envDir: mode === 'test' ? false : undefined,
   define: {
     __APP_VERSION__: JSON.stringify(version),
   },
@@ -31,4 +34,4 @@ export default defineConfig({
     // and time out at random on a loaded machine; a real hang still fails.
     testTimeout: 15_000,
   },
-});
+}));

@@ -3,7 +3,7 @@ import { analyticsAvailable, setAnalyticsConsent } from './analytics';
 import { useAnalyticsConsent } from './useAnalyticsConsent';
 
 /**
- * Settings > Privacy: "Share anonymous usage", the one switch for everything
+ * Settings > Privacy: "Share usage statistics", the one switch for everything
  * analytics does. Off by default and until the person turns it on (or answers
  * the first-run question); turning it off stops collection at once and clears
  * the analytics client id. Renders nothing where the build has no analytics.
@@ -30,7 +30,7 @@ export function UsageSetting() {
       >
         <span className="min-w-0 flex-1">
           <span id={labelId} className="block text-body font-extrabold">
-            Share anonymous usage
+            Share usage statistics
           </span>
           <span id={hintId} className="block text-meta leading-snug text-ink-dim">
             Which screens and features you use, and for how long. No ads, never sold, no account details.

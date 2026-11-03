@@ -26,7 +26,7 @@ Google account can do). Code lives in `src/cloud/`.
 | 1. Accounts | Sign up with a username, email and password, or with Google or Apple; sign in; sign out; password reset; delete account (and, through `onBeforeAccountDelete` hooks, the cloud data). | `src/cloud/auth.ts`, `AccountProvider.tsx`, `AccountCard.tsx`, `AccountSheet.tsx`, `usernames.ts` | Authentication (Email/Password, Google, optionally Apple), Firestore `usernames` and `profiles` |
 | 2. Progress sync | Signed-in players' progress follows them to another device. | `src/progress` (sync), Firestore `users/{uid}` | Firestore + rules |
 | 3. Leaderboard | Optional public name and XP; a ranking in the You tab. | `leaderboard/` collection, You tab | Firestore + rules + indexes |
-| 4. Usage analytics | Opt-in, anonymous: which screens and features are used, and for how long. | `src/cloud/analytics.ts`, `analyticsBackend.ts`, `ConsentSheet.tsx`, `UsageSetting.tsx`, `src/app/useUsageTracking.ts` | Google Analytics enabled on the project |
+| 4. Usage analytics | Opt-in, pseudonymous (a random id, never the account): which screens and features are used, and for how long. | `src/cloud/analytics.ts`, `analyticsBackend.ts`, `ConsentSheet.tsx`, `UsageSetting.tsx`, `src/app/useUsageTracking.ts` | Google Analytics enabled on the project |
 
 > **For the merge:** the specifics of phases 2 and 3 (document shapes, rules,
 > the indexes file, what the You tab shows, which events `onBeforeAccountDelete`
@@ -299,7 +299,7 @@ the EU: **nothing is collected, loaded or queued until somebody says yes.**
 track(event, params?)                  // typed: a wrong event name or parameter is a compile error
 trackScreen(screenName, screenClass?, params?)
 setAnalyticsUserProperties({ instrument, level_bucket })
-setAnalyticsConsent(granted)           // the answer to "Share anonymous usage?"
+setAnalyticsConsent(granted)           // the answer to "Share usage statistics?"
 analyticsConsent()                     // 'granted' | 'denied' | 'unset'
 analyticsAvailable()                   // cloud on, a measurement id, not the emulators
 ```
@@ -318,7 +318,7 @@ is swallowed: analytics never breaks the app.
   the moment is right. **Share usage** (amber) and **No thanks** are the same
   size; Escape and a tap outside do nothing, because walking away is not an
   answer. It is never shown again.
-- **Changing it:** Settings > Privacy > **Share anonymous usage** switches it
+- **Changing it:** Settings > Privacy > **Share usage statistics** switches it
   on and off at any time.
 - **Where it is stored:** `localStorage`, key `guitarrot.analytics-consent.v1`
   (`granted` | `denied`; absent means not asked). It is a decision about this
@@ -346,7 +346,7 @@ is swallowed: analytics never breaks the app.
 ### What is tracked
 
 No personal data and no free text: only content ids, small numbers and fixed
-words. **The Firebase uid is not sent as `user_id`**: analytics stays anonymous
+words. **The Firebase uid is not sent as `user_id`**: analytics stays pseudonymous (a random id, not the account)
 (a random client id per browser or install, not linked to the account). The
 only user properties are `instrument` and `level_bucket` (`1-2`, `3-5`, `6-9`,
 `10+`).
@@ -426,6 +426,25 @@ Do it once, in order. Tick as you go.
 guitarRot is published by **Underdog Labs S.R.L.** (the controller named in
 `public/privacy.html`, the same company that publishes CeFacem), and its contact
 address is **`guitar.rot@proton.me`**.
+
+**Status on 2026-11-03.** Done:
+- Google account `guitar.rot@proton.me`.
+- Project **`guitarrot-a27b5`**, with Google Analytics.
+- GA Data Processing Amendment.
+- Web, Android and iOS apps registered.
+- Debug and upload SHA fingerprints.
+- `.env.local`.
+- Firestore `eur3` with delete protection; rules and indexes deployed.
+
+Left:
+- §1 GA settings.
+- §2 Vercel variables.
+- §3 Authentication (all of it).
+- §4 the Play App Signing fingerprint, then download `google-services.json` and `GoogleService-Info.plist` again.
+- §6.
+- §7.
+
+The real project has the alias `prod` in `.firebaserc`, so `firebase deploy --only firestore:rules,firestore:indexes --project prod`.
 
 ### 0. The app's Google account
 

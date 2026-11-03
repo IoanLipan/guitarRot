@@ -140,17 +140,17 @@ describe('the first-run question', () => {
   });
 });
 
-describe('Settings: Share anonymous usage', () => {
+describe('Settings: Share usage statistics', () => {
   it('is a switch that shows the choice, off until it has been made', () => {
     render(<UsageSetting />);
-    const toggle = screen.getByRole('switch', { name: 'Share anonymous usage' });
+    const toggle = screen.getByRole('switch', { name: 'Share usage statistics' });
     expect(toggle).toHaveAttribute('aria-checked', 'false');
     expect(toggle).toHaveAccessibleDescription(/which screens and features you use/i);
   });
 
   it('turns analytics on, and off again, from the one switch', () => {
     render(<UsageSetting />);
-    const toggle = screen.getByRole('switch', { name: 'Share anonymous usage' });
+    const toggle = screen.getByRole('switch', { name: 'Share usage statistics' });
 
     fireEvent.click(toggle);
     expect(analytics.setAnalyticsConsent).toHaveBeenLastCalledWith(true);

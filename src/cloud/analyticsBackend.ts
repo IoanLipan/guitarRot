@@ -43,6 +43,9 @@ const GTAG_CONFIG = {
   send_page_view: false,
   allow_google_signals: false,
   allow_ad_personalization_signals: false,
+  // The _ga cookies last 13 months instead of gtag's 2 years (the policy says so,
+  // and it is the ceiling EU regulators accept for analytics cookies).
+  cookie_expires: 13 * 30 * 24 * 60 * 60,
   ...(import.meta.env.DEV ? { debug_mode: true } : {}),
 };
 

@@ -15,6 +15,27 @@ pitch-shifted by `Tone.Sampler` to fill the gaps. A Karplus-Strong synth
 remains as the fallback when samples cannot be loaded, so the app is never
 mute and pitch is exact either way.
 
+## Stack
+
+Published by **Underdog Labs S.R.L.** (contact `guitar.rot@proton.me`) on the
+web, Google Play and the App Store, all from one codebase.
+
+| Layer | What | Notes |
+|---|---|---|
+| UI | React 19, TypeScript 6 (strict), Tailwind CSS v4 | self-hosted fonts (Figtree, Big Shoulders Display); no UI kit |
+| Build | Vite 8 | `npm run build` > `dist/` |
+| Audio | Tone.js 15 | recorded guitar and ukulele samples in `public/audio/`, Karplus-Strong fallback; pitch detection on the device (tuner, lesson checks) |
+| Native apps | Capacitor 8 | `android/` (Gradle, JDK 21) and `ios/` (Xcode, Swift Package Manager); one web bundle inside both |
+| Accounts | Firebase Authentication | username + email + password, Google, Apple; on phones through `@capacitor-firebase/authentication` |
+| Database | Cloud Firestore, `eur3` (EU) | progress sync, usernames, leaderboard; access decided by `firestore.rules` |
+| Analytics | Google Analytics 4 via Firebase | opt-in only; `@capacitor-firebase/analytics` on phones |
+| Hosting | Vercel | the website, from `master`; `public/privacy.html`, `public/terms.html` ship with it |
+| Tests | Vitest 4 + Testing Library (jsdom); Firebase Emulator Suite | `npm test`; `npm run test:cloud` for rules and sync against the emulators |
+| Releases | GitHub Releases (APK), Play Console (AAB), App Store Connect | `scripts/release-android.sh`; iOS in [`docs/IOS.md`](docs/IOS.md) |
+
+Firebase project: `guitarrot-a27b5` (owner `guitar.rot@proton.me`). Privacy
+records: [`docs/GDPR.md`](docs/GDPR.md).
+
 ## Status
 
 The music-theory core, audio engine, `Fretboard`/`TabStaff` renderers, and
@@ -161,13 +182,36 @@ username sign-up fails (it says "We couldn't save your username") until the
 `android/app/google-services.json` from the Firebase console; without it the
 debug build still assembles (see the note in `android/app/build.gradle`).
 
-**Usage analytics** (opt-in, anonymous: which screens and features are used and
+**Usage analytics** (opt-in, tied to a random id and never to the account: which screens and features are used and
 for how long) is part of the same layer and switches on only when
 `VITE_FIREBASE_MEASUREMENT_ID` is set too. Nothing is collected or loaded until
 the player says yes to the one-time question (and Settings has the switch).
 Everything about it, the env vars, and the owner's **manual setup checklist**
 (Firebase project, Auth providers, SHA fingerprints, Firestore, Play Console
 Data safety, DebugView) is in [`docs/ACCOUNTS.md`](docs/ACCOUNTS.md).
+
+## Running costs
+
+Firebase prices checked on 2026-11-03 (Firestore `eur3`: $0.06 per 100k reads,
+$0.18 per 100k writes, $0.18 per GiB-month; free every day: 50k reads, 20k
+writes, 20k deletes, 1 GiB). The estimate assumes "users" means monthly active
+users, a fifth of them on a given day, and everyone signed in (the worst case: a
+player without an account costs nothing). A signed-in player's day is about 130
+reads (mostly two leaderboard views of 25 rows each) and 25 writes (progress
+sync and leaderboard points, both throttled).
+
+| Monthly users | Firestore | Authentication | Analytics | Firebase total |
+|---|---|---|---|---|
+| 1,000 | $0 (inside the free tier) | $0 | $0 | **$0** |
+| 10,000 | about $4 reads + $2 writes | $0 | $0 | **about $6 / month** |
+| 100,000 | about $46 reads + $26 writes | $0 (see below) | $0 | **about $70 / month** |
+
+- **Plan.** The free Spark plan stops serving reads for the rest of the day once 50k are used, and caps Authentication at 3,000 daily users and 150 password-reset emails a day. So move to **Blaze** (pay as you go, same free tier) before launch, with **budget alerts** (say at $10, $50 and $100).
+- **Authentication.** Email, Google and Apple sign-in cost nothing up to 50k monthly users. Above that, a project upgraded to Identity Platform pays about $0.0055 per user (about $275 a month at 100k). Do not click "Upgrade to Identity Platform" unless a feature needs it.
+- **Other costs:**
+  - Vercel's free Hobby plan is for non-commercial use only. A company app needs **Pro, $20 a month**, or a move to Cloudflare Pages or Firebase Hosting.
+  - Apple Developer Program: $99 a year (Underdog Labs already has one).
+  - Google Play: $25 once (already paid).
 
 ## Android
 

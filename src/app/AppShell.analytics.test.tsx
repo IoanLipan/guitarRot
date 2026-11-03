@@ -212,7 +212,7 @@ describe('the app shell and usage analytics', () => {
       await openApp();
       fireEvent.click(screen.getByTestId('open-settings'));
 
-      const toggle = screen.getByRole('switch', { name: 'Share anonymous usage' });
+      const toggle = screen.getByRole('switch', { name: 'Share usage statistics' });
       expect(toggle).toHaveAttribute('aria-checked', 'true');
       fireEvent.click(toggle);
       expect(world.setAnalyticsConsent).toHaveBeenCalledWith(false);
