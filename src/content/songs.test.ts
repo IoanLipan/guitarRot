@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { SONGS, getSong } from './songCatalog';
+import { ALL_SONGS, SONGS, getSong } from './songCatalog';
 import {
   chartBars,
   chordByName,
+  GENRES,
+  GENRE_LABELS,
   isUpstroke,
   patternBeats,
   songBarCount,
@@ -241,6 +243,30 @@ describe('songToRiff', () => {
   });
 });
 
+describe('genres', () => {
+  it('gives every song, on every instrument, one of the known genres', () => {
+    for (const song of ALL_SONGS) {
+      expect(GENRES, `${song.id} has genre ${String(song.genre)}`).toContain(song.genre);
+    }
+  });
+
+  it('has at least one guitar song in every genre, so no chip leads to an empty list', () => {
+    for (const genre of GENRES) {
+      const guitar = ALL_SONGS.filter((song) => song.instrument === undefined && song.genre === genre);
+      expect(guitar.length, `no guitar song in ${genre}`).toBeGreaterThan(0);
+    }
+  });
+
+  it('has a label for every genre', () => {
+    for (const genre of GENRES) expect(GENRE_LABELS[genre]).not.toBe('');
+  });
+
+  it('gives a ukulele edition the genre of the guitar song it was made from', () => {
+    const edition = getSong('uke-twinkle-twinkle');
+    expect(edition?.genre).toBe(getSong('twinkle-twinkle')?.genre);
+  });
+});
+
 describe('validateSong', () => {
   const base: Song = {
     id: 'x',
@@ -277,6 +303,12 @@ describe('validateSong', () => {
     expect(validateSong({ ...base, chart })).toContain(
       'x: bar 2 names an unknown chord "Bmaj13"',
     );
+  });
+
+  it('rejects a genre that is not one of the known ones', () => {
+    const wrong = { ...base, genre: 'polka' } as unknown as Song;
+    expect(validateSong(wrong).join(' ')).toMatch(/x: genre "polka" is not one of/);
+    expect(validateSong(base)).toEqual([]);
   });
 
   it('demands an attribution for public-domain material', () => {
