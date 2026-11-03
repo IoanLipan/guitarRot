@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AccountCard, DELETE_BODY } from './AccountCard';
+import { AccountCard, DELETE_APPLE_NOTE, DELETE_BODY, DELETE_TITLE } from './AccountCard';
 import { AccountContext } from './AccountProvider';
 import { OpenAccountSheetProvider, type AccountSheetIntent } from './AccountSheetContext';
 import { ProfileContext } from './ProfileProvider';
@@ -240,6 +240,34 @@ describe('the account card', () => {
       await user.click(within(screen.getByTestId('confirm-dialog')).getByRole('button', { name: 'Delete account' }));
 
       expect(await screen.findByTestId('account-error')).toHaveTextContent('your account was kept');
+      expect(screen.getByTestId('account-name')).toBeInTheDocument();
+    });
+
+    it('tells an Apple account that Apple will ask first, and nobody else', async () => {
+      const apple = userEvent.setup();
+      const { unmount } = render(
+        <AccountContext.Provider value={{ status: 'signed-in', user: { ...ADA, providers: ['apple.com'] }, ...actions } as AccountApi}>
+          <AccountCard />
+        </AccountContext.Provider>,
+      );
+      await apple.click(screen.getByTestId('delete-account'));
+      expect(screen.getByRole('alertdialog', { name: DELETE_TITLE })).toHaveAccessibleDescription(DELETE_BODY + DELETE_APPLE_NOTE);
+      expect(DELETE_APPLE_NOTE).toMatch(/Apple will ask you to confirm/);
+      unmount();
+
+      const user = show({ status: 'signed-in', user: ADA });
+      await user.click(screen.getByTestId('delete-account'));
+      expect(screen.getByRole('alertdialog', { name: DELETE_TITLE })).toHaveAccessibleDescription(DELETE_BODY);
+    });
+
+    it('says nothing when the person backs out of Apple’s sheet, and the account stays', async () => {
+      actions.deleteAccount.mockRejectedValue(new AccountError('cancelled', ''));
+      const user = show({ status: 'signed-in', user: { ...ADA, providers: ['apple.com'] } });
+      await user.click(screen.getByTestId('delete-account'));
+      await user.click(within(screen.getByTestId('confirm-dialog')).getByRole('button', { name: 'Delete account' }));
+
+      expect(actions.deleteAccount).toHaveBeenCalledTimes(1);
+      expect(screen.queryByTestId('account-error')).toBeNull();
       expect(screen.getByTestId('account-name')).toBeInTheDocument();
     });
 
