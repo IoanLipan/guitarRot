@@ -302,7 +302,7 @@ describe('the tunes that have no ukulele edition', () => {
       expect(guitarRiffSongs.some((song) => song.id === id), `${id} is not a guitar riff song`).toBe(true);
       expect((UKULELE_LEFT_OUT[id] ?? '').length, id).toBeGreaterThan(20);
     }
-    expect(Object.keys(UKULELE_LEFT_OUT)).toHaveLength(17);
+    expect(Object.keys(UKULELE_LEFT_OUT)).toHaveLength(20);
   });
 });
 

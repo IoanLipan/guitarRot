@@ -3,6 +3,7 @@ import type { InstrumentId } from '@/music';
 import { MOVIES_TAG, songPlayableOn, type Song, type SongSection } from './songs';
 import { melodyRiff } from './melody';
 import { HARD_SONGS } from './hardSongs';
+import { ITALIAN_SONGS } from './italianSongs';
 import { MOVIE_SONGS } from './movieSongs';
 import { UKULELE_CHART_SONGS, ukuleleEditions } from './ukuleleSongs';
 
@@ -740,6 +741,9 @@ export const SONGS: readonly Song[] = [
 
   // --- Movies: public-domain film classics and film-mood originals (movieSongs.ts)
   ...MOVIE_SONGS,
+
+  // --- Italian: public-domain Italian classics and Italian-mood originals (italianSongs.ts)
+  ...ITALIAN_SONGS,
 
   // --- Hard: classical pieces and advanced studies (hardSongs.ts) --------
   ...HARD_SONGS,
