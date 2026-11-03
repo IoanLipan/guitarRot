@@ -182,6 +182,9 @@ export const UKULELE_LEFT_OUT: Readonly<Record<string, string>> = {
   'alternate-picking-ladder': 'A ladder of eighteen notes across six strings; the ukulele has its own scale-run riffs in the feed.',
   'sweep-cascade': 'Five-string sweep arpeggios; a ukulele has four strings and its own arpeggio riffs in the feed.',
   'travis-blues-in-e': 'An alternating thumb bass on the low E and A strings under the tune.',
+  'spanish-romance': 'A thumb bass on the low strings under a tune an octave and a half above it, with triplets between: three voices over three octaves.',
+  'rooftops-of-florence': 'Bass notes on the low E and A strings under inner-string arpeggios and a tune, over three octaves.',
+  'tarantella-in-a-minor': 'Open low-string drones under a fast tune in the high register, over three octaves.',
 };
 
 type Tune = { midi: Midi; beat: number; duration: number };

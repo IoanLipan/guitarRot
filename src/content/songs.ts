@@ -88,6 +88,17 @@ export function isMovieSong(song: Song): boolean {
   return song.tags.includes(MOVIES_TAG);
 }
 
+/**
+ * The tag that puts a song in the Italian category: public-domain Italian
+ * classics, plus guitarRot originals written in an Italian mood. Never a
+ * transcription of a copyrighted Italian song.
+ */
+export const ITALIAN_TAG = 'italian';
+
+export function isItalianSong(song: Song): boolean {
+  return song.tags.includes(ITALIAN_TAG);
+}
+
 /** `-` in a chart means "hold whatever was ringing". */
 export const HOLD = '-';
 
