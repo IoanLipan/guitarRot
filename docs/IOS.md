@@ -158,10 +158,14 @@ and report "Firebase was not configured" if it is not.
   returns Google's ID token and the JS SDK signs in with it, as on Android.
 - What the native flow needs in the Apple Developer account is only the **App ID with the
   Sign in with Apple capability** and, in the Firebase console, Apple enabled as a provider.
-  The Services ID, the `.p8` key and the return URL of
-  [`ACCOUNTS.md`](ACCOUNTS.md#manual-setup-once) are for the web and Android browser flow
-  and for **revoking the token when an account is deleted** (see
+  The Services ID and its return URL of [`ACCOUNTS.md`](ACCOUNTS.md#manual-setup-once) are
+  for the web and Android browser flow; the `.p8` key, with the Team ID and Key ID, is also
+  needed to **revoke the token when an account is deleted**, on iOS too (see
   [Known gaps](#known-gaps-and-review-risks)).
+- **Deleting an Apple account** shows the system sheet once more and revokes Apple's token
+  before anything is deleted (App Store guideline 5.1.1(v)): a native Firebase user is made for
+  that one sheet because the plugin's iOS revoke needs one, then signed out. The delete dialog
+  says "Apple will ask you to confirm first".
 
 ## Sound and the microphone
 
@@ -220,10 +224,11 @@ Do them in this order. Nothing here can be done from the repo.
 
 - [ ] Console > Authentication > Sign-in method: **Google** on (needed for the iOS client id),
       **Apple** on.
-- [ ] Apple provider: for the native iOS flow nothing more is needed to sign in. To revoke
-      tokens on account deletion (see [Known gaps](#known-gaps-and-review-risks)) fill in the
-      Apple team id, key id and `.p8` as in [`ACCOUNTS.md`](ACCOUNTS.md#apple-sign-in-optional)
-      steps 3 and 5 to 6 (the Services ID is for the web).
+- [ ] Apple provider: for the native iOS flow nothing more is needed to **sign in**, but
+      **revoking Apple's token when an account is deleted needs the Apple team id, key id and
+      `.p8`** filled in (steps 5 and 6 of [`ACCOUNTS.md`](ACCOUNTS.md#manual-setup-once); see
+      [Known gaps](#known-gaps-and-review-risks)). The Services ID and its return URL (steps 3 and
+      4) are for the web and Android only.
 - [ ] Download `GoogleService-Info.plist` again (Project settings > Your apps > iOS), replace
       `ios/App/App/GoogleService-Info.plist`, run `scripts/ios-google-url-scheme.sh`, commit both.
       Repeat whenever you change a sign-in method or link Analytics.
@@ -270,7 +275,12 @@ Things the simulator cannot show, to do once on a real iPhone from TestFlight:
 - [ ] **Continue with Apple** opens the system sheet and signs in; the username step follows;
       backing out of the sheet shows no error.
 - [ ] **Continue with Google** opens Google's sheet and signs in (after the URL scheme step).
-- [ ] Delete account works for an Apple account and for a Google one.
+- [ ] Delete account works for a Google account, and for an Apple account: Apple's sheet comes
+      up first ("Apple will ask you to confirm first" is in the dialog), the account goes, and
+      guitarRot is **gone from Settings > your name > Sign in with Apple** (a leftover entry
+      means the token was not revoked: the Apple key is missing in Firebase, and the Xcode console
+      or `log show` has "No Apple token to revoke"). Dismissing the sheet keeps the account and
+      says nothing. Do it once with a second Apple ID too, to see it refuse the wrong one.
 - [ ] Analytics: say yes to the question, then watch DebugView; say no, and nothing is sent.
 - [ ] Bottom bar clear of the home indicator, nothing under the Dynamic Island, on a small
       and a large phone.
@@ -363,20 +373,27 @@ screenshots should show them.
 
 In order of how likely each is to hold up a review.
 
-1. **Apple token revocation on account deletion is not implemented.** Guideline 5.1.1(v): an
-   app that offers account creation with Sign in with Apple must revoke the Apple token when the
-   account is deleted (the account deletion itself, in Settings, exists and works). `ACCOUNTS.md`
-   already notes it. What it needs, and why it was not guessed at without a real Apple
-   account: Apple's authorization code (one use, a few minutes of life) and a native Firebase
-   user, because the plugin's `revokeAccessToken` calls `Auth.revokeToken(withAuthorizationCode:)`,
-   which asks the native SDK's current user for its ID token and the app deliberately has none
-   (`skipNativeAuth`). The plan: on iOS, for an account with an `apple.com` provider,
-   `deleteAccount` runs the Apple sheet once with `signInWithApple({ skipNativeAuth: false })`,
-   uses its `idToken` and nonce for the JS re-authentication, calls
-   `FirebaseAuthentication.revokeAccessToken({ token: credential.authorizationCode })`, then signs
-   the native user out; if revoking fails it must not stop the deletion. It also needs the
-   Apple team id, key id and `.p8` filled in under Firebase's Apple provider (step 6 of
-   [`ACCOUNTS.md`](ACCOUNTS.md#manual-setup-once)). It cannot be tested without them and a phone.
+1. **Apple token revocation on account deletion is built, and untested against real Apple.**
+   Guideline 5.1.1(v): an app that offers account creation with Sign in with Apple must revoke the
+   Apple token when the account is deleted. For an account with the `apple.com` provider,
+   `deleteAccount` (`src/cloud/auth.ts`) now starts with one more Apple sheet (which is also the
+   fresh sign-in Firebase wants), revokes the token, and only then runs the clean-up and deletes
+   the user. On iOS the sheet gives a one-time authorization code; the JS SDK's `revokeAccessToken`
+   takes access tokens only, and the native SDK's `Auth.revokeToken(withAuthorizationCode:)`
+   (the plugin's `revokeAccessToken`) asks the native SDK's *current user* for its ID token and
+   never answers without one, so for that one sheet the plugin signs a native user in
+   (`skipNativeAuth: false`), the code is revoked under a 20 second deadline, and the native user
+   is signed out. The details, and web and Android, are under "Deleting an Apple account" in
+   [`ACCOUNTS.md`](ACCOUNTS.md#apple-sign-in-optional).
+   - **It only works if Firebase's Apple provider has the Team ID, Key ID and the `.p8`**
+     (step 6 of [`ACCOUNTS.md`](ACCOUNTS.md#manual-setup-once)); that is the first manual step to
+     do, and the one that is easy to forget on an iPhone-only plan.
+   - A revoke that fails for a temporary reason keeps the account and asks the person to try
+     again. If Firebase has no token because the key is missing, the delete still goes through
+     and only the console says so, so check it with a real Apple account (below).
+   - Not verified: it has not run against Apple. The phone checklist has the test: delete an
+     Apple account and see guitarRot disappear from Settings > your name > Sign in with Apple
+     on the phone (Apple lists the apps that still hold a token).
 2. **Google sign-in is not usable until the plist has a client id** (see
    [Firebase on iOS](#firebase-on-ios)). Until then, tapping the button does nothing.
 3. **The plugin links `AppTrackingTransparency`.** `@capacitor-firebase/authentication` imports it
