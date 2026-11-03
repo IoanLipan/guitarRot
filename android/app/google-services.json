@@ -1,0 +1,62 @@
+{
+  "project_info": {
+    "project_number": "302461379722",
+    "project_id": "guitarrot-a27b5",
+    "storage_bucket": "guitarrot-a27b5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:302461379722:android:3a03b0ff70d19bb499f973",
+        "android_client_info": {
+          "package_name": "com.guitarrot.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "302461379722-6pads0k8p8jtu48j5v9a6q6kape7j259.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.guitarrot.app",
+            "certificate_hash": "8f2a269108cb9b9774abe82ea0ad74660ad94c70"
+          }
+        },
+        {
+          "client_id": "302461379722-c3k9o8d437rgurr4mi3ue1b7k3g0s7lh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.guitarrot.app",
+            "certificate_hash": "a6d89c4c2b4b948f3476d208ccaff4d6b7553191"
+          }
+        },
+        {
+          "client_id": "302461379722-ettcmdk82ackbq7s0tmrk4hrck7s3at0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwPFjyHXco8sotXgVZBe6A_ZBvGCV_5oI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "302461379722-ettcmdk82ackbq7s0tmrk4hrck7s3at0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "302461379722-inirfl2ig617jvnc1jcvspj7crdpldpi.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.guitarrot.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
