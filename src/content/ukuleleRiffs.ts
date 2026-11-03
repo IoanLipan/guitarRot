@@ -107,6 +107,7 @@ function strumRiff(spec: {
     artist: 'guitarRot',
     difficulty: 'easy',
     style: spec.style,
+    genre: 'folk',
     key: bars[0] ?? '',
     bpm: spec.bpm,
     source: 'original',

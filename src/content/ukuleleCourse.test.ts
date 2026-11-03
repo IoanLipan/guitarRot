@@ -454,6 +454,7 @@ describe('answers derived from the theory core', () => {
       artist: 'x',
       difficulty: 'easy',
       style: 'x',
+      genre: 'folk',
       key: 'C',
       bpm: 80,
       source: 'original',

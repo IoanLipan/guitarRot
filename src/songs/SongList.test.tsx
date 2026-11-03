@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SONGS } from '@/content';
+import { GENRES, GENRE_LABELS, SONGS } from '@/content';
 import { EMPTY_FILTER, searchSongs, type SongFilter } from './searchSongs';
 import { RISE_ROWS, SongList } from './SongList';
 
@@ -98,6 +98,72 @@ describe('the song list, as a screen', () => {
       expect(row.querySelector('.w-px')).toBeNull();
       expect(screen.getByTestId('filter-movies')).toHaveClass('ml-2');
       expect(row.children).toHaveLength(5);
+    });
+  });
+
+  describe('the genre chips', () => {
+    it('are a second group, named, with All first and then the seven genres by their labels', () => {
+      render(<Harness />);
+
+      const group = screen.getByRole('group', { name: 'Filter by genre' });
+      const chips = within(group).getAllByRole('button');
+      expect(chips.map((chip) => chip.textContent)).toEqual(['All', ...GENRES.map((genre) => GENRE_LABELS[genre])]);
+      expect(chips.map((chip) => chip.getAttribute('data-testid'))).toEqual([
+        'genre-all',
+        ...GENRES.map((genre) => `genre-${genre}`),
+      ]);
+      // The difficulty row is its own group, not this one.
+      expect(screen.getByRole('group', { name: 'Filter songs' })).not.toBe(group);
+    });
+
+    it('are the same 44px, sentence-case chips as the difficulty row', () => {
+      render(<Harness />);
+
+      for (const chip of within(screen.getByTestId('genre-row')).getAllByRole('button')) {
+        expect(chip).toHaveClass('min-h-11', 'min-w-11', 'shrink-0', 'rounded-full', 'text-meta', 'font-bold');
+        expect(chip.className).not.toMatch(/uppercase|tracking-|text-xs/);
+      }
+    });
+
+    it('press one at a time, starting on All, and narrow the count a screen reader hears', async () => {
+      render(<Harness />);
+      const pressed = () =>
+        within(screen.getByTestId('genre-row'))
+          .getAllByRole('button')
+          .filter((chip) => chip.getAttribute('aria-pressed') === 'true')
+          .map((chip) => chip.getAttribute('data-testid'));
+      expect(pressed()).toEqual(['genre-all']);
+
+      await userEvent.click(screen.getByTestId('genre-blues'));
+      expect(pressed()).toEqual(['genre-blues']);
+      expect(screen.getByTestId('genre-blues')).toHaveClass('bg-accent');
+      expect(screen.getByTestId('genre-all')).not.toHaveClass('bg-accent');
+      const blues = SONGS.filter((song) => song.genre === 'blues').length;
+      expect(screen.getByRole('status')).toHaveTextContent(`${blues} songs`);
+
+      await userEvent.click(screen.getByTestId('genre-country'));
+      expect(pressed()).toEqual(['genre-country']);
+    });
+
+    it('leave the difficulty and Movies alone', async () => {
+      render(<Harness />);
+
+      await userEvent.click(screen.getByTestId('filter-hard'));
+      await userEvent.click(screen.getByTestId('filter-movies'));
+      await userEvent.click(screen.getByTestId('genre-rock'));
+
+      expect(screen.getByTestId('filter-hard')).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByTestId('filter-movies')).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByTestId('genre-rock')).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('keep the empty state honest when the genre leaves nothing', async () => {
+      render(<Harness />);
+
+      await userEvent.click(screen.getByTestId('genre-kids'));
+      await userEvent.click(screen.getByTestId('filter-hard'));
+
+      expect(screen.getByTestId('song-list')).toHaveTextContent('Nothing matches that. Try a style, a key, or clear the filters.');
     });
   });
 

@@ -259,6 +259,7 @@ function chartDrill(spec: {
     artist: 'guitarRot',
     difficulty: 'easy',
     style: 'Drill',
+    genre: 'folk',
     key: bars[0] ?? '',
     bpm: spec.bpm,
     source: 'original',

@@ -141,6 +141,63 @@ describe('Songs', () => {
     expect(screen.getByTestId('filter-movies')).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('filters by genre, and All brings the whole catalogue back', async () => {
+    render(<SongsHarness />);
+    const rows = () => within(screen.getByTestId('song-list')).getAllByRole('listitem');
+    expect(screen.getByTestId('genre-all')).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(screen.getByTestId('genre-kids'));
+    expect(rows()).toHaveLength(SONGS.filter((song) => song.genre === 'kids').length);
+    expect(screen.getByTestId('song-row-twinkle-twinkle')).toBeInTheDocument();
+    expect(screen.queryByTestId('song-row-tom-dooley')).not.toBeInTheDocument();
+    expect(screen.getByTestId('genre-kids')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('genre-all')).toHaveAttribute('aria-pressed', 'false');
+
+    await userEvent.click(screen.getByTestId('genre-all'));
+    expect(rows()).toHaveLength(SONGS.length);
+  });
+
+  it('combines the genre with the difficulty, Movies and the search', async () => {
+    render(<SongsHarness />);
+    const rows = () => within(screen.getByTestId('song-list')).getAllByRole('listitem');
+
+    await userEvent.click(screen.getByTestId('genre-classical'));
+    await userEvent.click(screen.getByTestId('filter-hard'));
+    await userEvent.click(screen.getByTestId('filter-movies'));
+    const expected = SONGS.filter(
+      (song) => song.genre === 'classical' && song.difficulty === 'hard' && isMovieSong(song),
+    );
+    expect(expected.length).toBeGreaterThan(0);
+    expect(rows()).toHaveLength(expected.length);
+
+    await userEvent.type(screen.getByTestId('song-search'), 'bach');
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0]).toHaveTextContent('Air on the G String');
+  });
+
+  it('finds a genre by typing its name, with no chip pressed', async () => {
+    render(<SongsHarness />);
+
+    await userEvent.type(screen.getByTestId('song-search'), 'carols');
+
+    const rows = within(screen.getByTestId('song-list')).getAllByRole('listitem');
+    expect(rows).toHaveLength(SONGS.filter((song) => song.genre === 'kids').length);
+    expect(screen.getByTestId('genre-all')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('says so when a genre and a difficulty leave nothing, and the way out is clear', async () => {
+    render(<SongsHarness />);
+    expect(SONGS.some((song) => song.genre === 'kids' && song.difficulty === 'hard')).toBe(false);
+
+    await userEvent.click(screen.getByTestId('genre-kids'));
+    await userEvent.click(screen.getByTestId('filter-hard'));
+
+    expect(screen.getByTestId('song-list')).toHaveTextContent('Nothing matches that');
+    expect(screen.getByTestId('song-list')).toHaveTextContent('clear the filters');
+    await userEvent.click(screen.getByTestId('genre-all'));
+    expect(screen.queryByText(/Nothing matches that/)).not.toBeInTheDocument();
+  });
+
   it('finds a movie song by the film it was heard in', async () => {
     render(<SongsHarness />);
 
@@ -159,6 +216,18 @@ describe('Songs', () => {
       expect(row).toContainElement(screen.getByTestId(id));
       // A chip that can shrink is a chip that gets squeezed instead of scrolled to.
       expect(screen.getByTestId(id)).toHaveClass('shrink-0');
+    }
+  });
+
+  it('keeps the genre chips in a second row that scrolls sideways too', () => {
+    render(<SongsHarness />);
+
+    const row = screen.getByTestId('genre-row');
+    expect(row).toHaveClass('overflow-x-auto', 'overscroll-x-contain');
+    expect(row).not.toBe(screen.getByTestId('filter-row'));
+    for (const id of ['all', 'rock', 'blues', 'folk', 'country', 'classical', 'pop', 'kids']) {
+      expect(row).toContainElement(screen.getByTestId(`genre-${id}`));
+      expect(screen.getByTestId(`genre-${id}`)).toHaveClass('shrink-0');
     }
   });
 
