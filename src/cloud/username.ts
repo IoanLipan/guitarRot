@@ -11,10 +11,13 @@
  *   - starts and ends with a letter or a digit (no `.joe`, no `joe_`; it also keeps a
  *     handle clear of Firestore's reserved ids such as `__x__`)
  *   - not one of a few reserved words
+ *   - not a slur or strong profanity (./nameFilter)
  *
- * The Firestore rules check exactly this (firestore.rules, `validHandle`); a test
- * keeps the two in step.
+ * The Firestore rules check the shape and the reserved words (firestore.rules,
+ * `validHandle`); a test keeps those in step. The profanity filter is the app's
+ * alone: see docs/ACCOUNTS.md, Moderation.
  */
+import { nameFilterMessage } from './nameFilter';
 
 export const USERNAME_MIN = 3;
 export const USERNAME_MAX = 20;
@@ -49,7 +52,7 @@ export function validateUsername(value: string): string | null {
   if (!/^[a-z0-9._]+$/.test(name)) return 'Use letters, numbers, . and _ only.';
   if (!USERNAME_PATTERN.test(name)) return 'Start and end with a letter or a number.';
   if (RESERVED_USERNAMES.includes(name)) return 'That username is reserved. Try another.';
-  return null;
+  return nameFilterMessage(name);
 }
 
 export function isValidUsername(value: string): boolean {

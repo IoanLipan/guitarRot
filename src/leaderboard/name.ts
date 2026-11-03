@@ -5,8 +5,10 @@
  *
  * The Firestore rules check the same shape (`firestore.rules`, the leaderboard
  * block): 3 to 20 characters; letters, digits, spaces, dots, underscores and
- * hyphens; no space at either end.
+ * hyphens; no space at either end. The Firestore rules do not hold the profanity
+ * filter (`@/cloud/nameFilter`), which the app applies on top: see docs/ACCOUNTS.md, Moderation.
  */
+import { isObjectionable, nameFilterMessage } from '@/cloud/nameFilter';
 
 export const NAME_MIN = 3;
 export const NAME_MAX = 20;
@@ -33,7 +35,7 @@ export function validateLeaderboardName(value: string): string | null {
   if (length(name) < NAME_MIN) return `Use at least ${NAME_MIN} characters.`;
   if (length(name) > NAME_MAX) return `Keep it to ${NAME_MAX} characters or fewer.`;
   if (!NAME_PATTERN.test(name)) return 'Use letters, numbers, spaces and . _ - only.';
-  return null;
+  return nameFilterMessage(name);
 }
 
 /**
@@ -47,5 +49,7 @@ export function suggestName(user: { displayName: string | null; email: string | 
   const local = user.email?.split('@')[0] ?? '';
   const source = first !== '' ? first : local;
   const cleaned = normalizeName(source.replace(DISALLOWED, ''));
-  return Array.from(cleaned).slice(0, NAME_MAX).join('').trim();
+  const suggestion = Array.from(cleaned).slice(0, NAME_MAX).join('').trim();
+  // Never put a word the board would refuse in the field for them.
+  return isObjectionable(suggestion) ? '' : suggestion;
 }
