@@ -215,8 +215,20 @@ async function nativeGoogleIdToken(): Promise<string> {
   return idToken;
 }
 
-/** What Apple's sign-in gave the Android plugin: the pieces the JS SDK needs to sign in, and the name if Apple shared it. */
-type NativeApple = { idToken: string; rawNonce: string; displayName: string | null };
+/**
+ * What Apple's sign-in gave the plugin: the pieces the JS SDK needs to sign in, and the name if Apple shared it.
+ * The rest is for revoking Apple's token when an account is deleted: the access token Firebase's browser flow
+ * got (Android), the one-time authorization code of the system sheet (iOS), and the native Firebase user the
+ * plugin signed in (always on Android, on iOS only when asked), which is who the plugin's revoke acts for.
+ */
+type NativeApple = {
+  idToken: string;
+  rawNonce: string;
+  displayName: string | null;
+  accessToken: string | null;
+  authorizationCode: string | null;
+  nativeUser: { uid: string; isNew: boolean } | null;
+};
 
 /**
  * Apple on Android is Firebase's browser flow (a Custom Tab on `<project>.firebaseapp.com/__/auth/handler`),
@@ -230,17 +242,35 @@ type NativeApple = { idToken: string; rawNonce: string; displayName: string | nu
  * user is made, `user` carries only the name and only the first time Apple is authorised (later it is
  * null), and `credential` has the ID token and the raw nonce (Apple was sent its SHA-256). The same code
  * reads both, and `nativeSignOut` is then a no-op for Apple.
+ *
+ * `keepNativeUser` (iOS only; Android always has one) asks the plugin to sign the native user in after all
+ * (`skipNativeAuth: false` for this call). Deleting an account needs it: see `reauthenticateAndRevokeApple`.
  */
-async function nativeAppleCredential(): Promise<NativeApple> {
+async function nativeAppleCredential({ keepNativeUser = false }: { keepNativeUser?: boolean } = {}): Promise<NativeApple> {
   const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
-  const result = await FirebaseAuthentication.signInWithApple({ scopes: ['email', 'name'] });
+  const result = await FirebaseAuthentication.signInWithApple({
+    scopes: ['email', 'name'],
+    ...(keepNativeUser ? { skipNativeAuth: false } : {}),
+  });
   const idToken = result.credential?.idToken;
   const rawNonce = result.credential?.nonce;
   if (idToken === undefined || idToken === '' || rawNonce === undefined || rawNonce === '') {
     throw new AccountError('auth/missing-id-token', 'Apple didn’t send back a sign-in. Please try again.');
   }
   const name = result.user?.displayName?.trim();
-  return { idToken, rawNonce, displayName: name === undefined || name === '' ? null : name };
+  const uid = result.user?.uid;
+  return {
+    idToken,
+    rawNonce,
+    displayName: name === undefined || name === '' ? null : name,
+    accessToken: nonEmpty(result.credential?.accessToken),
+    authorizationCode: nonEmpty(result.credential?.authorizationCode),
+    nativeUser: uid === undefined || uid === '' ? null : { uid, isNew: result.additionalUserInfo?.isNewUser === true },
+  };
+}
+
+function nonEmpty(value: string | null | undefined): string | null {
+  return value === undefined || value === null || value === '' ? null : value;
 }
 
 /** Clears the phone's remembered Google choice (and the native Apple user), so the next sign-in starts clean. */
@@ -380,6 +410,103 @@ async function reauthenticate(sdk: AuthSdk, user: User, password: string | undef
   throw new AccountError('auth/requires-recent-login', 'For your safety, sign out, sign in again, then retry.');
 }
 
+/** How long the plugin's native revoke gets: it has no timeout of its own, and a hang would leave "Deleting..." up for ever. */
+const NATIVE_REVOKE_MS = 20_000;
+
+/**
+ * Backend answers that mean Apple no longer knows the token (already revoked, expired, never ours): there is
+ * nothing left to revoke, so the deletion goes on. Anything else (offline, too many tries, a server error)
+ * is worth another try, so it stops the deletion with the account intact.
+ */
+const APPLE_TOKEN_GONE = new Set(['auth/invalid-credential', 'auth/invalid-idp-response']);
+
+/**
+ * Revokes the Apple token with `revoke`, or explains why it was not. `revoke` is null when there was nothing to
+ * revoke with: the one case is a Firebase project whose Apple provider has no team id, key id and private key, so
+ * Apple's authorization code was never exchanged for a token. That is the owner's set-up to fix (docs/ACCOUNTS.md),
+ * not something to hold every Apple account hostage to: deleting must always work, so it goes on and says so in
+ * the console, and the manual checklist has the owner try a delete with a real Apple account.
+ */
+async function revokeAppleToken(revoke: (() => Promise<void>) | null): Promise<void> {
+  if (revoke === null) {
+    console.warn('No Apple token to revoke: set up the Apple key in Firebase (docs/ACCOUNTS.md). Deleting the account anyway.');
+    return;
+  }
+  try {
+    await revoke();
+  } catch (error) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === 'string' && APPLE_TOKEN_GONE.has(code)) {
+      console.warn(`Apple no longer knows the token (${code}), so there is nothing to revoke. Deleting the account anyway.`);
+      return;
+    }
+    throw new AccountError(
+      'apple-revoke-failed',
+      'We couldn’t finish with Apple, so your account was kept. Check your connection and try again.',
+    );
+  }
+}
+
+/** Gives the plugin's revoke a deadline: on iOS it never answers when the native SDK has no current user. */
+function withDeadline(work: Promise<void>): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Revoking Apple’s token took too long.')), NATIVE_REVOKE_MS);
+    work.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
+
+/**
+ * Signs in with Apple again, as the account being deleted, and revokes Apple's token. App Store rule
+ * 5.1.1(v): an app that makes accounts with Sign in with Apple must revoke the token when one is deleted.
+ * Revoking needs a fresh credential (an authorization code lives for minutes), so this is one more Apple
+ * sheet, and it is also the recent sign-in Firebase wants before deleting. It runs FIRST, before the clean-up
+ * hooks: a failed revoke then keeps the account whole and a retry starts from the top.
+ *
+ *  - web: the popup re-authenticates the user, and its credential carries Apple's access token, which the
+ *    JS SDK's `revokeAccessToken` takes;
+ *  - Android: the plugin's browser flow gives the same access token (and the ID token and nonce to
+ *    re-authenticate with), for the same JS call;
+ *  - iOS: the system sheet gives only a one-time authorization code, and the JS SDK's revoke takes access
+ *    tokens only. The native SDK takes the code (`Auth.revokeToken(withAuthorizationCode:)`, through the
+ *    plugin's `revokeAccessToken`) but asks ITS current user for the ID token that authorises it, and never
+ *    answers when there is none. The app deliberately has no native user, so this one sheet signs one in
+ *    (`keepNativeUser`), the code is revoked, and the native user is signed out again.
+ *
+ * If the native user is not the account's (the phone's Apple ID is a different one), it is deleted when this
+ * very sheet created it (an empty account nobody asked for) and only signed out otherwise, and the person is
+ * told to use the same Apple ID.
+ */
+async function reauthenticateAndRevokeApple(auth: Auth, sdk: AuthSdk, user: User): Promise<void> {
+  if (!Capacitor.isNativePlatform()) {
+    const result = await sdk.reauthenticateWithPopup(user, appleProvider(sdk));
+    const token = nonEmpty(sdk.OAuthProvider.credentialFromResult(result)?.accessToken);
+    await revokeAppleToken(token === null ? null : () => sdk.revokeAccessToken(auth, token));
+    return;
+  }
+  const ios = Capacitor.getPlatform() === 'ios';
+  const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+  try {
+    const apple = await nativeAppleCredential({ keepNativeUser: ios });
+    if (apple.nativeUser !== null && apple.nativeUser.uid !== user.uid) {
+      if (apple.nativeUser.isNew) await FirebaseAuthentication.deleteUser().catch(() => undefined);
+      throw toAccountError({ code: 'auth/user-mismatch' });
+    }
+    await sdk.reauthenticateWithCredential(user, appleProvider(sdk).credential({ idToken: apple.idToken, rawNonce: apple.rawNonce }));
+    if (!ios) {
+      const token = apple.accessToken;
+      await revokeAppleToken(token === null ? null : () => sdk.revokeAccessToken(auth, token));
+      return;
+    }
+    const code = apple.authorizationCode;
+    // Without a native user the plugin's revoke would wait for ever, so it is not asked.
+    await revokeAppleToken(
+      code === null || apple.nativeUser === null ? null : () => withDeadline(FirebaseAuthentication.revokeAccessToken({ token: code })),
+    );
+  } finally {
+    await nativeSignOut();
+  }
+}
+
 export async function deleteAccount({ password }: DeleteAccountInput = {}): Promise<void> {
   try {
     const { auth, sdk } = await load();
@@ -387,7 +514,9 @@ export async function deleteAccount({ password }: DeleteAccountInput = {}): Prom
     if (user === null) throw new AccountError('signed-out', 'You’re not signed in.');
 
     // The fresh sign-in comes first: backing out of it must not leave the cloud data gone and the account standing.
-    if (await signInIsStale(user)) await reauthenticate(sdk, user, password);
+    // For an account that has Apple it is Apple's own sheet or window, and the same step revokes Apple's token.
+    if (user.providerData.some((info) => info.providerId === APPLE_PROVIDER)) await reauthenticateAndRevokeApple(auth, sdk, user);
+    else if (await signInIsStale(user)) await reauthenticate(sdk, user, password);
     await runBeforeDeleteHooks(toAccountUser(user));
     try {
       await sdk.deleteUser(user);

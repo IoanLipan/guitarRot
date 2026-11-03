@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Capacitor } from '@capacitor/core';
 import {
   deleteAccount,
@@ -34,6 +34,7 @@ const sdk = vi.hoisted(() => {
       return this;
     });
     credential = vi.fn((init: { idToken: string; rawNonce: string }) => ({ kind: 'apple-credential', ...init }));
+    static credentialFromResult = vi.fn();
   }
   return {
     GoogleAuthProvider,
@@ -52,12 +53,19 @@ const sdk = vi.hoisted(() => {
     reauthenticateWithPopup: vi.fn(),
     getRedirectResult: vi.fn(),
     deleteUser: vi.fn(),
+    revokeAccessToken: vi.fn(),
     signOut: vi.fn(),
     onAuthStateChanged: vi.fn(),
   };
 });
 const auth = vi.hoisted(() => ({ currentUser: null as unknown }));
-const plugin = vi.hoisted(() => ({ signInWithGoogle: vi.fn(), signInWithApple: vi.fn(), signOut: vi.fn() }));
+const plugin = vi.hoisted(() => ({
+  signInWithGoogle: vi.fn(),
+  signInWithApple: vi.fn(),
+  signOut: vi.fn(),
+  deleteUser: vi.fn(),
+  revokeAccessToken: vi.fn(),
+}));
 // The Firestore half of usernames has its own tests; here it is a stand-in that answers what these ask.
 const usernames = vi.hoisted(() => ({
   checkUsername: vi.fn(),
@@ -71,11 +79,17 @@ vi.mock('./firebase', () => ({
 }));
 vi.mock('./usernames', () => usernames);
 vi.mock('@capacitor-firebase/authentication', () => ({
-  FirebaseAuthentication: { signInWithGoogle: plugin.signInWithGoogle, signInWithApple: plugin.signInWithApple, signOut: plugin.signOut },
+  FirebaseAuthentication: {
+    signInWithGoogle: plugin.signInWithGoogle,
+    signInWithApple: plugin.signInWithApple,
+    signOut: plugin.signOut,
+    deleteUser: plugin.deleteUser,
+    revokeAccessToken: plugin.revokeAccessToken,
+  },
 }));
 vi.mock('@capacitor/core', async (importOriginal) => {
   const original = await importOriginal<typeof import('@capacitor/core')>();
-  return { ...original, Capacitor: { ...original.Capacitor, isNativePlatform: vi.fn(() => false) } };
+  return { ...original, Capacitor: { ...original.Capacitor, isNativePlatform: vi.fn(() => false), getPlatform: vi.fn(() => 'web') } };
 });
 
 type FakeUser = ReturnType<typeof makeUser>;
@@ -121,6 +135,7 @@ beforeEach(() => {
   usernames.checkUsername.mockReset().mockResolvedValue('available');
   usernames.claimUsername.mockReset().mockImplementation(async (_uid: string, handle: string) => handle.trim().toLowerCase());
   sdk.OAuthProvider.instances.length = 0;
+  sdk.OAuthProvider.credentialFromResult.mockReset();
   sdk.EmailAuthProvider.credential.mockImplementation((email: string, password: string) => ({ kind: 'email-credential', email, password }));
   sdk.GoogleAuthProvider.credential.mockImplementation((idToken: string) => ({ kind: 'google-credential', idToken }));
   sdk.getRedirectResult.mockResolvedValue(null);
@@ -128,7 +143,11 @@ beforeEach(() => {
   sdk.sendEmailVerification.mockResolvedValue(undefined);
   sdk.deleteUser.mockResolvedValue(undefined);
   plugin.signOut.mockResolvedValue(undefined);
+  sdk.revokeAccessToken.mockResolvedValue(undefined);
+  plugin.deleteUser.mockResolvedValue(undefined);
+  plugin.revokeAccessToken.mockResolvedValue(undefined);
   vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+  vi.mocked(Capacitor.getPlatform).mockReturnValue('web');
   auth.currentUser = null;
 });
 
@@ -485,6 +504,296 @@ describe('signing out', () => {
   });
 });
 
+// App Store rule 5.1.1(v): an account made with Sign in with Apple must have Apple's token revoked when it is deleted.
+// Revoking needs a fresh Apple credential, so the Apple person goes through Apple once more (which is also the fresh
+// sign-in Firebase wants), and it happens BEFORE any data goes: a failed revoke keeps the account and can be retried.
+describe('deleting an Apple account revokes Apple’s token first', () => {
+  const appleUser = (minutes = 1, overrides: Record<string, unknown> = {}) =>
+    userSignedInAgo(minutes, { providerData: [{ providerId: 'apple.com' }], ...overrides });
+
+  let warn: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    warn.mockRestore();
+    vi.useRealTimers();
+  });
+
+  /** Records the order of the steps that matter. */
+  function trace(): string[] {
+    const calls: string[] = [];
+    sdk.reauthenticateWithPopup.mockImplementation(async () => {
+      calls.push('reauth');
+      return { user: auth.currentUser };
+    });
+    sdk.reauthenticateWithCredential.mockImplementation(async () => {
+      calls.push('reauth');
+      return {};
+    });
+    sdk.revokeAccessToken.mockImplementation(async () => {
+      calls.push('revoke');
+    });
+    plugin.revokeAccessToken.mockImplementation(async () => {
+      calls.push('revoke');
+    });
+    sdk.deleteUser.mockImplementation(async () => {
+      calls.push('delete');
+    });
+    return calls;
+  }
+
+  describe('on the web', () => {
+    it('signs in with Apple again, revokes the access token it gets, and only then runs the hooks and deletes', async () => {
+      auth.currentUser = appleUser(1);
+      const calls = trace();
+      sdk.OAuthProvider.credentialFromResult.mockReturnValue({ accessToken: 'apple-access-token' });
+      const off = onBeforeAccountDelete(() => {
+        calls.push('hook');
+      });
+
+      await deleteAccount();
+      off();
+
+      // Even a sign-in a minute old: revoking needs a fresh credential.
+      expect(calls).toEqual(['reauth', 'revoke', 'hook', 'delete']);
+      expect(sdk.revokeAccessToken).toHaveBeenCalledWith(auth, 'apple-access-token');
+      expect(plugin.revokeAccessToken).not.toHaveBeenCalled();
+    });
+
+    it('stops with nothing deleted when the person closes Apple’s window', async () => {
+      auth.currentUser = appleUser(1);
+      sdk.reauthenticateWithPopup.mockRejectedValue(firebaseError('auth/popup-closed-by-user'));
+      const hook = vi.fn();
+      const off = onBeforeAccountDelete(hook);
+
+      expect((await failure(deleteAccount())).cancelled).toBe(true);
+      off();
+      expect(sdk.revokeAccessToken).not.toHaveBeenCalled();
+      expect(hook).not.toHaveBeenCalled();
+      expect(sdk.deleteUser).not.toHaveBeenCalled();
+    });
+
+    it('refuses an Apple ID that is not the account’s, and deletes nothing', async () => {
+      auth.currentUser = appleUser(1);
+      sdk.reauthenticateWithPopup.mockRejectedValue(firebaseError('auth/user-mismatch'));
+      const error = await failure(deleteAccount());
+      expect(error.code).toBe('auth/user-mismatch');
+      expect(sdk.revokeAccessToken).not.toHaveBeenCalled();
+      expect(sdk.deleteUser).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('on Android (Firebase’s browser flow, through the plugin)', () => {
+    beforeEach(() => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(Capacitor.getPlatform).mockReturnValue('android');
+    });
+
+    it('re-authenticates with the ID token and nonce, revokes the access token the plugin returned through the JS SDK, then clears the native user', async () => {
+      auth.currentUser = appleUser(1);
+      const calls = trace();
+      plugin.signInWithApple.mockResolvedValue({
+        user: { uid: 'u1' },
+        credential: { idToken: 'fresh-apple', nonce: 'fresh-nonce', accessToken: 'android-access-token' },
+      });
+
+      await deleteAccount();
+
+      expect(plugin.signInWithApple).toHaveBeenCalledWith({ scopes: ['email', 'name'] });
+      expect(sdk.reauthenticateWithCredential).toHaveBeenCalledWith(auth.currentUser, {
+        kind: 'apple-credential',
+        idToken: 'fresh-apple',
+        rawNonce: 'fresh-nonce',
+      });
+      expect(sdk.revokeAccessToken).toHaveBeenCalledWith(auth, 'android-access-token');
+      expect(plugin.revokeAccessToken).not.toHaveBeenCalled();
+      expect(calls).toEqual(['reauth', 'revoke', 'delete']);
+      expect(plugin.signOut).toHaveBeenCalled();
+    });
+  });
+
+  describe('on iOS (the system sheet, through the plugin)', () => {
+    beforeEach(() => {
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+      vi.mocked(Capacitor.getPlatform).mockReturnValue('ios');
+    });
+
+    const sheet = (overrides: Record<string, unknown> = {}) => ({
+      user: { uid: 'u1', displayName: null },
+      credential: { providerId: 'apple.com', idToken: 'ios-id-token', nonce: 'ios-raw-nonce', authorizationCode: 'one-time-code' },
+      additionalUserInfo: { isNewUser: false },
+      ...overrides,
+    });
+
+    it('keeps a native user for the sheet, re-authenticates, revokes the one-time code natively, then signs the native user out', async () => {
+      auth.currentUser = appleUser(1);
+      const calls = trace();
+      plugin.signInWithApple.mockResolvedValue(sheet());
+      const off = onBeforeAccountDelete(() => {
+        calls.push('hook');
+      });
+
+      await deleteAccount();
+      off();
+
+      // The plugin's revoke asks the native SDK's current user for its token, so this one sign-in must make that user.
+      expect(plugin.signInWithApple).toHaveBeenCalledWith({ scopes: ['email', 'name'], skipNativeAuth: false });
+      expect(sdk.reauthenticateWithCredential).toHaveBeenCalledWith(auth.currentUser, {
+        kind: 'apple-credential',
+        idToken: 'ios-id-token',
+        rawNonce: 'ios-raw-nonce',
+      });
+      expect(plugin.revokeAccessToken).toHaveBeenCalledWith({ token: 'one-time-code' });
+      // The JS SDK's revoke only takes an access token, never the code.
+      expect(sdk.revokeAccessToken).not.toHaveBeenCalled();
+      expect(calls).toEqual(['reauth', 'revoke', 'hook', 'delete']);
+      expect(plugin.signOut).toHaveBeenCalled();
+      expect(plugin.deleteUser).not.toHaveBeenCalled();
+    });
+
+    it('does not trust a revoke that never answers, and keeps the account', async () => {
+      vi.useFakeTimers();
+      auth.currentUser = appleUser(1);
+      plugin.signInWithApple.mockResolvedValue(sheet());
+      sdk.reauthenticateWithCredential.mockResolvedValue({});
+      plugin.revokeAccessToken.mockReturnValue(new Promise(() => undefined));
+
+      const attempt = failure(deleteAccount());
+      await vi.advanceTimersByTimeAsync(30_000);
+      const error = await attempt;
+
+      expect(error.code).toBe('apple-revoke-failed');
+      expect(sdk.deleteUser).not.toHaveBeenCalled();
+      expect(plugin.signOut).toHaveBeenCalled();
+    });
+
+    it('never calls the plugin’s revoke without a native user, which would wait for ever, and warns instead', async () => {
+      auth.currentUser = appleUser(1);
+      plugin.signInWithApple.mockResolvedValue(sheet({ user: { displayName: null } }));
+      sdk.reauthenticateWithCredential.mockResolvedValue({});
+
+      await deleteAccount();
+
+      expect(plugin.revokeAccessToken).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalled();
+      expect(sdk.deleteUser).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops the empty account the sheet just made when the phone’s Apple ID is not the account’s, and deletes nothing', async () => {
+      auth.currentUser = appleUser(1);
+      plugin.signInWithApple.mockResolvedValue(sheet({ user: { uid: 'someone-else' }, additionalUserInfo: { isNewUser: true } }));
+
+      const error = await failure(deleteAccount());
+
+      expect(error.code).toBe('auth/user-mismatch');
+      expect(plugin.deleteUser).toHaveBeenCalledTimes(1);
+      expect(plugin.revokeAccessToken).not.toHaveBeenCalled();
+      expect(sdk.reauthenticateWithCredential).not.toHaveBeenCalled();
+      expect(sdk.deleteUser).not.toHaveBeenCalled();
+      expect(plugin.signOut).toHaveBeenCalled();
+    });
+
+    it('only signs out, and deletes nobody, when the other Apple ID already had an account of its own', async () => {
+      auth.currentUser = appleUser(1);
+      plugin.signInWithApple.mockResolvedValue(sheet({ user: { uid: 'someone-else' }, additionalUserInfo: { isNewUser: false } }));
+
+      expect((await failure(deleteAccount())).code).toBe('auth/user-mismatch');
+      expect(plugin.deleteUser).not.toHaveBeenCalled();
+      expect(plugin.signOut).toHaveBeenCalled();
+    });
+
+    it('stops with nothing deleted when the person dismisses the sheet', async () => {
+      auth.currentUser = appleUser(1);
+      plugin.signInWithApple.mockRejectedValue(
+        new Error('The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1001.)'),
+      );
+      expect((await failure(deleteAccount())).cancelled).toBe(true);
+      expect(plugin.revokeAccessToken).not.toHaveBeenCalled();
+      expect(sdk.deleteUser).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('when the revoke fails', () => {
+    beforeEach(() => {
+      auth.currentUser = appleUser(1);
+      sdk.reauthenticateWithPopup.mockResolvedValue({});
+      sdk.OAuthProvider.credentialFromResult.mockReturnValue({ accessToken: 'apple-access-token' });
+    });
+
+    it.each(['auth/network-request-failed', 'auth/too-many-requests', 'auth/internal-error'])(
+      'keeps the account, runs no hook and says to try again, for %s',
+      async (code) => {
+        sdk.revokeAccessToken.mockRejectedValue(firebaseError(code));
+        const hook = vi.fn();
+        const off = onBeforeAccountDelete(hook);
+
+        const error = await failure(deleteAccount());
+        off();
+
+        expect(error.code).toBe('apple-revoke-failed');
+        expect(error.message).toMatch(/account was kept/);
+        expect(hook).not.toHaveBeenCalled();
+        expect(sdk.deleteUser).not.toHaveBeenCalled();
+      },
+    );
+
+    it('can be retried: the next attempt revokes again and deletes', async () => {
+      sdk.revokeAccessToken.mockRejectedValueOnce(firebaseError('auth/network-request-failed')).mockResolvedValueOnce(undefined);
+      await failure(deleteAccount());
+      await deleteAccount();
+      expect(sdk.revokeAccessToken).toHaveBeenCalledTimes(2);
+      expect(sdk.deleteUser).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['auth/invalid-credential', 'auth/invalid-idp-response'])(
+      'deletes anyway, and says so in the console, when Apple no longer knows the token (%s)',
+      async (code) => {
+        sdk.revokeAccessToken.mockRejectedValue(firebaseError(code));
+        await deleteAccount();
+        expect(sdk.deleteUser).toHaveBeenCalledTimes(1);
+        expect(warn).toHaveBeenCalled();
+      },
+    );
+
+    it('deletes anyway, and says so in the console, when Firebase gave no token to revoke (the Apple key is not set up)', async () => {
+      sdk.OAuthProvider.credentialFromResult.mockReturnValue({ accessToken: undefined });
+      await deleteAccount();
+      expect(sdk.revokeAccessToken).not.toHaveBeenCalled();
+      expect(sdk.deleteUser).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalled();
+    });
+  });
+
+  it('leaves the other ways of signing in alone: no Apple sign-in and no revoke for a password or a Google account', async () => {
+    for (const providerId of ['password', 'google.com']) {
+      auth.currentUser = userSignedInAgo(1, { providerData: [{ providerId }] });
+      await deleteAccount();
+    }
+    expect(sdk.reauthenticateWithPopup).not.toHaveBeenCalled();
+    expect(plugin.signInWithApple).not.toHaveBeenCalled();
+    expect(sdk.revokeAccessToken).not.toHaveBeenCalled();
+    expect(plugin.revokeAccessToken).not.toHaveBeenCalled();
+    expect(sdk.deleteUser).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the account when a hook fails after the revoke, and the retry goes through Apple again', async () => {
+    auth.currentUser = appleUser(1);
+    sdk.reauthenticateWithPopup.mockResolvedValue({});
+    sdk.OAuthProvider.credentialFromResult.mockReturnValue({ accessToken: 'apple-access-token' });
+    const off = onBeforeAccountDelete(() => {
+      throw new Error('firestore unavailable');
+    });
+    expect((await failure(deleteAccount())).code).toBe('cleanup-failed');
+    off();
+    expect(sdk.deleteUser).not.toHaveBeenCalled();
+
+    await deleteAccount();
+    expect(sdk.reauthenticateWithPopup).toHaveBeenCalledTimes(2);
+    expect(sdk.deleteUser).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('deleting the account', () => {
   it('runs the hooks first, in order, and only then deletes the user', async () => {
     const user = userSignedInAgo(1);
@@ -563,21 +872,25 @@ describe('deleting the account', () => {
   });
 
   it('after a long session signs an Apple account in again through the popup', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined); // no token in this stand-in: see the Apple tests above
     auth.currentUser = userSignedInAgo(30, { providerData: [{ providerId: 'apple.com' }] });
     sdk.reauthenticateWithPopup.mockResolvedValue({});
     await deleteAccount();
+    warn.mockRestore();
     expect(sdk.reauthenticateWithPopup).toHaveBeenCalledTimes(1);
     expect(sdk.OAuthProvider.instances[0]?.providerId).toBe('apple.com');
     expect(sdk.deleteUser).toHaveBeenCalledTimes(1);
   });
 
   it('on Android signs an Apple account in again with a fresh ID token and nonce, then clears the native user', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined); // no token in this stand-in: see the Apple tests above
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     auth.currentUser = userSignedInAgo(30, { providerData: [{ providerId: 'apple.com' }] });
     plugin.signInWithApple.mockResolvedValue({ user: null, credential: { idToken: 'fresh-apple', nonce: 'fresh-nonce' } });
     sdk.reauthenticateWithCredential.mockResolvedValue({});
 
     await deleteAccount();
+    warn.mockRestore();
 
     expect(sdk.reauthenticateWithCredential).toHaveBeenCalledWith(auth.currentUser, {
       kind: 'apple-credential',
