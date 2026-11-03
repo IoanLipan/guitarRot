@@ -1,5 +1,9 @@
 import UIKit
+import AVFoundation
 import Capacitor
+#if canImport(FirebaseCore)
+import FirebaseCore
+#endif
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,8 +11,47 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        configureAudioSession()
+        configureFirebase()
         return true
+    }
+
+    /// Firebase (accounts, sync, opt-in analytics) exists only in a build that has the project's
+    /// GoogleService-Info.plist inside the app. Without it the app is the offline app it always
+    /// was: nothing is configured, nothing is sent, and the web side finds its cloud features off.
+    /// This mirrors Android, where the google-services plugin is applied only if
+    /// google-services.json is there. Analytics collection is off in Info.plist until the player
+    /// says yes (src/cloud/analytics.ts).
+    private func configureFirebase() {
+        #if canImport(FirebaseCore)
+        guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else {
+            CAPLog.print("[guitarRot] No GoogleService-Info.plist in the app: Firebase is off.")
+            return
+        }
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+        }
+        #endif
+    }
+
+    /// One audio session for the whole app, set before the web view makes a sound.
+    ///
+    /// The tuner and the "play this note" checks listen through the microphone while lessons
+    /// play, so the category has to allow both from the start: switching to record when the
+    /// mic opens would cut the sound off. Play-and-record on its own sends sound to the quiet
+    /// earpiece and obeys the ringer switch the way a game does, so:
+    ///  - defaultToSpeaker: output on the loudspeaker (headphones and Bluetooth still win);
+    ///  - allowBluetoothA2DP: AirPods and other headphones keep their full-quality output
+    ///    while the phone's own mic listens, instead of dropping to the hands-free profile;
+    ///  - mixWithOthers: opening the app does not stop the player's music or a backing track.
+    private func configureAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothA2DP, .mixWithOthers])
+            try session.setActive(true)
+        } catch {
+            CAPLog.print("[guitarRot] Could not set up the audio session:", error.localizedDescription)
+        }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
