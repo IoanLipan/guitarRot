@@ -52,6 +52,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         } catch {
             CAPLog.print("[guitarRot] Could not set up the audio session:", error.localizedDescription)
         }
+        #if DEBUG
+        // Where the sound goes, in the Xcode console: "Speaker" is right, "Receiver" is the earpiece.
+        let logRoute = {
+            let outputs = session.currentRoute.outputs.map { $0.portType.rawValue }.joined(separator: ", ")
+            CAPLog.print("[guitarRot] Audio:", session.category.rawValue, "to", outputs.isEmpty ? "nothing yet" : outputs)
+        }
+        logRoute()
+        NotificationCenter.default.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { _ in logRoute() }
+        #endif
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
