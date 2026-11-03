@@ -75,7 +75,7 @@ folder; screenshots in `screenshots/`.
 | Privacy policy | https://guitar-rot.vercel.app/privacy.html |
 | Ads | No, the app does not contain ads |
 | App access | All functionality is available without special access |
-| Content rating (IARC) | Category: Reference, News, or Educational → answer No to every content question → expect *Everyone / PEGI 3* |
+| Content rating (IARC) | Category: Reference, News, or Educational → No to violence, sexuality, language, drugs, gambling. **Yes to "Can users interact or exchange content?"**: usernames and leaderboard names are public (filtered, reportable, hideable; see Moderation in `docs/ACCOUNTS.md`). No chat, no location sharing, no purchases yet → expect *Everyone / PEGI 3* with "Users interact" |
 | Target audience | 13 and over (keeps the app out of the Families programme's extra requirements; nothing in the app is unsuitable for younger users) |
 | News app | No |
 | Government app | No |
