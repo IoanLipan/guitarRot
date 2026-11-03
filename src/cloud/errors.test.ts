@@ -35,6 +35,28 @@ describe('plain words for the common Firebase errors', () => {
     expect(toAccountError({ message: 'Authorization canceled.' }).cancelled).toBe(true);
   });
 
+  it('recognises iPhone’s Sign in with Apple being dismissed, which the plugin passes on as a bare message with no code', () => {
+    // ASAuthorizationError.canceled: the sentence before the brackets is translated, the brackets are not.
+    for (const text of [
+      'The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1001.)',
+      'Operațiunea nu a putut fi finalizată. (com.apple.AuthenticationServices.AuthorizationError error 1001.)',
+    ]) {
+      const error = toAccountError(Object.assign(new Error(text), { code: undefined }));
+      expect(error.cancelled, text).toBe(true);
+      expect(error.message).toBe('');
+    }
+  });
+
+  it('does not take Apple’s other failures on iPhone for a dismissal', () => {
+    // 1000 unknown (no Apple ID on the phone), 1004 failed.
+    for (const number of [1000, 1002, 1004]) {
+      const text = `The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error ${number}.)`;
+      expect(toAccountError(new Error(text)).cancelled, text).toBe(false);
+    }
+    // Nor a 1001 of somebody else's domain.
+    expect(toAccountError(new Error('The operation couldn’t be completed. (NSURLErrorDomain error 1001.)')).cancelled).toBe(false);
+  });
+
   it('says what to do when the phone has no Google account', () => {
     expect(toAccountError(new Error('No credentials available')).message).toMatch(/Add one in your phone’s settings/);
   });

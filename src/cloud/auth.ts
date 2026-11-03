@@ -10,7 +10,9 @@
  * fetches Google's ID token, and the JS SDK signs in with it, exactly as if
  * the popup had done it. Apple on Android is Firebase's own browser flow, run by
  * the same plugin; it hands back Apple's ID token and the raw nonce, and the JS
- * SDK signs in with those (see nativeAppleCredential for the one wrinkle).
+ * SDK signs in with those (see nativeAppleCredential for the one wrinkle). On iOS
+ * Apple is the system's own sheet (ASAuthorization), which the plugin runs without
+ * a native Firebase user, and the same ID token and raw nonce go the same way.
  *
  * Every account has a username (./usernames): created with the account for an
  * email sign-up, asked for right after a Google or Apple sign-in.
@@ -223,6 +225,11 @@ type NativeApple = { idToken: string; rawNonce: string; displayName: string | nu
  * second, native user; we take Apple's ID token and the raw nonce from it, sign the JS SDK in with
  * those, and let the caller sign the native user out again (`nativeSignOut`), so there is still one
  * auth state for the app: the JS SDK's.
+ *
+ * On iOS the plugin's Apple handler (ASAuthorizationController) does honour `skipNativeAuth`: no native
+ * user is made, `user` carries only the name and only the first time Apple is authorised (later it is
+ * null), and `credential` has the ID token and the raw nonce (Apple was sent its SHA-256). The same code
+ * reads both, and `nativeSignOut` is then a no-op for Apple.
  */
 async function nativeAppleCredential(): Promise<NativeApple> {
   const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');

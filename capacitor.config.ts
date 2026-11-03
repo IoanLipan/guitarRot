@@ -62,7 +62,9 @@ const config: CapacitorConfig = {
       // Apple is Firebase's browser flow, run by the same plugin. Its Apple handler
       // ignores skipNativeAuth and signs a native user in too, so the app takes the
       // ID token and raw nonce from the result and signs that native user out again.
-      // The Apple button itself shows only with VITE_AUTH_APPLE=1 (docs/ACCOUNTS.md).
+      // On iOS Apple is the system's own sheet and does honour skipNativeAuth: the same
+      // ID token and raw nonce, and no native user at all.
+      // The Apple button shows with VITE_AUTH_APPLE=1 (docs/ACCOUNTS.md), and always on iOS.
       skipNativeAuth: true,
       providers: ['google.com', 'apple.com'],
     },
