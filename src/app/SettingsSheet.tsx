@@ -21,7 +21,7 @@ import {
 } from '@/music';
 import type { ProgressHandle } from './useProgress';
 import { InstrumentIcon } from './InstrumentSwitch';
-import { ANDROID_APP_URL, PRIVACY_URL } from './links';
+import { ANDROID_APP_URL, PRIVACY_URL, TERMS_URL } from './links';
 
 /** Strummed when you audition a tone or an instrument: the first chord everyone learns on it, an open E or an open C. */
 const PREVIEW_CHORD_ID: Record<InstrumentId, string> = { guitar: 'E-open', ukulele: 'uke-C' };
@@ -374,6 +374,9 @@ export function SettingsSheet({
           <div className="mt-3 flex flex-col gap-2">
             <AboutLink href={PRIVACY_URL} testId="privacy-link">
               Privacy policy
+            </AboutLink>
+            <AboutLink href={TERMS_URL} testId="terms-link">
+              Terms of use
             </AboutLink>
             {/* The Android app is already installed if this is running inside it. */}
             {!Capacitor.isNativePlatform() && (

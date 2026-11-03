@@ -14,6 +14,7 @@ Google account can do). Code lives in `src/cloud/`.
 - [Apple sign-in (optional)](#apple-sign-in-optional)
 - [Environment variables](#environment-variables)
 - [Developing without a Firebase project (emulators)](#developing-without-a-firebase-project-emulators)
+- [Moderation](#moderation)
 - [Usage analytics](#usage-analytics)
 - [Manual setup checklist](#manual-setup-checklist)
 - [Play Console: Data safety answers](#play-console-data-safety-answers)
@@ -285,6 +286,90 @@ Needs the `firebase` CLI and a JDK (`scripts/with-java.sh` finds Homebrew's
 nothing can reach a real project. `npm test` never needs them. To try the
 consent question and analytics without touching a real project, see
 [Trying analytics with a fake config](#trying-analytics-with-a-fake-config).
+
+## Moderation
+
+Two pieces of text are shown to other players and so are user-generated content: the
+**username** (public, unique) and the **leaderboard name**. App Store guideline 1.2 and Play's
+user-generated-content policy want four things; this is where each one lives.
+
+| Requirement | What guitarRot does | Where |
+|---|---|---|
+| A filter for objectionable content | A deny-list filter on both names, in the app | `src/cloud/nameFilter.ts` |
+| A way to report it, answered in good time | **Report this name** on every other player's leaderboard row; reports arrive by email; target 24 to 48 hours | `src/leaderboard/PlayerSheet.tsx`, `report.ts` |
+| A way to block abusive users | **Hide this player**, kept on the phone, with **N players hidden. Show them** at the foot of the board | `src/leaderboard/hidden.ts` |
+| Published contact information | `guitar.rot@proton.me`, in the terms, the privacy policy and the store listings | `public/terms.html`, `public/privacy.html` |
+
+Apple also looks for terms that say there is no tolerance for objectionable names or abusive
+users, accepted when somebody makes an account: `public/terms.html`
+(`https://guitar-rot.vercel.app/terms.html`), linked under **Create account** in the sign-up sheet
+and the one-time offer ("By creating an account you agree to the Terms and the Privacy policy") and
+under Settings > About > **Terms of use**.
+
+### The filter
+
+`nameFilter.ts` holds a few dozen roots of slurs and strong profanity in English and Romanian. A name
+is flattened first (lowercase, accents removed, so `ș ț ă â î` become `s t a a i`; leetspeak undone:
+`0 o`, `1 i or l`, `3 e`, `4 a`, `5 s`, `7 t`, `@ a`, `$ s`; `.`, `_`, `-` and spaces dropped) and refused if
+it contains a root. A short allowlist of real words and names that contain a root (Scunthorpe,
+Kinoshita, popular) is taken out before the roots are looked for. The message is always
+"Pick a different name." and never repeats the word.
+
+- It is used by `validateUsername` (so the sign-up field, the username step and
+  `usernameSeed`/`suggestUsernames` all honour it) and by `validateLeaderboardName`.
+- The board also **leaves out any row whose name the filter refuses** (`BoardView`), so a name written
+  before the filter existed, or by a modified client, does not show.
+- It is a deterrent, not a classifier: it will miss creative spellings and will sometimes refuse an
+  innocent name. To add a word, put its flattened form in `ROOTS`; to let a real name through, add
+  the word (flattened) to `ALLOWED`; either way add a case to `nameFilter.test.ts`.
+- **It is client-side only.** `firestore.rules` still check only the shape and the reserved words: a
+  substring and leetspeak check cannot be written there (the reserved-word check is an exact match). A
+  modified client can therefore write any well-formed name, which is why reports and the steps below
+  matter, and why the board drops rows the filter refuses.
+
+### How reports arrive
+
+On a leaderboard row (not your own) the dots open a sheet with **Report this name** and **Hide this
+player**. Report opens the person's email app with a message to `guitar.rot@proton.me`, subject
+**Report a guitarRot name**, and a body with:
+
+```
+Name shown: <the name on the board>
+Player id: <the player's uid>
+What is wrong with it (optional):
+```
+
+(A `Username:` line is added when the app knows it; the board shows only the name, so look the
+username up from the player id, below.) The email comes from the reporter's own address. Reporting
+also hides that player for the reporter. Nothing is sent from the app itself, so there is no
+backend to run and nothing to configure; the privacy policy promises the email is used only to review
+the name and is deleted once it has been dealt with.
+
+Hiding is local: the uids are in `localStorage` under `guitarrot.hidden-players.v1` (at most 200),
+never synced and never seen by us.
+
+### Acting on a report
+
+The target is to **respond within 24 to 48 hours**. In the Firebase console, for the player id in the
+email (it is the id of every document below):
+
+1. **Look at the row.** Firestore Database > `leaderboard` > the document with that id. If the
+   `name` breaks the terms, either edit `name` to something neutral (the app only ever rewrites it
+   when the player renames themselves, so it stays) or **delete the document** to take the
+   player off the board. A player whose row is gone sees the join form again, and the filter now
+   applies to the name they pick.
+2. **Free the username**, if it is the offensive part. Open `profiles/{uid}` and note `username`
+   (the handle). Delete **`usernames/{handle}`** and delete (or correct) **`profiles/{uid}`**. The app
+   treats a missing profile as "no username yet": the Account card shows **Pick a username** and the
+   leaderboard asks for one before joining. The handle is free for anybody to claim at once.
+3. **Ban the account**, for abuse and not only a name: Authentication > Users > find the uid > **Disable
+   account**. They cannot sign in again; a phone that is already signed in keeps working until its
+   token refreshes (up to an hour), so delete their `leaderboard` row as well and look once more
+   after an hour. Deleting the user outright (Authentication > Delete account) also works, but leaves
+   `users/{uid}`, `profiles/{uid}`, `usernames/{handle}` and `leaderboard/{uid}` behind to be removed by hand.
+4. **Answer the reporter** if it helps, then **delete the email**.
+
+Nothing needs deploying for any of this: console edits bypass the security rules.
 
 ## Usage analytics
 

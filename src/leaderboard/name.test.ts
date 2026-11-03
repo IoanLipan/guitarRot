@@ -32,6 +32,22 @@ describe('validateLeaderboardName', () => {
     }
   });
 
+  it('refuses a slur or strong profanity, in a neutral sentence', () => {
+    for (const bad of ['fuckface', 'Big Shithead', 'p.i.z.d.a', 'Sugi Pula', 'sh1thead']) {
+      expect(validateLeaderboardName(bad), bad).toBe('Pick a different name.');
+    }
+  });
+
+  it('keeps real names that happen to contain a root', () => {
+    for (const ok of ['Scunthorpe', 'Kinoshita', 'Hitchcock', 'Ioana Pop', 'Popular Pete']) {
+      expect(validateLeaderboardName(ok), ok).toBeNull();
+    }
+  });
+
+  it('says a name is too short before it says the name is not allowed', () => {
+    expect(validateLeaderboardName('f')).toMatch(/at least 3/);
+  });
+
   it('ignores spaces at the ends and in runs, as the stored name does', () => {
     expect(validateLeaderboardName('  Ada   Love  ')).toBeNull();
     expect(normalizeName('  Ada   Love \t ')).toBe('Ada Love');
@@ -59,6 +75,11 @@ describe('suggestName', () => {
 
   it('keeps accents', () => {
     expect(suggestName({ displayName: 'Ștefan Popescu', email: null })).toBe('Ștefan');
+  });
+
+  it('does not hand over a word the board would refuse', () => {
+    expect(suggestName({ displayName: 'Shithead Smith', email: null })).toBe('');
+    expect(suggestName({ displayName: null, email: 'pizda.x@example.com' })).toBe('');
   });
 
   it('can come back empty', () => {

@@ -55,6 +55,21 @@ describe('validateUsername', () => {
     expect(validateUsername('guitarrot2')).toBeNull();
   });
 
+  it('refuses a slur or strong profanity, in a neutral sentence, and not before the shape is right', () => {
+    for (const bad of ['fuckface', 'shithead', 'mega.pizda', 'sugi_pula', 'sh1thead', 'b1tch.pls']) {
+      expect(validateUsername(bad), bad).toBe('Pick a different name.');
+    }
+    // A shape problem is still said first.
+    expect(validateUsername('fuck.')).toBe('Start and end with a letter or a number.');
+    expect(validateUsername('fuck!')).toBe('Use letters, numbers, . and _ only.');
+  });
+
+  it('keeps real names that happen to contain a root', () => {
+    for (const ok of ['scunthorpe', 'kinoshita', 'hitchcock', 'popular.pete', 'pulaski', 'harshit_k']) {
+      expect(validateUsername(ok), ok).toBeNull();
+    }
+  });
+
   it('agrees with isValidUsername', () => {
     expect(isValidUsername('ada')).toBe(true);
     expect(isValidUsername('a')).toBe(false);
@@ -80,6 +95,11 @@ describe('usernameSeed', () => {
     expect(usernameSeed({ displayName: 'Al', email: null })).toBe('player');
     expect(usernameSeed({ displayName: '李雷', email: null })).toBe('player');
     expect(usernameSeed({ displayName: null, email: null })).toBe('player');
+  });
+
+  it('does not start a person off on a word the filter refuses', () => {
+    expect(usernameSeed({ displayName: 'Shithead Smith', email: 'ada@example.com' })).toBe('ada');
+    expect(usernameSeed({ displayName: 'Shithead', email: null })).toBe('player');
   });
 
   it('leaves room for a number, and is always valid', () => {

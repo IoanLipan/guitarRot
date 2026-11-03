@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react';
+import { PRIVACY_URL, TERMS_URL } from '@/app/links';
 import { BottomSheet } from '@/game/BottomSheet';
 import { CloseIcon, MailIcon } from '@/ui/icons';
 import { useAccount } from './AccountProvider';
@@ -290,6 +291,7 @@ export function AccountSheet({ intent, onClose }: { intent: AccountSheetIntent |
                 {providerError}
               </p>
             )}
+            <TermsLine />
             <div className="flex flex-col items-center">
               <button
                 type="button"
@@ -336,7 +338,7 @@ export function AccountSheet({ intent, onClose }: { intent: AccountSheetIntent |
           <form
             onSubmit={submit}
             noValidate
-            className={`flex flex-col gap-4 tight:gap-3 ${view === 'sign-up' || view === 'sign-in' ? 'mt-3 tight:mt-2' : 'mt-4'}`}
+            className={`flex flex-col gap-4 tight:gap-3 [&_input]:scroll-mb-32 ${view === 'sign-up' || view === 'sign-in' ? 'mt-3 tight:mt-2' : 'mt-4'}`}
             data-testid={`account-form-${view}`}
           >
             {view === 'reset' && (
@@ -415,16 +417,27 @@ export function AccountSheet({ intent, onClose }: { intent: AccountSheetIntent |
               </button>
             )}
 
-            {formError}
-
-            <button
-              type="submit"
-              disabled={busy}
-              data-testid="account-submit"
-              className="press flex min-h-12 items-center justify-center rounded-full bg-accent px-6 text-base font-extrabold text-ground disabled:opacity-60"
+            {/* The action stays on screen: on a small phone the fields are taller than the sheet, and the
+                button (with what must be said next to it) would otherwise sit below the fold. The inputs'
+                scroll margin (above) keeps a field the browser scrolls to from landing under it. */}
+            <div
+              data-testid="account-actions"
+              // The sheet's own bottom padding (BottomSheet) counts against a sticky offset, so the offset gives it back:
+              // stuck, this sits flush with the sheet's bottom edge; at the end of the scroll it is where it always was.
+              style={{ bottom: 'calc(-1.5rem - env(safe-area-inset-bottom))' }}
+              className="sticky z-10 -mx-6 -mt-2 flex flex-col gap-2 bg-surface px-6 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]"
             >
-              {pending ? SUBMIT[view].busy : SUBMIT[view].label}
-            </button>
+              {formError}
+              <button
+                type="submit"
+                disabled={busy}
+                data-testid="account-submit"
+                className="press flex min-h-12 items-center justify-center rounded-full bg-accent px-6 text-base font-extrabold text-ground disabled:opacity-60"
+              >
+                {pending ? SUBMIT[view].busy : SUBMIT[view].label}
+              </button>
+              {view === 'sign-up' && <TermsLine />}
+            </div>
 
             {view === 'sign-up' && (
               <SwitchLine lead="Already have an account?" action="Sign in" onClick={() => changeView('sign-in')} />
@@ -443,6 +456,28 @@ export function AccountSheet({ intent, onClose }: { intent: AccountSheetIntent |
         )}
       </div>
     </BottomSheet>
+  );
+}
+
+/**
+ * What making an account means, said next to the ways to make one (Google, Apple, email): the
+ * terms and the privacy policy, opened the way Settings opens them (a new browser tab on the web,
+ * the phone's browser in the app: see `AboutLink` in app/SettingsSheet).
+ */
+function TermsLine() {
+  const link = 'font-bold text-ink underline underline-offset-2';
+  return (
+    <p className="text-center text-label leading-snug text-ink-dim" data-testid="account-terms">
+      By creating an account you agree to the{' '}
+      <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" data-testid="account-terms-link" className={link}>
+        Terms
+      </a>{' '}
+      and the{' '}
+      <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" data-testid="account-privacy-link" className={link}>
+        Privacy policy
+      </a>
+      .
+    </p>
   );
 }
 
