@@ -31,6 +31,15 @@ function countText(count: number): string {
   return `${count} ${count === 1 ? 'song' : 'songs'}`;
 }
 
+/**
+ * Amber means "a filter is on". A pressed "All" is the resting state of its row, so
+ * it is only lifted a shade: two rows at rest would otherwise show two amber chips.
+ */
+function chipTone(isActive: boolean, isAll: boolean): string {
+  if (!isActive) return 'bg-surface-2 text-ink-dim';
+  return isAll ? 'bg-surface-3 text-ink' : 'bg-accent text-ground';
+}
+
 // min-w-11: the shortest word, All, still makes a 44px target.
 const CHIP = 'press min-h-11 min-w-11 shrink-0 rounded-full px-4 text-meta font-bold narrow:px-3';
 
@@ -96,7 +105,7 @@ export function SongList({
                   tapHaptic();
                   onFilterChange({ ...filter, difficulty: level });
                 }}
-                className={`${CHIP} ${isActive ? 'bg-accent text-ground' : 'bg-surface-2 text-ink-dim'}`}
+                className={`${CHIP} ${chipTone(isActive, level === 'all')}`}
               >
                 {sentenceCase(level)}
               </button>
@@ -131,7 +140,7 @@ export function SongList({
                   tapHaptic();
                   onFilterChange({ ...filter, genre });
                 }}
-                className={`${CHIP} ${isActive ? 'bg-accent text-ground' : 'bg-surface-2 text-ink-dim'}`}
+                className={`${CHIP} ${chipTone(isActive, genre === 'all')}`}
               >
                 {genre === 'all' ? 'All' : GENRE_LABELS[genre]}
               </button>
