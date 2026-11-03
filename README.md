@@ -34,7 +34,8 @@ web, Google Play and the App Store, all from one codebase.
 | Releases | GitHub Releases (APK), Play Console (AAB), App Store Connect | `scripts/release-android.sh`; iOS in [`docs/IOS.md`](docs/IOS.md) |
 
 Firebase project: `guitarrot-a27b5` (owner `guitar.rot@proton.me`). Privacy
-records: [`docs/GDPR.md`](docs/GDPR.md).
+records: [`docs/GDPR.md`](docs/GDPR.md). What is left before launch, in order:
+[`docs/LAUNCH.md`](docs/LAUNCH.md).
 
 ## Status
 
