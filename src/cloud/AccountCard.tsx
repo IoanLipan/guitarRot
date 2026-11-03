@@ -17,6 +17,8 @@ import { useSync } from './useCloudSync';
 export const DELETE_TITLE = 'Delete your account?';
 export const DELETE_BODY =
   'This permanently deletes your guitarRot account (your name, email and sign-in) and everything saved in the cloud for it, such as synced progress and your leaderboard entry. Progress on this phone stays, and you can keep playing without an account. This can’t be undone.';
+/** An account with Apple also has Apple's token revoked as it goes, which takes Apple's own sheet or window. */
+export const DELETE_APPLE_NOTE = ' Apple will ask you to confirm first.';
 
 /** What the card says about the saved progress, quietly, under who you are. */
 export const SYNC_TEXT: Record<SyncStatus, string> = {
@@ -116,9 +118,10 @@ export function AccountCard({ delay = '0ms' }: { delay?: string }) {
       setNotice(DELETED_NOTICE);
     } catch (failure) {
       const problem = toAccountError(failure);
-      // A password account that signed in a while ago has to say its password first.
+      // A password account that signed in a while ago has to say its password first. Backing out of Apple's
+      // sheet is a choice, not a failure: the account stays and there is nothing to say.
       if (problem.code === 'password-needed') setAskingPassword(true);
-      else setError(problem.message);
+      else if (!problem.cancelled) setError(problem.message);
     } finally {
       setBusy(null);
     }
@@ -222,7 +225,7 @@ export function AccountCard({ delay = '0ms' }: { delay?: string }) {
         {confirmingDelete && (
           <ConfirmDialog
             title={DELETE_TITLE}
-            body={DELETE_BODY}
+            body={user.providers.includes(APPLE_PROVIDER) ? DELETE_BODY + DELETE_APPLE_NOTE : DELETE_BODY}
             keepLabel="Keep my account"
             confirmLabel="Delete account"
             onKeep={() => setConfirmingDelete(false)}

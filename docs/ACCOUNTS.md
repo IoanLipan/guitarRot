@@ -205,10 +205,42 @@ have them. The iOS app's own setup is in [`IOS.md`](IOS.md).
   `...AuthorizationError error 1001.` message, which `errors.ts` treats as a cancel. The
   native flow needs only the App ID's Sign in with Apple capability (no Services ID); see
   [`IOS.md`](IOS.md#sign-in-with-apple-and-google-on-ios).
-- **Deleting an Apple account** signs in with Apple again when Firebase wants a
-  recent sign-in (popup on the web, the plugin on Android and iOS). The iOS App Store
-  build must also revoke the Apple token when an account is deleted (guideline 5.1.1(v)):
-  **not done yet**, with the reason and the plan in [`IOS.md`](IOS.md#known-gaps-and-review-risks).
+- **Deleting an Apple account revokes Apple's token first** (App Store guideline
+  5.1.1(v): an app that makes accounts with Sign in with Apple must do it when one is
+  deleted; web and Android get it too, for the same account). Delete starts with one more
+  Apple sign-in (popup on the web, the plugin on Android and iOS; it is also the recent
+  sign-in Firebase wants), and only then runs the clean-up hooks and deletes the user:
+  - web: the popup's credential carries Apple's **access token**; the JS SDK's
+    `revokeAccessToken(auth, token)` revokes it;
+  - Android: the plugin's browser flow returns the same access token (`credential.accessToken`);
+    the same JS call;
+  - iOS: the system sheet returns only a one-time **authorization code**, which the JS SDK
+    cannot revoke (it sends `ACCESS_TOKEN`). The native SDK can
+    (`Auth.revokeToken(withAuthorizationCode:)`, the plugin's `revokeAccessToken`), but it asks
+    its **own current user** for the ID token that authorises it and never answers when there
+    is none. The app has no native user (`skipNativeAuth`), so for this one sheet
+    `signInWithApple({ skipNativeAuth: false })` makes one, the code is revoked natively (20
+    second deadline), and the native user is signed out again.
+  - **Firebase must have the Apple key for any of this to work, on every platform:** the
+    Apple provider needs the **Team ID, Key ID and the `.p8` private key** (step 6 below), because
+    Firebase uses them to exchange the authorization code with Apple for the token it then
+    returns (web, Android) or revokes (iOS). Without them no token comes back.
+  - **If the revoke fails** for a reason another try can fix (offline, too many tries, a
+    server error), the account is **kept**, nothing is deleted, and the person sees "We couldn't
+    finish with Apple, so your account was kept" and tries again. If Apple no longer knows the
+    token (`auth/invalid-credential`, `auth/invalid-idp-response`), or Firebase returned no
+    token at all (the key is not set up), the delete **goes on** and writes a warning to the
+    console: deleting an account must always work, and a missing key is the owner's to fix. The
+    last case is silent to the person, so **try a delete with a real Apple account** (see
+    [`IOS.md`](IOS.md#phone-checklist)) and check Apple ID settings > Sign in with Apple no
+    longer lists guitarRot afterwards.
+  - An Apple ID on the phone that is not the account's is refused ("That's not the account
+    you're signed in with"); the empty native account the sheet made for it is deleted, and
+    one that already had an account of its own is only signed out.
+  - **Not verifiable without an Apple Developer account and a phone**: the unit tests stand in
+    for the plugin and the SDK, and the Auth emulator has no Apple. The one thing only a real run
+    shows is that Firebase accepts the same Apple ID token twice (once natively on iOS, once in
+    the JS re-authentication).
 - **Locally:** `VITE_AUTH_APPLE=1 npm run dev:emulators`. The Auth emulator's fake
   Apple window opens for the real button (email, optional name), so the whole
   flow, username step included, runs with no Apple account.
@@ -240,10 +272,14 @@ have them. The iOS app's own setup is in [`IOS.md`](IOS.md).
        Configure > the primary App ID > Save > Continue > Register. **Download the
        `.p8` now (Apple lets you once)** and note its **Key ID**. Your **Team ID**
        is in the top-right of the developer pages (and Membership details).
+       **This key is not optional**: without it Apple's token cannot be revoked when an
+       account is deleted, which App Store guideline 5.1.1(v) requires (see above).
 6. [ ] Firebase console > Authentication > Sign-in method > **Apple** > Enable.
        Services ID: `com.guitarrot.app.web`; Apple team ID; Key ID; Private key:
-       paste the `.p8`'s text. Save. Check the redirect URL it shows is the one in
-       step 3. (Never commit the `.p8`.)
+       paste the `.p8`'s text. Save. **Fill in all of them, the Team ID, Key ID and private
+       key included, even if you only ever sign in on iPhone**: Firebase needs the key to
+       exchange Apple's authorization code and so to revoke the token, on web, Android and iOS
+       alike. Check the redirect URL it shows is the one in step 3. (Never commit the `.p8`.)
 7. [ ] Build with `VITE_AUTH_APPLE=1` (Vercel's environment variables for the web;
        the shell or `.env.local` before `npm run build && npx cap sync android` for
        the app) and redeploy: Vite inlines it at build time.
@@ -788,6 +824,13 @@ Policy": no (target audience 13+).
   address yet"**: the domain is missing from Authentication > Settings >
   Authorized domains. Apple's own page showing `invalid_request`: the Services
   ID's return URL or domain does not match the Firebase auth domain exactly.
+- **Deleting an Apple account says "We couldn't finish with Apple, so your account was
+  kept".** Revoking Apple's token failed for a reason that looks temporary (offline, too many
+  tries, a server error): try again. If it keeps failing with a connection, look at the
+  Apple provider in Firebase (Team ID, Key ID, `.p8`: a wrong key makes Firebase's call to
+  Apple fail). **A delete that works but leaves guitarRot in Apple ID settings > Sign in
+  with Apple** means no token came back: the key is missing, and the console shows "No Apple
+  token to revoke".
 - **Google sign-in "developer error" on Android.** A signing key's SHA-1 or
   SHA-256 is missing from the Android app in Firebase (the Play App Signing key
   is the usual one), or `google-services.json` was downloaded before it was
