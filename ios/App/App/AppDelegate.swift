@@ -25,12 +25,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     private func configureFirebase() {
         #if canImport(FirebaseCore)
         guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else {
-            CAPLog.print("[guitarRot] No GoogleService-Info.plist in the app: Firebase is off.")
+            NSLog("[guitarRot] No GoogleService-Info.plist in the app: Firebase is off.")
             return
         }
-        if FirebaseApp.app() == nil {
-            FirebaseApp.configure()
-        }
+        FirebaseApp.configure()
         #endif
     }
 
@@ -50,13 +48,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothA2DP, .mixWithOthers])
             try session.setActive(true)
         } catch {
-            CAPLog.print("[guitarRot] Could not set up the audio session:", error.localizedDescription)
+            NSLog("[guitarRot] Could not set up the audio session: %@", error.localizedDescription)
         }
         #if DEBUG
-        // Where the sound goes, in the Xcode console: "Speaker" is right, "Receiver" is the earpiece.
+        // Where the sound goes, in the Xcode console (NSLog: CAPLog is not switched on this early):
+        // "Speaker" is right, "Receiver" is the earpiece.
         let logRoute = {
             let outputs = session.currentRoute.outputs.map { $0.portType.rawValue }.joined(separator: ", ")
-            CAPLog.print("[guitarRot] Audio:", session.category.rawValue, "to", outputs.isEmpty ? "nothing yet" : outputs)
+            NSLog("[guitarRot] Audio: %@ to %@", session.category.rawValue, outputs.isEmpty ? "nothing yet" : outputs)
         }
         logRoute()
         NotificationCenter.default.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { _ in logRoute() }
