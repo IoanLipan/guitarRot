@@ -9,7 +9,7 @@ const GENRE_FILTERS: readonly GenreFilter[] = ['all', ...GENRES];
 
 /** The same scrolling strip for both chip rows. */
 const CHIP_ROW =
-  '-mx-5 flex gap-2 overflow-x-auto overscroll-x-contain px-5 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  '-mx-5 flex gap-2 overflow-x-auto overscroll-x-contain px-5 py-1 tight:py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /** Only the first screenful of rows rises in, one after another; a long list never makes you wait for its tail. */
 export const RISE_ROWS = 8;
@@ -79,7 +79,7 @@ export function SongList({
             instead of wrapping or squeezing; overscroll-x-contain keeps a swipe
             that runs out of chips from chaining into the page. */}
         <div
-          className={`${CHIP_ROW} mt-2`}
+          className={`${CHIP_ROW} mt-2 tight:mt-1`}
           role="group"
           aria-label="Filter songs"
           data-testid="filter-row"
