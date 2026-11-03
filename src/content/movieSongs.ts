@@ -10,7 +10,7 @@ import {
   QUIET_RUINS_ROWS,
   STONE_HALL_HYMN_ROWS,
 } from './movieTabs';
-import { MOVIES_TAG, type Difficulty, type Song } from './songs';
+import { MOVIES_TAG, type Difficulty, type Genre, type Song } from './songs';
 import type { Riff } from './types';
 
 /*
@@ -69,6 +69,7 @@ type MovieSpec = {
   artist: string;
   difficulty: Difficulty;
   style: string;
+  genre: Genre;
   key: string;
   bpm: number;
   bars: number;
@@ -104,6 +105,7 @@ function movieSong(spec: MovieSpec): Song {
     artist: spec.artist,
     difficulty: spec.difficulty,
     style: spec.style,
+    genre: spec.genre,
     key: spec.key,
     bpm: spec.bpm,
     source: spec.source,
@@ -128,6 +130,7 @@ export const diesIrae: Song = movieSong({
   artist: 'Gregorian chant',
   difficulty: 'easy',
   style: 'Gregorian chant',
+  genre: 'classical',
   key: 'Am',
   bpm: 56,
   bars: 8,
@@ -150,6 +153,7 @@ export const hallOfTheMountainKing: Song = movieSong({
   artist: 'Edvard Grieg',
   difficulty: 'medium',
   style: 'Romantic',
+  genre: 'classical',
   key: 'Bm',
   bpm: 138,
   bars: 16,
@@ -187,6 +191,7 @@ export const canonInD: Song = movieSong({
   artist: 'Johann Pachelbel',
   difficulty: 'medium',
   style: 'Baroque',
+  genre: 'classical',
   key: 'D',
   bpm: 55,
   bars: 10,
@@ -206,6 +211,7 @@ export const gymnopedieNo1: Song = movieSong({
   artist: 'Erik Satie',
   difficulty: 'medium',
   style: 'French piano',
+  genre: 'classical',
   key: 'D',
   bpm: 60,
   bars: 14,
@@ -232,6 +238,7 @@ export const airOnTheGString: Song = movieSong({
   artist: 'Johann Sebastian Bach',
   difficulty: 'hard',
   style: 'Baroque',
+  genre: 'classical',
   key: 'D',
   bpm: 72,
   bars: 12,
@@ -259,6 +266,7 @@ export const theEntertainer: Song = movieSong({
   artist: 'Scott Joplin',
   difficulty: 'hard',
   style: 'Ragtime',
+  genre: 'pop',
   key: 'C',
   bpm: 72,
   bars: 16,
@@ -291,6 +299,7 @@ export const hillsideJig: Song = movieSong({
   artist: 'guitarRot',
   difficulty: 'medium',
   style: 'Pastoral folk',
+  genre: 'folk',
   key: 'G',
   bpm: 104,
   bars: 16,
@@ -308,6 +317,7 @@ export const hymnForAStoneHall: Song = movieSong({
   artist: 'guitarRot',
   difficulty: 'easy',
   style: 'Dirge',
+  genre: 'classical',
   key: 'Em',
   bpm: 52,
   bars: 8,
@@ -325,6 +335,7 @@ export const quietRuins: Song = movieSong({
   artist: 'guitarRot',
   difficulty: 'medium',
   style: 'Ambient fingerstyle',
+  genre: 'classical',
   key: 'Em',
   bpm: 60,
   bars: 8,

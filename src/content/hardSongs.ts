@@ -1,4 +1,4 @@
-import type { Song } from './songs';
+import type { Genre, Song } from './songs';
 import type { Riff, TabEvent } from './types';
 import {
   BWV999_ROWS,
@@ -52,6 +52,8 @@ type ClassicalSpec = {
   tags: readonly string[];
   about: string;
   style?: string;
+  /** Almost every piece here is classical; the odd one out says so. */
+  genre?: Genre;
 };
 
 function classical(spec: ClassicalSpec): Song {
@@ -75,6 +77,7 @@ function classical(spec: ClassicalSpec): Song {
     artist: spec.artist,
     difficulty: 'hard',
     style,
+    genre: spec.genre ?? 'classical',
     key: spec.key,
     bpm: spec.bpm,
     source: 'public-domain',
@@ -397,6 +400,7 @@ export const alternatePickingLadderSong: Song = {
   artist: 'guitarRot',
   difficulty: 'hard',
   style: 'Shred technique',
+  genre: 'rock',
   key: 'Am',
   bpm: 140,
   source: 'original',
@@ -412,6 +416,7 @@ export const sweepCascadeSong: Song = {
   artist: 'guitarRot',
   difficulty: 'hard',
   style: 'Neoclassical',
+  genre: 'rock',
   key: 'Am',
   bpm: 112,
   source: 'original',
@@ -427,6 +432,7 @@ export const travisBluesInESong: Song = {
   artist: 'guitarRot',
   difficulty: 'hard',
   style: 'Fingerstyle blues',
+  genre: 'blues',
   key: 'E',
   bpm: 96,
   source: 'original',

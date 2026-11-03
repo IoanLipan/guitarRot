@@ -7,6 +7,25 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 export const DIFFICULTIES: readonly Difficulty[] = ['easy', 'medium', 'hard'];
 
 /**
+ * The few families the Songs tab filters by. A song's `style` is free text
+ * ("Thrash metal", "Folk waltz"), far too many values for a row of chips; the
+ * genre is the coarse bucket every style falls into.
+ */
+export const GENRES = ['rock', 'blues', 'folk', 'country', 'classical', 'pop', 'kids'] as const;
+
+export type Genre = (typeof GENRES)[number];
+
+export const GENRE_LABELS: Record<Genre, string> = {
+  rock: 'Rock & metal',
+  blues: 'Blues',
+  folk: 'Folk & traditional',
+  country: 'Country',
+  classical: 'Classical',
+  pop: 'Pop & ballads',
+  kids: 'Kids & carols',
+};
+
+/**
  * How the right hand moves through a bar. Patterns are expressed as beat
  * offsets so they work in any time signature, not just 4/4.
  */
@@ -37,6 +56,8 @@ export type Song = {
   artist: string;
   difficulty: Difficulty;
   style: string;
+  /** The family the Songs tab files it under; `style` is the finer, free-text label. */
+  genre: Genre;
   /** Home key, for the browser's subtitle line. */
   key: string;
   bpm: number;
@@ -252,6 +273,9 @@ export function validateSong(song: Song): string[] {
   if (!has(song.about)) errors.push(`${song.id}: about must not be blank`);
   if (!Number.isFinite(song.bpm) || song.bpm < 30 || song.bpm > 300) {
     errors.push(`${song.id}: bpm ${song.bpm} is implausible`);
+  }
+  if (!(GENRES as readonly string[]).includes(song.genre)) {
+    errors.push(`${song.id}: genre "${String(song.genre)}" is not one of ${GENRES.join(', ')}`);
   }
   // The catalogue's licensing rule, enforced rather than trusted: anything
   // not written for this app has to say where it came from.
